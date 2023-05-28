@@ -1,7 +1,7 @@
 # subject-LFIQA-software
 light field image subject quality assessment software
 
-# How to run with our data
+# How to run it with our data
 ### Step 1. 
 
 Download the source code. Compile the source code with the Visual studio.
