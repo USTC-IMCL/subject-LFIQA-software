@@ -37,9 +37,14 @@ namespace position_save_excel
             this.AcceptButton = Save_result;   //默认回车键
             this.KeyPreview = true;
 
-            label2.Text = Form1.i.ToString()+"/"+Form1.num.ToString();
-
-            //2017-09-19改  修改打分界面适应屏幕尺寸
+            if (login.is_3d_mode)
+            {
+                label2.Text = Form1.i.ToString() + "/" + Form1.num.ToString();
+            }
+            else
+            {
+                label2.Text = Form1_2D.i.ToString() + "/" + Form1_2D.num.ToString();
+            }
 
             int SH = Screen.PrimaryScreen.Bounds.Height;
             int SW = Screen.PrimaryScreen.Bounds.Width;
@@ -47,14 +52,9 @@ namespace position_save_excel
             int h = Convert.ToInt32(SH / 2);
 
             this.question_name.Size = new Size(w, h);
-            //      if (this.Save_result!= null)
-            //      Save_result.Size = new Size(10, 20);
-            //groupBox1.Size = new Size(w, h);
 
             //2017-09-19改
             overallBox.Size = new Size(w, h);
-
-
 
             int x = Convert.ToInt32(SW / 24 * 6 - this.question_name.Size.Width / 2);
             int y = Convert.ToInt32(SH / 2 - this.question_name.Size.Height / 2);
@@ -111,7 +111,7 @@ namespace position_save_excel
                 }
             }
         }
-        private bool WriteGrade(string filename,int picno, int g1,int g2,int g3,int i)
+        private bool WriteGrade(string filename,int picno, int g1,int g2,int g3)
         {
             //启动Excel应用程序
             Excel.Application xls = new Excel.Application();
@@ -120,7 +120,16 @@ namespace position_save_excel
             xls.Visible = false;//设置Excel后台运行
             xls.DisplayAlerts = false;//设置不显示确认修改提示
 
-            xls.Cells[row, column] = Form1.current_image;
+            if (login.is_3d_mode)
+            {
+                xls.Cells[row, column] = Form1.current_image;
+            }
+            else
+            {
+                xls.Cells[row, column] = Form1_2D.current_image;
+            }
+
+            
             column++;
             xls.Cells[row, column] = picno;
             column++;
@@ -151,123 +160,83 @@ namespace position_save_excel
             if (overallButton5.Checked || overallButton4.Checked || overallButton3.Checked
                         || overallButton2.Checked || overallButton1.Checked)
             {
-                
-                StreamWriter ss = File.AppendText(".\\light_filed_image_subjective_exp\\user_defi_" + login.s + ".txt");
-                string picnum = Form1.pictrue_num.ToString();
-                ss.Write("imagenum：" + picnum + "\r\n");
-                ss.Close();
-           
-                StreamWriter sw = File.AppendText(".\\light_filed_image_subjective_exp\\user_defi_" + login.s + ".txt");
 
                 if (Button1.Checked)
                 {
-                    string w = "5\r\n";
-                    sw.Write(w);
-                    sw.Close();
                     grade_defi = 5;
                 }
                 else if (Button2.Checked)
-                {
-                    string w = "4\r\n";
-                    sw.Write(w);
-                    sw.Close();
+                {;
                     grade_defi = 4;
                 }
                 else if (Button3.Checked)
                 {
-                    string w = "3\r\n";
-                    sw.Write(w);
-                    sw.Close();
                     grade_defi = 3;
 
                 }
                 else if (Button4.Checked)
                 {
-                    string w = "2\r\n";
-                    sw.Write(w);
-                    sw.Close();
                     grade_defi = 2;
                 }
                 else if (Button5.Checked)
                 {
-                    string w = "1\r\n";
-                    sw.Write(w);
-                    sw.Close();
                     grade_defi = 1;
                 }
 
-                StreamWriter sd = File.AppendText(".\\light_filed_image_subjective_exp\\user_depth_" + login.s + ".txt");
-
-                sd.Write("imagenum：" + picnum + "\r\n");
-                sd.Close();
-                //  StreamWriter sw = File.AppendText(".\\light_filed_image_subjective_exp\\light_filed_image_subjective_exp.txt");
-                
-               
-                //2017-09-19改
-                StreamWriter overallTxt = File.AppendText(".\\light_filed_image_subjective_exp\\user_overall_" + login.s + ".txt");
-
-                overallTxt.Write("imagenum：" + picnum + "\r\n");
-                overallTxt.Close();
-                StreamWriter overallTxt2 = File.AppendText(".\\light_filed_image_subjective_exp\\user_overall_" + login.s + ".txt");
 
                 if (overallButton5.Checked)
                 {
-                    string w = "5\r\n";
-                    overallTxt2.Write(w);
-                    overallTxt2.Close();
                     grade_overall = 5;
                 }
                 else if (overallButton4.Checked)
                 {
-                    string w = "4\r\n";
-                    overallTxt2.Write(w);
-                    overallTxt2.Close();
                     grade_overall = 4;
                 }
                 else if (overallButton3.Checked)
                 {
-                    string w = "3\r\n";
-                    overallTxt2.Write(w);
-                    overallTxt2.Close();
                     grade_overall = 3;
                 }
                 else if (overallButton2.Checked)
                 {
-                    string w = "2\r\n";
-                    overallTxt2.Write(w);
-                    overallTxt2.Close();
                     grade_overall = 2;
                 }
                 else if (overallButton1.Checked)
                 {
-                    string w = "1\r\n";
-                    overallTxt2.Write(w);
-                    overallTxt2.Close();
                     grade_overall = 1;
                 }
 
 
                 this.Close();
                 //this.Hide();
-
-                if (Form1.i != Form1.num + 1)
+                if (login.is_3d_mode)
                 {
-                    WriteGrade(login.file_excel, Form1.pictrue_num, grade_defi, grade_depth,grade_overall,Form1.i);
-                }
+                    if (Form1.i != Form1.num + 1)
+                    {
+                        WriteGrade(login.file_excel, Form1.pictrue_num, grade_defi, grade_depth, grade_overall);
+                    }
 
-                if (Form1.i == Form1.num)
+                    if (Form1.i == Form1.num)
+                    {
+                        MessageBox.Show("Thank you for cooperation. That's all.");
+                        Close();
+
+                    }
+                }
+                else
                 {
-                    MessageBox.Show("Thank you for cooperation. That's all.");
-                    //     Close();
-                    //  StreamWriter st = File.AppendText(".\\light_filed_image_subjective_exp\\light_filed_image_subjective_exp.txt");
-                    StreamWriter st = File.AppendText(".\\light_filed_image_subjective_exp\\user_defi_" + login.s + ".txt");
+                    if (Form1_2D.i != Form1_2D.num + 1)
+                    {
+                        WriteGrade(login.file_excel, Form1_2D.pictrue_num, grade_defi, grade_depth, grade_overall);
+                    }
 
-                    string dt = DateTime.Now.ToString();
-                    st.Write(dt + "\r\n");
-                    st.Close();
-                   
+                    if (Form1_2D.i == Form1_2D.num)
+                    {
+                        MessageBox.Show("Thank you for cooperation. That's all.");
+                        Close();
 
+                    }
                 }
+                 
 
             }
                 else
@@ -275,9 +244,6 @@ namespace position_save_excel
                     MessageBox.Show("Please check your grades.");
 
                 }
-                // imagepath = @"D:\Pictures\9.jpg";
-                //  Form1.pictureBox1.ImageLocation = imagepath;
-                //  this.Visible = false;
                
             }
 

@@ -1,4 +1,6 @@
-﻿namespace position_save_excel
+﻿using System.Windows.Forms;
+
+namespace position_save_excel
 {
     partial class Form1
     {
@@ -34,16 +36,15 @@
             this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             //this.button1 = new System.Windows.Forms.Button();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.pictureBox2 = new System.Windows.Forms.PictureBox();
+            this.pictureBox3 = new System.Windows.Forms.PictureBox();
+            this.pictureBox4 = new System.Windows.Forms.PictureBox();
+
             this.To_assess = new System.Windows.Forms.Button();
             this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.button2 = new System.Windows.Forms.Button();
-            //this.pictureBox2 = new System.Windows.Forms.PictureBox();
-            //this.trackBar1 = new System.Windows.Forms.TrackBar();
-            //this.trackBar2 = new System.Windows.Forms.TrackBar();
-            //this.textBox1 = new System.Windows.Forms.TextBox();
-            //this.textBox2 = new System.Windows.Forms.TextBox();
-            //this.textBox3 = new System.Windows.Forms.TextBox();
-            //this.textBox4 = new System.Windows.Forms.TextBox();
+
+
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             //((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             //((System.ComponentModel.ISupportInitialize)(this.trackBar1)).BeginInit();
@@ -69,17 +70,7 @@
             // columnHeader2
             // 
             this.columnHeader2.Text = "Y";
-            // 
-            // button1
-            // 
-            //this.button1.BackColor = System.Drawing.Color.White;
-            //this.button1.Location = new System.Drawing.Point(127, 532);
-            //this.button1.Name = "button1";
-            //this.button1.Size = new System.Drawing.Size(101, 23);
-            //this.button1.TabIndex = 1;
-            //this.button1.Text = "Send to Excel";
-            //this.button1.UseVisualStyleBackColor = false;
-            //this.button1.Click += new System.EventHandler(this.button1_Click);
+
             // 
             // pictureBox1
             // 
@@ -94,6 +85,48 @@
             this.pictureBox1.MouseDown += new System.Windows.Forms.MouseEventHandler(this.pictureBox1_MouseDown);
             this.pictureBox1.MouseMove += new System.Windows.Forms.MouseEventHandler(this.pictureBox1_MouseMove);
             this.pictureBox1.MouseUp += new System.Windows.Forms.MouseEventHandler(this.pictureBox1_MouseUp);
+            // 
+            // pictureBox2
+            // 
+            this.pictureBox2.BackColor = System.Drawing.SystemColors.ButtonShadow;
+            this.pictureBox2.Location = new System.Drawing.Point(322, 68);
+            this.pictureBox2.Name = "pictureBox2";
+            this.pictureBox2.Size = new System.Drawing.Size(1672, 434);
+            this.pictureBox2.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.pictureBox2.TabIndex = 3;
+            this.pictureBox2.TabStop = false;
+            this.pictureBox2.MouseClick += new System.Windows.Forms.MouseEventHandler(this.Form1_MouseClick_box2);
+            this.pictureBox2.MouseDown += new System.Windows.Forms.MouseEventHandler(this.pictureBox2_MouseDown);
+            this.pictureBox2.MouseMove += new System.Windows.Forms.MouseEventHandler(this.pictureBox2_MouseMove);
+            this.pictureBox2.MouseUp += new System.Windows.Forms.MouseEventHandler(this.pictureBox1_MouseUp);
+            // 
+            // pictureBox3
+            // 
+            this.pictureBox3.BackColor = System.Drawing.SystemColors.ButtonShadow;
+            this.pictureBox3.Location = new System.Drawing.Point(322, 68);
+            this.pictureBox3.Name = "pictureBox3";
+            this.pictureBox3.Size = new System.Drawing.Size(1672, 434);
+            this.pictureBox3.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.pictureBox3.TabIndex = 3;
+            this.pictureBox3.TabStop = false;
+            this.pictureBox3.MouseClick += new System.Windows.Forms.MouseEventHandler(this.Form1_MouseClick_box3);
+            this.pictureBox3.MouseDown  += new System.Windows.Forms.MouseEventHandler(this.pictureBox3_MouseDown);
+            this.pictureBox3.MouseMove  += new System.Windows.Forms.MouseEventHandler(this.pictureBox3_MouseMove);
+            this.pictureBox3.MouseUp    += new System.Windows.Forms.MouseEventHandler(this.pictureBox1_MouseUp);
+            // 
+            // pictureBox4
+            // 
+            this.pictureBox4.BackColor = System.Drawing.SystemColors.ButtonShadow;
+            this.pictureBox4.Location = new System.Drawing.Point(322, 68);
+            this.pictureBox4.Name = "pictureBox4";
+            this.pictureBox4.Size = new System.Drawing.Size(1672, 434);
+            this.pictureBox4.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.pictureBox4.TabIndex = 3;
+            this.pictureBox4.TabStop = false;
+            this.pictureBox4.MouseClick += new System.Windows.Forms.MouseEventHandler(this.Form1_MouseClick_box4);
+            this.pictureBox4.MouseDown += new System.Windows.Forms.MouseEventHandler(this.pictureBox4_MouseDown);
+            this.pictureBox4.MouseMove += new System.Windows.Forms.MouseEventHandler(this.pictureBox4_MouseMove);
+            this.pictureBox4.MouseUp += new System.Windows.Forms.MouseEventHandler(this.pictureBox1_MouseUp);
             // 
             // To_assess
             // 
@@ -116,61 +149,7 @@
             this.button2.Text = "exit";
             this.button2.UseVisualStyleBackColor = true;
             this.button2.Click += new System.EventHandler(this.button2_Click_1);
-            // 
-            // pictureBox2
-            // 
-            //this.pictureBox2.BackColor = System.Drawing.SystemColors.ButtonShadow;
-            //this.pictureBox2.Location = new System.Drawing.Point(553, 68);
-            //this.pictureBox2.Name = "pictureBox2";
-            //this.pictureBox2.Size = new System.Drawing.Size(625, 434);
-            //this.pictureBox2.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
-            //this.pictureBox2.TabIndex = 12;
-            //this.pictureBox2.TabStop = false;
-            // 
-            // trackBar1
-            // 
-            //this.trackBar1.Location = new System.Drawing.Point(304, 497);
-            //this.trackBar1.Name = "trackBar1";
-            //this.trackBar1.Size = new System.Drawing.Size(625, 45);
-            //this.trackBar1.TabIndex = 13;
-            //this.trackBar1.Scroll += new System.EventHandler(this.trackBar1_Scroll);
-            // 
-            // trackBar2
-            // 
-            //this.trackBar2.Location = new System.Drawing.Point(127, 28);
-            //this.trackBar2.Name = "trackBar2";
-            //this.trackBar2.Orientation = System.Windows.Forms.Orientation.Vertical;
-            //this.trackBar2.Size = new System.Drawing.Size(45, 434);
-            //this.trackBar2.TabIndex = 15;
-            //this.trackBar2.Scroll += new System.EventHandler(this.trackBar2_Scroll);
-            // 
-            // textBox1
-            // 
-            //this.textBox1.Location = new System.Drawing.Point(302, 535);
-            //this.textBox1.Name = "textBox1";
-            //this.textBox1.Size = new System.Drawing.Size(100, 21);
-            //this.textBox1.TabIndex = 16;
-            // 
-            // textBox2
-            // 
-            //this.textBox2.Location = new System.Drawing.Point(480, 539);
-            //this.textBox2.Name = "textBox2";
-            //this.textBox2.Size = new System.Drawing.Size(100, 21);
-            //this.textBox2.TabIndex = 17;
-            // 
-            // textBox3
-            // 
-            //this.textBox3.Location = new System.Drawing.Point(636, 542);
-            //this.textBox3.Name = "textBox3";
-            //this.textBox3.Size = new System.Drawing.Size(100, 21);
-            //this.textBox3.TabIndex = 18;
-            // 
-            // textBox4
-            // 
-            //this.textBox4.Location = new System.Drawing.Point(811, 538);
-            //this.textBox4.Name = "textBox4";
-            //this.textBox4.Size = new System.Drawing.Size(100, 21);
-            //this.textBox4.TabIndex = 19;
+            
             // 
             // Form1
             // 
@@ -178,16 +157,15 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.Black;
             this.ClientSize = new System.Drawing.Size(1231, 590);
-            //this.Controls.Add(this.textBox4);
-            //this.Controls.Add(this.textBox3);
-            //this.Controls.Add(this.textBox2);
-            //this.Controls.Add(this.textBox1);
             //this.Controls.Add(this.trackBar2);
             //this.Controls.Add(this.trackBar1);
             //this.Controls.Add(this.pictureBox2);
             this.Controls.Add(this.button2);
             this.Controls.Add(this.To_assess);
             this.Controls.Add(this.pictureBox1);
+            this.Controls.Add(this.pictureBox2);
+            this.Controls.Add(this.pictureBox3);
+            this.Controls.Add(this.pictureBox4);
             //this.Controls.Add(this.button1);
             this.Controls.Add(this.listView1);
             this.Name = "Form1";
@@ -197,8 +175,6 @@
             this.MouseClick += new System.Windows.Forms.MouseEventHandler(this.Form1_MouseClick);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             //((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).EndInit();
-            //((System.ComponentModel.ISupportInitialize)(this.trackBar1)).EndInit();
-            //((System.ComponentModel.ISupportInitialize)(this.trackBar2)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -210,17 +186,19 @@
         private System.Windows.Forms.ColumnHeader columnHeader1;
         private System.Windows.Forms.ColumnHeader columnHeader2;
         //private System.Windows.Forms.Button button1;
+
+
+
         private System.Windows.Forms.PictureBox pictureBox1;
+        private System.Windows.Forms.PictureBox pictureBox2;
+        private PictureBox pictureBox3;
+        private PictureBox pictureBox4;
+
         private System.Windows.Forms.Button To_assess;
         private System.Windows.Forms.Timer timer1;
         private System.Windows.Forms.Button button2;
-        private System.Windows.Forms.PictureBox pictureBox2;
-        private System.Windows.Forms.TrackBar trackBar1;
-        private System.Windows.Forms.TrackBar trackBar2;
-        private System.Windows.Forms.TextBox textBox1;
-        private System.Windows.Forms.TextBox textBox2;
-        private System.Windows.Forms.TextBox textBox3;
-        private System.Windows.Forms.TextBox textBox4;
+        
+
     }
 }
 

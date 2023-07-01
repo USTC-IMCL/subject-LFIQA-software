@@ -1,0 +1,16 @@
+C:\Users\52384\Desktop\Display_Demo\subject-LFIQA-software\position_save_excel\bin\Debug\position_save_excel.exe.config
+C:\Users\52384\Desktop\Display_Demo\subject-LFIQA-software\position_save_excel\bin\Debug\position_save_excel.exe
+C:\Users\52384\Desktop\Display_Demo\subject-LFIQA-software\position_save_excel\bin\Debug\position_save_excel.pdb
+C:\Users\52384\Desktop\Display_Demo\subject-LFIQA-software\position_save_excel\obj\Debug\position_save_excel.csproj.AssemblyReference.cache
+C:\Users\52384\Desktop\Display_Demo\subject-LFIQA-software\position_save_excel\obj\Debug\position_save_excel.csproj.SuggestedBindingRedirects.cache
+C:\Users\52384\Desktop\Display_Demo\subject-LFIQA-software\position_save_excel\obj\Debug\position_save_excel.csproj.ResolveComReference.cache
+C:\Users\52384\Desktop\Display_Demo\subject-LFIQA-software\position_save_excel\obj\Debug\position_save_excel.Form1.resources
+C:\Users\52384\Desktop\Display_Demo\subject-LFIQA-software\position_save_excel\obj\Debug\position_save_excel.Form2.resources
+C:\Users\52384\Desktop\Display_Demo\subject-LFIQA-software\position_save_excel\obj\Debug\position_save_excel.Formexit.resources
+C:\Users\52384\Desktop\Display_Demo\subject-LFIQA-software\position_save_excel\obj\Debug\position_save_excel.login.resources
+C:\Users\52384\Desktop\Display_Demo\subject-LFIQA-software\position_save_excel\obj\Debug\position_save_excel.Properties.Resources.resources
+C:\Users\52384\Desktop\Display_Demo\subject-LFIQA-software\position_save_excel\obj\Debug\position_save_excel.csproj.GenerateResource.cache
+C:\Users\52384\Desktop\Display_Demo\subject-LFIQA-software\position_save_excel\obj\Debug\position_save_excel.csproj.CoreCompileInputs.cache
+C:\Users\52384\Desktop\Display_Demo\subject-LFIQA-software\position_save_excel\obj\Debug\position_save_excel.exe
+C:\Users\52384\Desktop\Display_Demo\subject-LFIQA-software\position_save_excel\obj\Debug\position_save_excel.pdb
+C:\Users\52384\Desktop\Display_Demo\subject-LFIQA-software\position_save_excel\obj\Debug\position_save_excel.Form1_2D.resources
