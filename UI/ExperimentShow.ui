@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ScoringWidget</class>
+ <widget class="QStackedWidget" name="ScoringWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>757</width>
+    <height>553</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>StackedWidget</string>
+  </property>
+  <widget class="QWidget" name="page_scoring"/>
+  <widget class="QWidget" name="page_showing"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

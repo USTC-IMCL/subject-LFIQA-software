@@ -1,0 +1,25 @@
+{
+    "LFI_Info":[
+        {
+            "Name":"Bikes",
+            "Origin_Path":"F:/Example/Bikes/Origin",
+            "Distorted_Path":"F:/Example/Bikes/Distorted",
+            "Type":"Dense",
+            "Angular_Format":"XY"
+        },
+        {
+            "Name":"Fountain",
+            "Origin_Path":"F:/Example/Fountain/Origin",
+            "Distorted_Path":"F:/Example/Fountain/Distorted",
+            "Type":"Sparse",
+            "Angular_Format":"HW"
+        }
+
+    ],
+    "Exp_Info":{
+        "Display_Type":"3D",
+        "ThreeD_Type":"",
+        "View_Changing":"Active",
+        "Refocusing":"Active"
+    }
+}
