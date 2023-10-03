@@ -119,7 +119,16 @@ This section explains the operation to evaluate the light field image.
 6. Next page
    
    Use enter key to get next page when you have finished exploring the light field immage (except the pair-wise comparison mode).
-   
+
+## Postprocessing
+Click the Post Processing button to start the post processing. Two file selection dialogs will be open. Here are tow steps:
+
+1. Choose the folder that contains your subject file. Currently it is the folder you put the binary software.
+
+2. Choose your configuration file.
+
+Then the software will extract info from all the subjects results and calculate PLCC for each subject. The results will be stored in outlier_result.csv or outlier_result.xlsx. The format depends on your experiment setting.
+
 ## Known issues & Discussions
 
 Coming soon...
