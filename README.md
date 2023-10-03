@@ -5,9 +5,10 @@ This is IMCL software for subjective light field image quality assessment. It ha
 ## How to Run
 As the project is implemented with Python, you may run it from the scripts. But I recommend to use the compiled binary file that we released.
 
-If you want a passive light field image feature (e.g. passive view changing or passive refocusing), then make sure you have installed the ffmpeg in your system. For windows system you can download the portable **ffmpeg [here](https://github.com/GyanD/codexffmpeg/releases/tag/2023-09-29-git-40aa451154)**.
+If you want a passive light field image feature (i.e. passive view changing or passive refocusing), then make sure you have installed the ffmpeg in your system. For windows system you can download the portable **ffmpeg [here](https://github.com/GyanD/codexffmpeg/releases/tag/2023-09-29-git-40aa451154)**.
 
 1. Run from scripts
+   
    Python 3.9+ is recomended.
    Before running it some python modules should be installed. 
    
@@ -48,7 +49,7 @@ Before Config your own experiment, you need to prepare your own data. The folder
 ```
 The Origin folder contains origin light field views. Each distorted type has 5 levels (it is fixed in this version, see konwn issue section).
 
-In each folder, e.g. the Origin or the distortion_type_2/1, the views are named in x_y.png or h_w.png format. The x/y (w/h) represents col index and row index respectively in the angular domain. The number of the angular index should be continuous but **it does not need to start from 0**.
+In each folder, e.g. the Origin or the distortion_type_2/1, the views are named in x_y.png or h_w.png format. The x/y (w/h) represents col index and row index respectively in the angular domain. The number of the angular index should be continuous but **it does not need to start from 0**. Also, any formats including png, jpg, bmp or ppm are acceptable. But we do not consider the bit depth greater than 8.
 
 **If you want a refocusing feature, please put the lambda file and the depth map in each folder. The lambda file is only for the dense light field image. The module for sparse light field images need to be further implemented.**
 
@@ -92,23 +93,29 @@ If you use a passive feature for your experiment, you may find a .mp4 file in th
 This section explains the operation to evaluate the light field image.
 
 1. Active view changing
+   
    Use a right click (any position is fine) to start the view changing. Then you can change the view by moving mouse. Note that we use a right click to "wake up" the view changing instead of using the hover directly. This avoids subjects to take a border view as the first-glance view and can make sure that each subject starts from the same view (e.g. the center view).
     
 2. Active refocusing
+   
   Use a left clicing (any positin within the view) to select where you want to focus. This will close the active view changing.
       
 3. Passive feature
+   
   Just left clicking the view then the video begins playing.
 
 4. Pair comparison
+   
    Use a left or right arrow to select the better one. Note once you press the key, it records your choice and show the next page.
 
-6. Scoring
+5. Scoring
+   
    Use left or right arrow te select the scring table and the number key to offer you evaluation score.
    
    ![image](https://github.com/USTC-IMCL/subject-LFIQA-software/assets/9655283/c169c84d-11d6-4247-acec-69ebaa872fab)
 
-7. Next page
+6. Next page
+   
    Use enter key to get next page when you have finished exploring the light field immage (except the pair-wise comparison mode).
    
 ## Known issues & Discussions
@@ -117,5 +124,4 @@ Coming soon...
 
 ## Acknowledgement
 
-Any problem or quesition please email me: zsy7788@mail.ustc.edu.cn. 
-Or propose a new issue for this project.
+Any problem or quesition please email me: zsy7788@mail.ustc.edu.cn. Any new issue for this project is welcome.
