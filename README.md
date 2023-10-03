@@ -94,15 +94,17 @@ This section explains the operation to evaluate the light field image.
 
 1. Active view changing
    
+
    Use a right click (any position is fine) to start the view changing. Then you can change the view by moving mouse. Note that we use a right click to "wake up" the view changing instead of using the hover directly. This avoids subjects to take a border view as the first-glance view and can make sure that each subject starts from the same view (e.g. the center view).
     
-2. Active refocusing
+3. Active refocusing
    
+  
   Use a left clicing (any positin within the view) to select where you want to focus. This will close the active view changing.
       
 3. Passive feature
    
-  Just left clicking the view then the video begins playing.
+   Just left clicking the view then the video begins playing.
 
 4. Pair comparison
    
