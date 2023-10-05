@@ -235,7 +235,7 @@ class LogForm(QtWidgets.QWidget,LogForm):
         self.exp_setting=exp_setting
         #exp_setting.has_preprocess=True
         if exp_setting.has_preprocess:
-            return
+            return True
 
         preprocessing_dialog=QtWidgets.QProgressDialog(self)
         preprocessing_dialog.setWindowTitle('Now Preprocessing')
