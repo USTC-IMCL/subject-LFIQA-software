@@ -13,7 +13,7 @@ If you want a passive light field image feature (i.e. passive view changing or p
    Before running it some python modules should be installed. 
    
    ```
-   pip install PySide6 xlsxwriter openpyxl numpy opencv-python
+   pip install PySide6 xlsxwriter xlsxreader openpyxl numpy opencv-python
    ```
    Download and unpack the source code. Enter the folder and run it with
    
@@ -129,9 +129,34 @@ Click the Post Processing button to start the post processing. Two file selectio
 
 Then the software will extract info from all the subjects results and calculate PLCC for each subject. The results will be stored in outlier_result.csv or outlier_result.xlsx. The format depends on your experiment setting.
 
-## Known issues & Discussions
+## Known issues
 
-Coming soon...
+Here we list the known issues that should be solved or improved in the future.
+
+1. Configuration guides. Currently nothing happend if there is anything wrong duiring the configuration. A pop-out window is needed to guide the user if there are problems with the configuration.
+
+2. Configuration with json. The interface is not released this version. Actually you can find a ***Previous*** button when configuring the trainning. Its previous page looks like the following:
+
+   ![image](https://github.com/USTC-IMCL/subject-LFIQA-software/assets/9655283/0b05d772-9314-404a-9396-fbc955ec3566)
+
+   It is hidden currently. (Thus each experiment should be configured manually.)
+   
+
+3. The number of distortion levels is fixed to 5. The distortion levels should be denoted by the experiment designer.
+
+4. Refocusing module only works for **Lytro light field images**. But it can be easily extended. As shown below,
+
+   ![image](https://github.com/USTC-IMCL/subject-LFIQA-software/assets/9655283/0f559028-8c7f-427b-8bd1-5d716940417b)
+
+   First we detect the views paths of the origin light field images and the distorted ones. Then we generate all possible refocusing results for each the light field images if the refocusing feature is required. Then with the calculated results we 'stitch' them into one singel picture. If a passive feature is needed, the ffmpeg is used to concat these pictures as frames into one .mp4 fiel losslessly.
+
+   We can see that this working flow can be extened to any light field images if we have an appropriate refocusing algorithm. Some other ways may also help, e.g. make a plugin interface to let users use their own refocusing script, or just let users specify the refocusing results path manually.
+
+5. Output folders are fixed to the folder where exe file is put. It should be specified by the users.
+
+6. Preprocessing after configuration. If one chooses ***preprocessing*** immediately after clicling the ***Finish** button, he/she needs to select the saved project file first.
+
+7. Post processing file selection. The saved csv or excel files paths should be included in the project file. Then the user just need to select the project file only.
 
 ## Acknowledgement
 
