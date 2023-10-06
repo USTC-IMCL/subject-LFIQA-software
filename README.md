@@ -148,7 +148,7 @@ Here we list the known issues that should be solved or improved in the future.
 
    ![image](https://github.com/USTC-IMCL/subject-LFIQA-software/assets/9655283/0f559028-8c7f-427b-8bd1-5d716940417b)
 
-   First we detect the views paths of the origin light field images and the distorted ones. Then we generate all possible refocusing results for each the light field images if the refocusing feature is required. Then with the calculated results we 'stitch' them into one singel picture. If a passive feature is needed, the ffmpeg is used to concat these pictures as frames into one .mp4 fiel losslessly.
+   First we detect the views paths of the origin light field images and the distorted ones. Then we generate all possible refocusing results for each light field images if the refocusing feature is required. Then with the calculated results we 'stitch' them into one singel picture. If a passive feature is needed, the ffmpeg is used to concat these pictures as frames into one .mp4 fiel losslessly.
 
    We can see that this working flow can be extened to any light field images if we have an appropriate refocusing algorithm. Some other ways may also help, e.g. make a plugin interface to let users use their own refocusing script, or just let users specify the refocusing results path manually.
 
