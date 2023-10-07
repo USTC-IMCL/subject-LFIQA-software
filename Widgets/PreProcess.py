@@ -183,7 +183,8 @@ class ExpPreprocessing:
     def RunDoubleOrSingle(self):
         for lf_name in self.all_lfi_name:
             cur_ori_lfi_info=self.all_lfi_info.GetOriginLFIInfo(lf_name)
-            GenerateRefocusedImg(cur_ori_lfi_info)
+            if LFIFeatures.None_Refocusing not in self.exp_setting.lfi_features:
+                GenerateRefocusedImg(cur_ori_lfi_info)
             for dist_type in self.all_distortion_type:
                 for i in range(1,6):
                     single_lfi_info=self.all_lfi_info.GetLFIInfo(lf_name,dist_type,i)
@@ -228,12 +229,12 @@ class SinglePreProcessing:
                 self.Generate_refocusing()
             if LFIFeatures.Active_Refocusing in self.exp_setting.lfi_features:
                 self.Generate_show_refocus(self.cmp_root)
-            else:
+            if LFIFeatures.Passive_Refocusing in self.exp_setting.lfi_features:
                 self.Generate_passive_refocus_video()
             
             if LFIFeatures.Active_ViewChanging in self.exp_setting.lfi_features:
                 self.Generate_show_views(self.cmp_root)
-            else:
+            if LFIFeatures.Passive_ViewChanging in self.exp_setting.lfi_features:
                 self.Generaet_passive_view_video()
 
     def Generate_refocusing(self):

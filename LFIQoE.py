@@ -9,4 +9,6 @@ if __name__ == '__main__':
     app = QtWidgets.QApplication()
     window = LogForm()
     window.show()
+
+
     sys.exit(app.exec())
