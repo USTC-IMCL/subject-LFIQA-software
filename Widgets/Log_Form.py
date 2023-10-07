@@ -263,6 +263,8 @@ class LogForm(QtWidgets.QWidget,LogForm):
             pickle.dump(test_LFI_info,fid)
             pickle.dump(exp_setting,fid)
         
+        return True
+        
     
     def CreateFinished(self,b_preprocessing_now):
         #print(b_preprocessing_now)
