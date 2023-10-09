@@ -27,6 +27,9 @@ class PictureMask:
             cur_img=images[i]
             if cur_img.shape[0]!=self.img_height or cur_img.shape[1]!=self.img_width:
                 cur_img=cv2.resize(cur_img,(self.img_width,self.img_height))
+            # 10 bit images
+            if cur_img.max()>255:
+                cur_img=cur_img//4
             ret_img[self.img_rect[i][1]:self.img_rect[i][1]+self.img_height,self.img_rect[i][0]:self.img_rect[i][0]+self.img_width,:]=cur_img
         return ret_img
         
@@ -126,7 +129,7 @@ def CalDenseRefocusing(lfi_info:SingleLFIInfo,post_fix):
             cur_view_path=lfi_info.GetViewPath(col,row) 
             temp=cv2.imread(cur_view_path,-1)
             if temp.max()>255:
-                temp=temp/temp.max()*255
+                temp=temp//4#temp.max()*255
             lf_image[row,col]=temp.astype(np.uint8)
     
     with open(lambda_file,'r') as fid:
@@ -142,9 +145,11 @@ def CalDenseRefocusing(lfi_info:SingleLFIInfo,post_fix):
 
     all_depth_values=np.unique(depth_map)
     for depth_val in all_depth_values:
+        output_name=os.path.join(refocusing_folder,f'{depth_val}.{post_fix}')
+        if os.path.exists(output_name):
+            continue
         refocus_img=run_refocus(lf_image,device_meta,meta_data,depth_val,{'InterpMethod':'cubic'})
         output_img=refocus_img[:,:,:3]
-        output_name=os.path.join(refocusing_folder,f'{depth_val}.{post_fix}')
         cv2.imwrite(output_name,output_img)
         
 def CalSparseRefocusing(lfi_info,post_fix):
@@ -174,6 +179,9 @@ class ExpPreprocessing:
         self.all_lfi_name=self.all_lfi_info.GetAllLFNames()
         self.all_distortion_type=self.all_lfi_info.GetAllDistNames(self.all_lfi_name[0])
 
+        self.show_list=None
+        self.mode="training"
+
     def Run(self):
         if self.exp_setting.comparison_type == ComparisonType.PairComparison:
             self.RunPairWise()
@@ -193,14 +201,14 @@ class ExpPreprocessing:
                     cur_processor.Run()
             
     def RunPairWise(self):
-        show_list=GetShowList(self.all_lfi_info,self.exp_setting)
+        show_list=self.show_list
         for info_index,show_info in enumerate(show_list):
             left_lfi_info=self.all_lfi_info.GetLFIInfo(show_info[0],show_info[1],show_info[2])
             right_lfi_info=self.all_lfi_info.GetLFIInfo(show_info[0],show_info[3],show_info[4])
 
             cur_preprocessor=SinglePreProcessing(left_lfi_info,self.exp_setting)
             cur_preprocessor.SetOriginLFIInfo(right_lfi_info)
-            cur_preprocessor.cmp_root=os.path.join(left_lfi_info.view_path,'cmp_%d' % info_index)
+            cur_preprocessor.cmp_root=os.path.join(left_lfi_info.view_path,'%s/cmp_%d' % (self.mode,info_index))
             cur_preprocessor.Run()
 
 class SinglePreProcessing:
@@ -219,6 +227,9 @@ class SinglePreProcessing:
         self.origin_lfi_info=origin_lfi
         
     def Run(self):
+        # handle the right one when using the pair-wise comparison
+        if self.exp_setting.comparison_type == ComparisonType.PairComparison:
+            self.Generate_origin_refucusing()
         if self.exp_setting.has_preprocess:
             return
         if self.lfi_info.type == CompTypes.Origin:
@@ -239,6 +250,9 @@ class SinglePreProcessing:
 
     def Generate_refocusing(self):
         GenerateRefocusedImg(self.lfi_info,self.exp_setting.ViewSaveTypeStr)
+    
+    def Generate_origin_refucusing(self):
+        GenerateRefocusedImg(self.origin_lfi_info,self.exp_setting.ViewSaveTypeStr)
     
     def Generate_show_refocus(self,target_path=None):
         # Note that entering this function means we need an active refocusing

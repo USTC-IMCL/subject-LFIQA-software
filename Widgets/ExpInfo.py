@@ -387,7 +387,7 @@ class ExpSetting:
         self.ViewSaveTypeStr=ViewSaveTypeDict[self.ViewSaveType]
         self.VideoSaveTypeStr=VideoSaveTypeDict[self.VideoSaveType]
     
-def GetShowList(lfi_info:ExpLFIInfo, exp_setting:ExpSetting):
+def GetShowList(lfi_info:ExpLFIInfo, exp_setting:ExpSetting,mode="trainging"):
     '''
     return a list of show list
     '''
@@ -396,6 +396,10 @@ def GetShowList(lfi_info:ExpLFIInfo, exp_setting:ExpSetting):
         pair_wise_config=exp_setting.pair_wise_config
         with open(pair_wise_config,'r') as f:
             pair_wise_dict=json.load(f)
+        if mode == "training":
+            pair_wise_dict=pair_wise_dict['training']
+        else:
+            pair_wise_dict=pair_wise_dict['test']
         for cmp_key in pair_wise_dict.keys():
             cur_info=pair_wise_dict[cmp_key]
             show_list.append([cur_info["lfi_name"],cur_info["left"],int(cur_info["left_level"]),cur_info["right"],int(cur_info["right_level"])])

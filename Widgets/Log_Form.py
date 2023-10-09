@@ -66,12 +66,12 @@ class LogForm(QtWidgets.QWidget,LogForm):
             return
 
         if mode == "training":
-            show_list=GetShowList(self.training_LFI_info,self.exp_setting)
+            show_list=GetShowList(self.training_LFI_info,self.exp_setting,"training")
             score_info=self.training_LFI_info
             show_index=list(range(len(show_list)))
             new_show_list=show_list
         else:
-            show_list=GetShowList(self.test_LFI_info,self.exp_setting)
+            show_list=GetShowList(self.test_LFI_info,self.exp_setting,"test")
             score_info=self.test_LFI_info
             show_index,new_show_list=self.GetRandomShowList(show_list)
         
@@ -233,7 +233,7 @@ class LogForm(QtWidgets.QWidget,LogForm):
         self.training_LFI_info=training_LFI_info
         self.test_LFI_info=test_LFI_info
         self.exp_setting=exp_setting
-        #exp_setting.has_preprocess=True
+        #exp_setting.has_preprocess=False
         if exp_setting.has_preprocess:
             return True
 
@@ -249,10 +249,18 @@ class LogForm(QtWidgets.QWidget,LogForm):
         test_preprocess=PreProcess.ExpPreprocessing(test_LFI_info,exp_setting)
 
         preprocessing_dialog.setLabelText('Now Preprocessing Training Data...')
+        training_show_list=GetShowList(training_LFI_info,exp_setting,"training")
+        training_preprocess.mode="training"
+        training_preprocess.show_list=training_show_list
         training_preprocess.Run()
         preprocessing_dialog.setValue(50)
+
         preprocessing_dialog.setLabelText('Now Preprocessing Test Data...')
+        test_show_list=GetShowList(test_LFI_info,exp_setting,"test")
+        test_preprocess.mode="test"
+        test_preprocess.show_list=test_show_list
         test_preprocess.Run()
+
         preprocessing_dialog.setValue(100)
         preprocessing_dialog.close()
 

@@ -1,27 +1,58 @@
 {
-    "0":
+    "training":
     {
-        "lfi_name": "Bikes",
-        "left": "HEVC",
-        "left_level": 1,
-        "right":"Pleno",
-        "right_level": 2
-    }
-    ,
-    "1":
-    {
-        "lfi_name": "Bikes",
-        "left": "HEVC",
-        "left_level": 5,
-        "right":"Pleno",
-        "right_level": 3
+        "0":
+        {
+            "lfi_name": "Bikes",
+            "left": "HEVC",
+            "left_level": 1,
+            "right":"Pleno",
+            "right_level": 2
+        }
+        ,
+        "1":
+        {
+            "lfi_name": "Bikes",
+            "left": "HEVC",
+            "left_level": 3,
+            "right":"Pleno",
+            "right_level": 3
+        },
+        "2":
+        {
+            "lfi_name": "Bikes",
+            "left": "HEVC",
+            "left_level": 3,
+            "right":"Pleno",
+            "right_level": 2
+        }
     },
-    "2":
+    "test":
     {
-        "lfi_name": "Bikes",
-        "left": "HEVC",
-        "left_level": 3,
-        "right":"Pleno",
-        "right_level": 2
+        "0":
+        {
+            "lfi_name": "b",
+            "left": "HEVC",
+            "left_level": 1,
+            "right":"Pleno",
+            "right_level": 2
+        }
+        ,
+        "1":
+        {
+            "lfi_name": "b",
+            "left": "HEVC",
+            "left_level": 5,
+            "right":"Pleno",
+            "right_level": 3
+        },
+        "2":
+        {
+            "lfi_name": "b",
+            "left": "HEVC",
+            "left_level": 3,
+            "right":"Pleno",
+            "right_level": 2
+        }
     }
 }

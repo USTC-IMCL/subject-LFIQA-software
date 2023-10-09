@@ -275,17 +275,17 @@ class ScoringWidget(QtWidgets.QStackedWidget):
         #self.resize(screen.width(), screen.height())
 
         self.setWindowFlag(Qt.FramelessWindowHint)
-        self.setWindowFlag(Qt.WindowStaysOnTopHint)
+        #self.setWindowFlag(Qt.WindowStaysOnTopHint)
         #self.setAttribute(Qt.WA_TranslucentBackground)
         
         cur_lf_info=self.GetSingleLFIInfo(self.current_lfi_show_index)
 
         self.SetPageShowing(cur_lf_info,init_flag=True)
         self.SetPageShowing(cur_lf_info)
-        if self.show_page_list[0] is not None:
-            self.show_page_list[0].setParent(self)
-        if self.show_page_list[1] is not None:
-            self.show_page_list[1].setParent(self)
+        for show_page in self.show_page_list:
+            if show_page is not None:
+                show_page.setParent(self)
+
 
         ############
         self.page_scoring=ScoringPage(screen.height(),screen.width())
@@ -308,6 +308,7 @@ class ScoringWidget(QtWidgets.QStackedWidget):
         cur_left_dist=self.show_list[show_index][1]
         cur_left_dist_level=self.show_list[show_index][2]
         return self.all_lfi_info.GetLFIInfo(cur_lfi_name,cur_left_dist,cur_left_dist_level)
+    
     
     def RecordScore(self,ret_scores):
         # get score, then set new lfi image
@@ -447,8 +448,11 @@ class ImagePage(QtWidgets.QWidget):
         self.clicking_flag=False
         self.arrow_key_flag=False
         self.better_one=0
+
+        self.setMouseTracking(True)
         
         self.img_label=QtWidgets.QLabel(self)
+        self.img_label.setMouseTracking(True)
         self.comparison_type=exp_setting.comparison_type
         self.clicking_mask=None
         self.SetNewLFI(exp_setting,dist_lfi_info,view_path,refocusing_path)
@@ -517,14 +521,15 @@ class ImagePage(QtWidgets.QWidget):
             self.current_x=self.move_x
             self.current_y=self.move_y
             return super().mousePressEvent(event)
-        if event.button()==Qt.MouseButton.LeftButton and self.clicking_flag:
+        if event.button()==Qt.MouseButton.LeftButton:
             self.hover_open_flag=False
-            if self.clicking_mask is not None and self.refocusing_path is not None:
-                ret=self.clicking_mask.IsInRect(event.x(),event.y())
-                if ret[0]:
-                    depth_value=self.depth_img[ret[1][1],ret[1][0]]
-                    refocus_img_path=os.path.join(self.refocusing_path,f"{depth_value}.{self.post_fix}")
-                    self.SetImage(refocus_img_path)
+            if self.clicking_flag:
+                if self.clicking_mask is not None and self.refocusing_path is not None:
+                    ret=self.clicking_mask.IsInRect(event.x(),event.y())
+                    if ret[0]:
+                        depth_value=self.depth_img[ret[1][1],ret[1][0]]
+                        refocus_img_path=os.path.join(self.refocusing_path,f"{depth_value}.{self.post_fix}")
+                        self.SetImage(refocus_img_path)
         return super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event) -> None:
