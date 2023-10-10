@@ -235,7 +235,7 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         if self.radio_btn_manually.isChecked():
             self.current_page_index+=1
             self.ConfigStackWidget.setCurrentIndex(self.current_page_index)
-        else:
+        if self.radio_btn_json.isChecked():
             json_path=self.page_0_json_path.text()
             ret_info=self.ConfigFromJson(json_path)
             if ret_info[0]:
@@ -294,6 +294,30 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         '''
         config with json here 
         '''
+        with open(config_path,'r') as fid:
+            all_config=json.load(fid)
+        
+        if "Training" not in all_config.keys():
+            return False, "Invalid json! There should be a Training key to config the training!"
+        if "Test" not in all_config.keys():
+            return False, "Invalid json! There should be a Test key to config the training!"
+        if "Exp_Info" not in all_config.keys():
+            return False, "Invalid json! There should be an Exp_Info key to config the experiment!"
+        training_lfi_config=all_config['Training']
+        test_lfi_config=all_config['Test']
+        exp_setting_config=all_config['Exp_Info']
+
+    def GetConfigAllLFIInfo(self,all_config):
+        lfi_num=len(all_config)
+
+        if lfi_num==0:
+            return None
+        
+        all_lfi_names=[]
+        all_lfi_ori_paths=[]
+        all_lfi_dist_paths=[]
+        all_lfi_types=[]
+
         
     def GetAllLFIInfo(self,all_lfi_boxes,angular_format):
         lfi_box_num=len(all_lfi_boxes)

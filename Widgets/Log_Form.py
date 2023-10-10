@@ -245,21 +245,25 @@ class LogForm(QtWidgets.QWidget,LogForm):
         preprocessing_dialog.setWindowModality(QtCore.Qt.WindowModal)
         preprocessing_dialog.show()
 
-        training_preprocess=PreProcess.ExpPreprocessing(training_LFI_info,exp_setting)
-        test_preprocess=PreProcess.ExpPreprocessing(test_LFI_info,exp_setting)
+        if training_LFI_info is not None:
+            training_preprocess=PreProcess.ExpPreprocessing(training_LFI_info,exp_setting)
+        if test_LFI_info is not None:
+            test_preprocess=PreProcess.ExpPreprocessing(test_LFI_info,exp_setting)
 
         preprocessing_dialog.setLabelText('Now Preprocessing Training Data...')
-        training_show_list=GetShowList(training_LFI_info,exp_setting,"training")
-        training_preprocess.mode="training"
-        training_preprocess.show_list=training_show_list
-        training_preprocess.Run()
+        if training_LFI_info is not None:
+            training_show_list=GetShowList(training_LFI_info,exp_setting,"training")
+            training_preprocess.mode="training"
+            training_preprocess.show_list=training_show_list
+            training_preprocess.Run()
         preprocessing_dialog.setValue(50)
 
         preprocessing_dialog.setLabelText('Now Preprocessing Test Data...')
-        test_show_list=GetShowList(test_LFI_info,exp_setting,"test")
-        test_preprocess.mode="test"
-        test_preprocess.show_list=test_show_list
-        test_preprocess.Run()
+        if test_LFI_info is not None:
+            test_show_list=GetShowList(test_LFI_info,exp_setting,"test")
+            test_preprocess.mode="test"
+            test_preprocess.show_list=test_show_list
+            test_preprocess.Run()
 
         preprocessing_dialog.setValue(100)
         preprocessing_dialog.close()
