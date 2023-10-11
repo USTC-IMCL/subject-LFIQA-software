@@ -307,6 +307,74 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         test_lfi_config=all_config['Test']
         exp_setting_config=all_config['Exp_Info']
 
+        training_lfi_info=self.GetConfigAllLFIInfo(training_lfi_config)
+        test_lfi_info=self.GetConfigAllLFIInfo(test_lfi_config)
+
+
+
+    def GetConfigExpSetting(self,exp_config):
+        if self.radio_btn_refocusing_none.isChecked() and self.radio_btn_view_change_none.isChecked():
+            self.ShowMessage("You must select at least one feature!",2)
+            return 
+        project_post_fix='lfqoe'
+        save_file=self.GetSaveFileName()
+        if save_file is None:
+            self.ShowMessage("Invalid path! Please check the path again!",2)
+            return
+        else:
+            if not save_file.endswith(project_post_fix):
+                save_file=save_file+'.'+project_post_fix
+        
+        disp_type=exp_config["Display_Type"]
+        threed_type=exp_config["ThreeD_Type"]
+        view_change_type=exp_config["View_Changing"]
+        refocusing_type=exp_config["Refocusing"]
+        cmp_type=exp_config["Comparison"]
+        save_format_type=exp_config["Save_Format"]
+
+        all_lfi_features=[]
+
+        disp_type=disp_type.lower()
+        if disp_type == '2d':
+            all_lfi_features.append(LFIFeatures.TwoD)
+        if disp_type == '3d':
+            if threed_type.lower == "lr" or threed_type.lower =="leftright":
+                all_lfi_features.append(LFIFeatures.Stereo_horizontal)
+
+        view_change_type=view_change_type.lower()
+        if view_change_type == "active":
+            all_lfi_features.append(LFIFeatures.Active_ViewChanging) 
+        if view_change_type == "passive":
+            all_lfi_features.append(LFIFeatures.Passive_ViewChanging)
+        if view_change_type == "none":
+            all_lfi_features.append(LFIFeatures.None_ViewChanging)
+        
+
+        if refocusing_type.
+        refocusing_type=LFIFeatures(self.button_group_refocusing.checkedId())
+        cmp_type=ComparisonType(self.button_group_cmp_type.checkedId())
+        pair_wise_path=self.pair_line_editor.text()
+        save_format_type=SaveFormat(self.button_group_save_format.checkedId())
+
+        all_lfi_features=[disp_type,view_change_type,refocusing_type]
+        if LFIFeatures.Active_Refocusing in all_lfi_features or LFIFeatures.Passive_Refocusing in all_lfi_features:
+            all_lfi_features.append(LFIFeatures.Refocusing)
+
+        exp_setting=ExpSetting(all_lfi_features,cmp_type,save_format_type)
+        exp_setting.pair_wise_config=pair_wise_path
+
+        with open(save_file,'wb') as f:
+            pickle.dump(self.training_all_lfi_info,f)
+            pickle.dump(self.test_all_lfi_info,f)
+            pickle.dump(exp_setting,f)
+        
+        bPreProcess=self.OptionDialog("Do you want to preprocess the data now?")
+        self.Finished.emit(bPreProcess)
+
+        self.deleteLater()
+
+
+
     def GetConfigAllLFIInfo(self,all_config):
         lfi_num=len(all_config)
 
@@ -317,6 +385,30 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         all_lfi_ori_paths=[]
         all_lfi_dist_paths=[]
         all_lfi_types=[]
+        angular_format=None
+
+        for cur_config in all_config:
+            cur_lfi_name=cur_config["Name"]
+            cur_lfi_origin_path=cur_config["Origin_Path"]
+            cur_lfi_dist_path=cur_config["Distorted_Path"]
+            cur_lfi_type=cur_config["Type"]
+            cur_lfi_format=cur_config["Angular_Format"]
+
+            all_lfi_names.append(cur_lfi_name)
+            all_lfi_ori_paths.append(cur_lfi_origin_path)
+            all_lfi_dist_paths.append(cur_lfi_dist_path)
+
+            if cur_lfi_type.lower() == "dense":
+                all_lfi_types.append(LFITypes.Dense)
+            if cur_lfi_type.lower() == "sparse":
+                all_lfi_types.append(LFITypes.Sparse)
+
+            if cur_lfi_format == "XY":
+                angular_format=AngularFormat.XY
+            else:
+                angular_format=AngularFormat.HW
+
+        return ExpLFIInfo(all_lfi_names,all_lfi_ori_paths,all_lfi_dist_paths,all_lfi_types,angular_format)
 
         
     def GetAllLFIInfo(self,all_lfi_boxes,angular_format):

@@ -19,8 +19,10 @@
     ],
     "Exp_Info":{
         "Display_Type":"3D",
-        "ThreeD_Type":"",
+        "ThreeD_Type":"LeftRight",
         "View_Changing":"Active",
-        "Refocusing":"Active"
+        "Refocusing":"Active",
+        "Comparison":"DoubleStimuli",
+        "Save_Format":"CSV"
     }
 }

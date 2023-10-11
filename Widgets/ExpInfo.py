@@ -63,7 +63,7 @@ VideoSaveTypeDict={
     VideoSaveType.avi:"avi",
     VideoSaveType.mp4:"mp4"
 }
-    
+
 def MakeAJsonTemplate(output_path_file):
     json_dict={}
     json_dict["LFI_Info"]=[
