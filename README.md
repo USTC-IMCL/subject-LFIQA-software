@@ -21,7 +21,7 @@ If you want a passive light field image feature (i.e. passive view changing or p
    python LFIQoE.py
    ```
    
-2. Alternatively, you can download the [binary file](https://github.com/USTC-IMCL/subject-LFIQA-software/releases/download/V1.0/LFIQoE.exe). Put it to anywhere you like and double click it.
+2. Alternatively, you can download the [binary file](https://github.com/USTC-IMCL/subject-LFIQA-software/releases/). Put it to anywhere you like and double click it.
 
 
 ## Data Preparation
