@@ -239,7 +239,7 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
             json_path=self.page_0_json_path.text()
             ret_info=self.ConfigFromJson(json_path)
             if ret_info[0]:
-                self.CancelClose()
+                self.SaveJsonConfig()
             else:
                 dlg=QMessageBox(self)
                 dlg.setWindowTitle("Warning!")
@@ -248,6 +248,26 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
                 dlg.setText(ret_info[1])
                 dlg.exec()
     
+    def SaveJsonConfig(self):
+        project_post_fix='lfqoe'
+        save_file=self.GetSaveFileName()
+        if save_file is None:
+            self.ShowMessage("Invalid path! Please check the path again!",2)
+            return
+        else:
+            if not save_file.endswith(project_post_fix):
+                save_file=save_file+'.'+project_post_fix
+        
+        with open(save_file,'wb') as f:
+            pickle.dump(self.training_all_lfi_info,f)
+            pickle.dump(self.test_all_lfi_info,f)
+            pickle.dump(self.exp_setting,f)
+        
+        bPreProcess=self.OptionDialog("Do you want to preprocess the data now?")
+        self.Finished.emit(bPreProcess)
+
+        self.deleteLater()
+        
     def ShowMessage(self,message_text,message_mode):
         '''
         message_mode: 0: info 1: warning  2: error
@@ -310,21 +330,18 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         training_lfi_info=self.GetConfigAllLFIInfo(training_lfi_config)
         test_lfi_info=self.GetConfigAllLFIInfo(test_lfi_config)
 
+        exp_setting=self.GetConfigExpSetting(exp_setting_config)
 
+        if exp_setting is None:
+            return False, "Invalid json! For refocusing and view-changing features, at least you need to choose one of them!"
+
+        self.training_all_lfi_info=training_lfi_info
+        self.test_all_lfi_boxes=test_lfi_info
+        self.exp_setting=exp_setting
+
+        return True,None
 
     def GetConfigExpSetting(self,exp_config):
-        if self.radio_btn_refocusing_none.isChecked() and self.radio_btn_view_change_none.isChecked():
-            self.ShowMessage("You must select at least one feature!",2)
-            return 
-        project_post_fix='lfqoe'
-        save_file=self.GetSaveFileName()
-        if save_file is None:
-            self.ShowMessage("Invalid path! Please check the path again!",2)
-            return
-        else:
-            if not save_file.endswith(project_post_fix):
-                save_file=save_file+'.'+project_post_fix
-        
         disp_type=exp_config["Display_Type"]
         threed_type=exp_config["ThreeD_Type"]
         view_change_type=exp_config["View_Changing"]
@@ -335,10 +352,11 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         all_lfi_features=[]
 
         disp_type=disp_type.lower()
+        threed_type=threed_type.lower()
         if disp_type == '2d':
             all_lfi_features.append(LFIFeatures.TwoD)
         if disp_type == '3d':
-            if threed_type.lower == "lr" or threed_type.lower =="leftright":
+            if threed_type == "lr" or threed_type =="leftright":
                 all_lfi_features.append(LFIFeatures.Stereo_horizontal)
 
         view_change_type=view_change_type.lower()
@@ -349,31 +367,34 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         if view_change_type == "none":
             all_lfi_features.append(LFIFeatures.None_ViewChanging)
         
+        refocusing_type=refocusing_type.lower()
+        if refocusing_type == "active":
+            all_lfi_features.append(LFIFeatures.Active_Refocusing)
+        if refocusing_type == "passive":
+            all_lfi_features.append(LFIFeatures.Passive_Refocusing)
+        if refocusing_type == "none":
+            all_lfi_features.append(LFIFeatures.None_Refocusing)
+        
+        if LFIFeatures.None_Refocusing in all_lfi_features and LFIFeatures.None_ViewChanging in all_lfi_features:
+            return None
 
-        if refocusing_type.
-        refocusing_type=LFIFeatures(self.button_group_refocusing.checkedId())
-        cmp_type=ComparisonType(self.button_group_cmp_type.checkedId())
-        pair_wise_path=self.pair_line_editor.text()
-        save_format_type=SaveFormat(self.button_group_save_format.checkedId())
+        cmp_type_str=cmp_type.lower()
+        if "double" in cmp_type_str:
+            cmp_type=ComparisonType.DoubleStimuli
+        if "single" in cmp_type_str:
+            cmp_type=ComparisonType.SingleStimuli
+        if "pair" in cmp_type_str:
+            cmp_type=ComparisonType.PairComparison
+            
+        pair_wise_path=exp_config["PairWise_Path"]
 
-        all_lfi_features=[disp_type,view_change_type,refocusing_type]
         if LFIFeatures.Active_Refocusing in all_lfi_features or LFIFeatures.Passive_Refocusing in all_lfi_features:
             all_lfi_features.append(LFIFeatures.Refocusing)
 
         exp_setting=ExpSetting(all_lfi_features,cmp_type,save_format_type)
         exp_setting.pair_wise_config=pair_wise_path
 
-        with open(save_file,'wb') as f:
-            pickle.dump(self.training_all_lfi_info,f)
-            pickle.dump(self.test_all_lfi_info,f)
-            pickle.dump(exp_setting,f)
-        
-        bPreProcess=self.OptionDialog("Do you want to preprocess the data now?")
-        self.Finished.emit(bPreProcess)
-
-        self.deleteLater()
-
-
+        return exp_setting
 
     def GetConfigAllLFIInfo(self,all_config):
         lfi_num=len(all_config)
