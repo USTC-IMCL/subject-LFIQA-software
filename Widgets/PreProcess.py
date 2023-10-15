@@ -451,7 +451,7 @@ class SinglePreProcessing:
             os.remove(output_video)
 
         #cmd=f'{ffmpeg_path} -f concat -safe 0 -i {output_txt} -c:v libx265 -x265-params "lossless=1:qp=0" -r 30 -pix_fmt yuv420p {output_video}'
-        cmd=f'{ffmpeg_path} -f concat -safe 0 -r 30 -i {output_txt} -c:v libx264 -qp 0 -r 30 -pix_fmt yuv420p {output_video}'
+        cmd=f'ffmpeg -f concat -safe 0 -r 30 -i {output_txt} -c:v libx264 -qp 0 -r 30 -pix_fmt yuv420p {output_video}'
         os.system(cmd)
 
 

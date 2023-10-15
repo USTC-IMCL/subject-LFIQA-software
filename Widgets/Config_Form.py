@@ -336,7 +336,7 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
             return False, "Invalid json! For refocusing and view-changing features, at least you need to choose one of them!"
 
         self.training_all_lfi_info=training_lfi_info
-        self.test_all_lfi_boxes=test_lfi_info
+        self.test_all_lfi_info=test_lfi_info
         self.exp_setting=exp_setting
 
         return True,None
