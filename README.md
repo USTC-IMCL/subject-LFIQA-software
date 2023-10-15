@@ -5,7 +5,7 @@ This is IMCL software for subjective light field image quality assessment. It ha
 ## How to Run
 As the project is implemented with Python, you may run it from the scripts. But I recommend to use the compiled binary file that we released.
 
-If you want a passive light field image feature (i.e. passive view changing or passive refocusing), then make sure you have installed the ffmpeg in your system. For windows system you can download the portable **ffmpeg [here](https://github.com/GyanD/codexffmpeg/releases/tag/2023-09-29-git-40aa451154)**.
+If you want a passive light field image feature (i.e. passive view changing or passive refocusing), then make sure you have installed the ffmpeg in your system. For windows system you can download the portable **ffmpeg [here](https://github.com/GyanD/codexffmpeg/releases/tag/2023-09-29-git-40aa451154)**. The ffmpeg path should be added into system environment.
 
 1. Run from scripts
    
