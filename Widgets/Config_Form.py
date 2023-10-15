@@ -1,7 +1,5 @@
 import os
 import sys
-
-import PySide6.QtGui
 sys.path.append('../UI')
 sys.path.append('../Widgets/')
 from PySide6 import QtWidgets, QtCore, QtGui

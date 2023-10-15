@@ -397,9 +397,10 @@ class SinglePreProcessing:
                     dist_view_path_right=self.lfi_info.GetViewPath(col+1,row)
                     origin_view_path_left=self.origin_lfi_info.GetViewPath(col,row)
                     origin_view_path_right=self.origin_lfi_info.GetViewPath(col+1,row)
-                    output_path=os.path.join(self.lfi_info.show_views_path,self.lfi_info.GetViewName(col,row))
-                    if not output_path.endswith(self.exp_setting.ViewSaveTypeStr):
-                        output_path=output_path.split('.')[0]+'.'+self.exp_setting.ViewSaveTypeStr
+                    view_name=self.lfi_info.GetViewName(col,row)
+                    if not view_name.endswith(self.exp_setting.ViewSaveTypeStr):
+                        view_name=view_name.split('.')[0]+'.'+self.exp_setting.ViewSaveTypeStr
+                    output_path=os.path.join(self.lfi_info.show_views_path,view_name)
                     self.StichingPictures([dist_view_path_left,dist_view_path_right,origin_view_path_left,origin_view_path_right],output_path,self.picture_mask)
 
     def Generaet_passive_view_video(self):

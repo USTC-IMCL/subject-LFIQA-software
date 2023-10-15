@@ -275,7 +275,7 @@ class ScoringWidget(QtWidgets.QStackedWidget):
         #self.resize(screen.width(), screen.height())
 
         self.setWindowFlag(Qt.FramelessWindowHint)
-        #self.setWindowFlag(Qt.WindowStaysOnTopHint)
+        self.setWindowFlag(Qt.WindowStaysOnTopHint)
         #self.setAttribute(Qt.WA_TranslucentBackground)
         
         cur_lf_info=self.GetSingleLFIInfo(self.current_lfi_show_index)
