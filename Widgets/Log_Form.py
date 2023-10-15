@@ -328,7 +328,7 @@ class LogForm(QtWidgets.QWidget,LogForm):
             pickle.dump(self.exp_setting,fid)
         self.preprocessing_dialog.deleteLater()
         self.preprocessing_worker.deleteLater()
-        self.preprocessing_thread.deleteLater()
+        #self.preprocessing_thread.deleteLater()
         if self.start_exp:
             self._StartExp()
 
