@@ -275,7 +275,7 @@ class ScoringWidget(QtWidgets.QStackedWidget):
         #self.resize(screen.width(), screen.height())
 
         self.setWindowFlag(Qt.FramelessWindowHint)
-        #self.setWindowFlag(Qt.WindowStaysOnTopHint)
+        self.setWindowFlag(Qt.WindowStaysOnTopHint)
         #self.setAttribute(Qt.WA_TranslucentBackground)
         
         cur_lf_info=self.GetSingleLFIInfo(self.current_lfi_show_index)
@@ -494,8 +494,14 @@ class ImagePage(QtWidgets.QWidget):
         
         post_fix=exp_setting.ViewSaveTypeStr
         self.post_fix=post_fix
-        center_view_path=self.MakeViewPath(center_x,center_y)
-        self.SetImage(center_view_path)
+        if self.view_path is None:
+            all_refocusing_views=os.listdir(self.refocusing_path)
+            first_view=all_refocusing_views[0]
+            first_view=os.path.join(self.refocusing_path,first_view)
+            self.SetImage(first_view)
+        else:
+            center_view_path=self.MakeViewPath(center_x,center_y)
+            self.SetImage(center_view_path)
         
         if self.refocusing_path is not None:
             self.depth_img=cv2.imread(self.depth_path,cv2.IMREAD_GRAYSCALE)
