@@ -420,7 +420,7 @@ class FinishPage(QtWidgets.QWidget):
         self.show_label.setFont(QtGui.QFont("Roman times",20,QtGui.QFont.Bold))
     
     def handle_key_press(self, event) -> None:
-        if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Escape:
+        if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Escape or event.key() == Qt.Key_Return:
             self.key_pressed.emit()
         return super().keyPressEvent(event)
 
@@ -554,7 +554,7 @@ class ImagePage(QtWidgets.QWidget):
 
     def handle_key_press(self, event) -> None:
         if not self.arrow_key_flag:
-            if event.key() == Qt.Key_Enter:
+            if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
                 self.eval_finished.emit()
             return super().keyPressEvent(event)
         if event.key() == Qt.Key_Left:
@@ -636,7 +636,7 @@ class VideoPage(QtWidgets.QWidget):
     
     def handle_key_press(self, event) -> None:
         if not self.arrow_key_flag:
-            if event.key() == Qt.Key_Enter:
+            if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
                 self.finish_video.emit()
             return super().keyPressEvent(event)
         if event.key() == Qt.Key_Left:
@@ -695,7 +695,7 @@ class ScoringPage(QtWidgets.QWidget):
         self.all_table[last_index].SetMyFocused(False)
         self.all_table[self.current_focus_index].SetMyFocused(True)
 
-        if event.key() == Qt.Key_Enter:
+        if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
             all_scores=[]
             for table in self.all_table:
                 all_scores.append(table.GetResult())
