@@ -244,6 +244,10 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
         self.setCurrentIndex(self.current_page_index)
 
     def FinishAll(self):
+        if len(self.all_view_scores)==0:
+            self.all_view_scores=None
+        if len(self.all_refocusing_scores)==0:
+            self.all_refocusing_scores=None
         self.scoring_finished.emit([self.all_view_scores,self.all_refocusing_scores])
         self.deleteLater()
         
@@ -557,12 +561,14 @@ class ImagePage(QtWidgets.QWidget):
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
                 self.eval_finished.emit()
             return super().keyPressEvent(event)
-        if event.key() == Qt.Key_Left:
-            self.better_one=0
-        if event.key() == Qt.Key_Right:
-            self.better_one=1
-        self.pair_finished.emit(self.better_one)
-        return super().keyPressEvent(event)
+        else:
+            if event.key() == Qt.Key_Left:
+                self.better_one=0
+                self.pair_finished.emit(self.better_one)
+            if event.key() == Qt.Key_Right:
+                self.better_one=1
+                self.pair_finished.emit(self.better_one)
+            return super().keyPressEvent(event)
 
     def MakeViewPath(self,angular_x,angular_y):
         view_name=self.lfi_info.GetPureViewName(angular_x,angular_y)
@@ -639,13 +645,14 @@ class VideoPage(QtWidgets.QWidget):
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
                 self.finish_video.emit()
             return super().keyPressEvent(event)
-        if event.key() == Qt.Key_Left:
-            self.better_one=0
-            self.pair_finished.emit(self.better_one)
-        if event.key() == Qt.Key_Right:
-            self.better_one=1
-            self.pair_finished.emit(self.better_one)
-        return super().keyPressEvent(event)
+        else:
+            if event.key() == Qt.Key_Left:
+                self.better_one=0
+                self.pair_finished.emit(self.better_one)
+            if event.key() == Qt.Key_Right:
+                self.better_one=1
+                self.pair_finished.emit(self.better_one)
+            return super().keyPressEvent(event)
 
 class ScoringPage(QtWidgets.QWidget):
     HasScored=QtCore.Signal(list)

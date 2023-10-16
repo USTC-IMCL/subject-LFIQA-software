@@ -128,10 +128,11 @@ class LogForm(QtWidgets.QWidget,LogForm):
             else:
                 save_array=[]
                 for i in range(len(show_index)):
+                    save_array.append([])
                     if all_results[0] is not None:
-                        save_array.append(view_changing_score[i])
+                        save_array[i].append(view_changing_score[i])
                     if all_results[1] is not None:
-                        save_array.append(refocusing_score[i])
+                        save_array[i].append(refocusing_score[i])
 
                 current_col=2
                 if view_changing_score is not None:
@@ -175,10 +176,11 @@ class LogForm(QtWidgets.QWidget,LogForm):
                 else:
                     save_array=[]
                     for i in range(len(show_index)):
+                        save_array.append([])
                         if all_results[0] is not None:
-                            save_array.append(view_changing_score[i])
+                            save_array[i].append(view_changing_score[i])
                         if all_results[1] is not None:
-                            save_array.append(refocusing_score[i])
+                            save_array[i].append(refocusing_score[i])
 
                     current_col=2
                     if view_changing_score is not None:
@@ -229,6 +231,10 @@ class LogForm(QtWidgets.QWidget,LogForm):
         if self.exp_config_file=='':
             return None
         
+        return self._preprocess(self.exp_config_file)
+    
+    def _preprocess(self,exp_config_file):
+        self.exp_config_file=exp_config_file
         training_LFI_info,test_LFI_info,exp_setting=ReadExpConfig(self.exp_config_file)
         self.training_LFI_info=training_LFI_info
         self.test_LFI_info=test_LFI_info
@@ -278,12 +284,12 @@ class LogForm(QtWidgets.QWidget,LogForm):
         return True
         
     
-    def CreateFinished(self,b_preprocessing_now):
+    def CreateFinished(self,b_preprocessing_now,target_config_file):
         #print(b_preprocessing_now)
         self.show()
         self.New_Experiment=None
         if b_preprocessing_now:
-            self.Preprocess()
+            self._preprocess(target_config_file)
     
     def CreateCanceled(self):
         self.show()
