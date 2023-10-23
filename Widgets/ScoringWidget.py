@@ -600,6 +600,7 @@ class VideoPage(QtWidgets.QWidget):
         self.arrow_key_flag=False
         self.better_one=0
         self.video_path=None
+        self.player.playingChanged.connect(self.EndPlaying)
         self.SetNewLFI(exp_setting,dist_lfi_info,video_path)
         
     def SetNewLFI(self,exp_setting:ExpSetting,dist_lfi_info:SingleLFIInfo, video_path):
@@ -639,6 +640,11 @@ class VideoPage(QtWidgets.QWidget):
             self.player.setPosition(0)
             self.player.play()
         return super().mousePressEvent(event)
+
+    def EndPlaying(self,isPlaying):
+        if not isPlaying:
+            self.video_widget.hide()
+            self.img_label.show()
     
     def handle_key_press(self, event) -> None:
         if not self.arrow_key_flag:

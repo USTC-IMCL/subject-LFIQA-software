@@ -339,7 +339,7 @@ class SinglePreProcessing:
         view_post_fix=self.exp_setting.ViewSaveTypeStr
         video_post_fix=self.exp_setting.VideoSaveTypeStr
 
-        output_txt=os.path.join('./refocus.txt')
+        output_txt=os.path.join('refocus.txt')
         with open(output_txt,'w') as fid:
             for index in all_show_index:
                 file_name=os.path.join(show_path,'%d.%s' % (index,view_post_fix))
@@ -434,7 +434,7 @@ class SinglePreProcessing:
         first_view_name=os.path.join(show_path,first_view_name)
         shutil.copyfile(first_view_name,os.path.join(show_path,'thumbnail.%s' % self.exp_setting.ViewSaveTypeStr))
         video_post_fix=self.exp_setting.VideoSaveTypeStr
-        output_txt=os.path.join('./views.txt')
+        output_txt=os.path.join('views.txt')
         with open(output_txt,'w') as fid:
             for row,col in order:
                 view_name=self.lfi_info.GetViewName(col,row)
