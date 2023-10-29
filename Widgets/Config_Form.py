@@ -50,7 +50,7 @@ class LFIGroupBox(QtWidgets.QWidget,Ui_LFIGroupWidget,QtCore.QObject):
 # 3. The experiment information
 class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
     CancelClosed = Signal()
-    Finished = Signal(bool)
+    Finished = Signal(bool,str)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -182,7 +182,7 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
             pickle.dump(exp_setting,f)
         
         bPreProcess=self.OptionDialog("Do you want to preprocess the data now?")
-        self.Finished.emit(bPreProcess)
+        self.Finished.emit(bPreProcess,save_file)
 
         self.deleteLater()
         
@@ -264,7 +264,7 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
             pickle.dump(self.exp_setting,f)
         
         bPreProcess=self.OptionDialog("Do you want to preprocess the data now?")
-        self.Finished.emit(bPreProcess)
+        self.Finished.emit(bPreProcess,save_file)
 
         self.deleteLater()
         
@@ -390,8 +390,14 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
 
         if LFIFeatures.Active_Refocusing in all_lfi_features or LFIFeatures.Passive_Refocusing in all_lfi_features:
             all_lfi_features.append(LFIFeatures.Refocusing)
+        
+        save_format_type=save_format_type.lower()
+        if save_format_type == "csv":
+            save_format=SaveFormat.CSV
+        if save_format_type == "excel":
+            save_format=SaveFormat.Excel
 
-        exp_setting=ExpSetting(all_lfi_features,cmp_type,save_format_type)
+        exp_setting=ExpSetting(all_lfi_features,cmp_type,save_format)
         exp_setting.pair_wise_config=pair_wise_path
 
         return exp_setting

@@ -244,6 +244,10 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
         self.setCurrentIndex(self.current_page_index)
 
     def FinishAll(self):
+        if len(self.all_view_scores)==0:
+            self.all_view_scores=None
+        if len(self.all_refocusing_scores)==0:
+            self.all_refocusing_scores=None
         self.scoring_finished.emit([self.all_view_scores,self.all_refocusing_scores])
         self.deleteLater()
         
@@ -275,7 +279,7 @@ class ScoringWidget(QtWidgets.QStackedWidget):
         #self.resize(screen.width(), screen.height())
 
         self.setWindowFlag(Qt.FramelessWindowHint)
-        #self.setWindowFlag(Qt.WindowStaysOnTopHint)
+        self.setWindowFlag(Qt.WindowStaysOnTopHint)
         #self.setAttribute(Qt.WA_TranslucentBackground)
         
         cur_lf_info=self.GetSingleLFIInfo(self.current_lfi_show_index)
@@ -420,7 +424,7 @@ class FinishPage(QtWidgets.QWidget):
         self.show_label.setFont(QtGui.QFont("Roman times",20,QtGui.QFont.Bold))
     
     def handle_key_press(self, event) -> None:
-        if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Escape:
+        if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Escape or event.key() == Qt.Key_Return:
             self.key_pressed.emit()
         return super().keyPressEvent(event)
 
@@ -494,8 +498,14 @@ class ImagePage(QtWidgets.QWidget):
         
         post_fix=exp_setting.ViewSaveTypeStr
         self.post_fix=post_fix
-        center_view_path=self.MakeViewPath(center_x,center_y)
-        self.SetImage(center_view_path)
+        if self.view_path is None:
+            all_refocusing_views=os.listdir(self.refocusing_path)
+            first_view=all_refocusing_views[0]
+            first_view=os.path.join(self.refocusing_path,first_view)
+            self.SetImage(first_view)
+        else:
+            center_view_path=self.MakeViewPath(center_x,center_y)
+            self.SetImage(center_view_path)
         
         if self.refocusing_path is not None:
             self.depth_img=cv2.imread(self.depth_path,cv2.IMREAD_GRAYSCALE)
@@ -548,15 +558,17 @@ class ImagePage(QtWidgets.QWidget):
 
     def handle_key_press(self, event) -> None:
         if not self.arrow_key_flag:
-            if event.key() == Qt.Key_Enter:
+            if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
                 self.eval_finished.emit()
             return super().keyPressEvent(event)
-        if event.key() == Qt.Key_Left:
-            self.better_one=0
-        if event.key() == Qt.Key_Right:
-            self.better_one=1
-        self.pair_finished.emit(self.better_one)
-        return super().keyPressEvent(event)
+        else:
+            if event.key() == Qt.Key_Left:
+                self.better_one=0
+                self.pair_finished.emit(self.better_one)
+            if event.key() == Qt.Key_Right:
+                self.better_one=1
+                self.pair_finished.emit(self.better_one)
+            return super().keyPressEvent(event)
 
     def MakeViewPath(self,angular_x,angular_y):
         view_name=self.lfi_info.GetPureViewName(angular_x,angular_y)
@@ -588,6 +600,7 @@ class VideoPage(QtWidgets.QWidget):
         self.arrow_key_flag=False
         self.better_one=0
         self.video_path=None
+        self.player.playingChanged.connect(self.EndPlaying)
         self.SetNewLFI(exp_setting,dist_lfi_info,video_path)
         
     def SetNewLFI(self,exp_setting:ExpSetting,dist_lfi_info:SingleLFIInfo, video_path):
@@ -627,19 +640,25 @@ class VideoPage(QtWidgets.QWidget):
             self.player.setPosition(0)
             self.player.play()
         return super().mousePressEvent(event)
+
+    def EndPlaying(self,isPlaying):
+        if not isPlaying:
+            self.video_widget.hide()
+            self.img_label.show()
     
     def handle_key_press(self, event) -> None:
         if not self.arrow_key_flag:
-            if event.key() == Qt.Key_Enter:
+            if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
                 self.finish_video.emit()
             return super().keyPressEvent(event)
-        if event.key() == Qt.Key_Left:
-            self.better_one=0
-            self.pair_finished.emit(self.better_one)
-        if event.key() == Qt.Key_Right:
-            self.better_one=1
-            self.pair_finished.emit(self.better_one)
-        return super().keyPressEvent(event)
+        else:
+            if event.key() == Qt.Key_Left:
+                self.better_one=0
+                self.pair_finished.emit(self.better_one)
+            if event.key() == Qt.Key_Right:
+                self.better_one=1
+                self.pair_finished.emit(self.better_one)
+            return super().keyPressEvent(event)
 
 class ScoringPage(QtWidgets.QWidget):
     HasScored=QtCore.Signal(list)
@@ -689,7 +708,7 @@ class ScoringPage(QtWidgets.QWidget):
         self.all_table[last_index].SetMyFocused(False)
         self.all_table[self.current_focus_index].SetMyFocused(True)
 
-        if event.key() == Qt.Key_Enter:
+        if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
             all_scores=[]
             for table in self.all_table:
                 all_scores.append(table.GetResult())
