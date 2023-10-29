@@ -82,7 +82,7 @@ class LogForm(QtWidgets.QWidget,LogForm):
 
         self.hide()
         score_page.show()
-        score_page.scoring_finished.connect(lambda all_results: self.GetAndSaveResult(all_results,subject_name,show_index,show_list))
+        score_page.scoring_finished.connect(lambda all_results: self.GetAndSaveResult(all_results,subject_name,show_index,new_show_list))
     
     def GetAndSaveResult(self,all_results,subject_name,show_index,show_list):
         self.output_folder='./'
