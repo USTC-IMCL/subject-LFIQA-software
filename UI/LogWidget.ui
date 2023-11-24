@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>LogWidget</class>
+ <widget class="QWidget" name="LogWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>600</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>System Logs</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="UI_res.qrc">
+    <normaloff>:/logo/imcl_logo</normaloff>:/logo/imcl_logo</iconset>
+  </property>
+  <widget class="QTextEdit" name="text_editor">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>600</width>
+     <height>300</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>12</pointsize>
+    </font>
+   </property>
+  </widget>
+ </widget>
+ <resources>
+  <include location="UI_res.qrc"/>
+ </resources>
+ <connections/>
+</ui>
