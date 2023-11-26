@@ -1,6 +1,9 @@
 import LogWindow
 import sys
 from PySide6.QtWidgets import QApplication, QWidget, QPushButton
+import logging
+
+logger=logging.getLogger("LogWindow")
 
 def test(inlog_widget: LogWindow.QLogWidget):
     if inlog_widget.isVisible():
@@ -19,7 +22,6 @@ if __name__ == "__main__":
     little_window=QPushButton("Little Window")
     little_window.show()
 
-    LogWidget = QWidget()
     window=LogWindow.QLogWidget()
     window.show()
 

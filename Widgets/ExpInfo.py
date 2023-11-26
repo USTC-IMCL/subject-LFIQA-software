@@ -4,6 +4,8 @@ from enum import IntEnum
 from PySide6.QtWidgets import QApplication
 import json
 import pickle
+import logging
+logger=logging.getLogger("LogWindow")
 
 class CompTypes(IntEnum):
     Origin=0
@@ -412,6 +414,81 @@ def GetShowList(lfi_info:ExpLFIInfo, exp_setting:ExpSetting,mode="trainging"):
     return show_list
 
 
+class ProjectInfo:
+    '''
+    A whole project managing class
+    '''
+    def __init__(self,project_path=None,software_version='2.0'):
+        self.project_path=project_path
+        self.software_version=software_version
+        if not os.path.exists(project_path) or project_path is None:
+            self.project_name=None
+            self.training_LFI_info=None
+            self.test_LFI_info=None
+            self.exp_setting=None
+            self.version=None
+            self.subject_list=[]
+        else:
+            self.ReadFromFile()
+    
+    def ReadFromFile(self):
+        with open(self.project_path,'rb') as fid:
+            self.project_version=pickle.load(fid)
+            if self.project_version != self.software_version:
+                logger.error("The software version is not matched! The software version is %s, but the project version is %s"%(self.software_version,self.project_version))
+                return False
+            self.project_name=pickle.load(fid)
+            self.training_LFI_info=pickle.load(fid)
+            self.test_LFI_info=pickle.load(fid)
+            self.exp_setting=pickle.load(fid)
+            self.subject_list=pickle.load(fid)
+
+    def SaveToFile(self,save_file): 
+        with open(save_file,'wb') as fid:
+            pickle.dump(self.project_version,fid)
+            pickle.dump(self.project_name,fid)
+            pickle.dump(self.training_LFI_info,fid)
+            pickle.dump(self.test_LFI_info,fid)
+            pickle.dump(self.exp_setting,fid)
+            pickle.dump(self.subject_list)
+    
+    def PrintAll(self):
+        ret_str=''
+        ret_str+=f"Project Name: {self.project_name}\n"
+        ret_str+=f"Project Version: {self.project_version}\n"
+        ret_str+="-----------Training LFI Info-----------\n"
+        ret_str+=self.PrintLFIInfo(self.training_LFI_info)
+        ret_str+="-----------Test LFI Info-----------\n"
+        ret_str+=self.PrintLFIInfo(self.test_LFI_info)
+
+
+    
+    def PrintLFIInfo(self,lfi_info:ExpLFIInfo):
+        ret_str=''
+        ret_str+="All LFI:\n"
+        all_lfi_names=lfi_info.GetAllLFNames()
+        all_dist_names=lfi_info.GetAllDistNames()
+        dist_names_str=['%s ' % x for x in all_dist_names]
+        ret_str+="All Distortion: " + dist_names_str +"\n"
+        ret_str+="All LFI: \n"
+        for idx, lif_name in enumerate(all_lfi_names):
+            origin_path=lfi_info.ori_paths[idx]
+            dist_path=lfi_info.dist_paths[idx]
+            lfi_type=lfi_info.lfi_types[idx]
+            angular_format=lfi_info.angular_formats[idx]
+            ret_str+="Light field image name: %s\n" % lif_name
+            ret_str+="Original path: %s\n" %origin_path
+            ret_str+="Distortion path: %s\n" %dist_path
+            if lfi_type == LFITypes.Sparse:
+                ret_str+="Light field image type: Sparse\n"
+            else:
+                ret_str+="Light field image type: Dense\n"
+            if angular_format == AngularFormat.XY:
+                ret_str+="Angular format: XY\n"
+            else:
+                ret_str+="Angular format: HW\n"
+        return ret_str
+
 def ReadExpConfig(file_path):
     training_LFI_info=None
     test_LFI_info=None
@@ -421,5 +498,3 @@ def ReadExpConfig(file_path):
         test_LFI_info=pickle.load(fid)
         exp_setting=pickle.load(fid)
     return training_LFI_info,test_LFI_info,exp_setting
-
-        

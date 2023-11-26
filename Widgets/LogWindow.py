@@ -37,6 +37,50 @@ class QtLogTextEditorHandler(logging.Handler):
         else:
             self.log_text_editor.append(self.format(record))
 
+class QLogTextEditor(QTextEdit):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setReadOnly(True)
+        self.logger=logging.getLogger(__name__)
+
+        self.widget_handler=QtLogTextEditorHandler()
+        self.widget_handler.SetLogTextEditor(self)
+
+        format_str='%(asctime)s [%(levelname)s]: %(message)s'
+        self.log_format=logging.Formatter(fmt=format_str,datefmt='%Y-%m-%d-%H:%M')
+        self.widget_handler.setFormatter(self.log_format)
+        
+        self.logger.addHandler(self.widget_handler)
+        self.logger.setLevel(logging.DEBUG)
+
+        sys.stdout=StreamToLogger(self.logger,logging.INFO)
+        sys.stderr=StreamToLogger(self.logger,logging.ERROR)
+
+        self.log_dict={
+            'debug':self.logger.debug,
+            'info':self.logger.info,
+            'warning':self.logger.warning,
+            'error':self.logger.error,
+            'critical':self.logger.critical
+        }
+    
+    def RecordMessage(self,message,level='info'):
+        if level in self.log_dict.keys():
+            self.log_dict[level](message)
+        else:
+            self.log_dict['info'](message)
+    
+    def AddFileHandler(self,log_file,file_format=None):
+        file_handler=logging.FileHandler(log_file)
+        if file_format is None:
+            file_handler.setFormatter(self.log_format)
+        else:
+            file_handler.setFormatter(file_format)
+        self.logger.addHandler(file_handler)
+    
+
+
+
 class QLogWidget(QWidget, LogWidget):
     def __init__(self, *args, **kwargs):
         '''
@@ -51,7 +95,7 @@ class QLogWidget(QWidget, LogWidget):
         self.widget_handler=QtLogTextEditorHandler()
         self.widget_handler.SetLogTextEditor(self.text_editor)
         #format_str='%(asctime)s, From '+ __name__+' [%(levelname)s]: %(message)s'
-        format_str='%(asctime)s [%(levelname)s]: %(message)s'
+        format_str='%(asctime)s [%(levelname)s]: %(name)s %(message)s'
         self.log_format=logging.Formatter(fmt=format_str,datefmt='%Y-%m-%d-%H:%M')
         self.widget_handler.setFormatter(self.log_format)
 
