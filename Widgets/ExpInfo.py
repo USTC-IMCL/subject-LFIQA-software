@@ -460,6 +460,27 @@ class ProjectInfo:
         ret_str+=self.PrintLFIInfo(self.training_LFI_info)
         ret_str+="-----------Test LFI Info-----------\n"
         ret_str+=self.PrintLFIInfo(self.test_LFI_info)
+        ret_str+="-----------Experiment Setting-----------\n"
+        if LFIFeatures.TwoD in self.exp_setting.lfi_features:
+            ret_str+="Display type: 2D\n"
+        else:
+            ret_str+="Dispylay type: 3D\n"
+
+        if LFIFeatures.Active_Refocusing in self.exp_setting.lfi_features:
+            ret_str+="Refocusing feature: active\n"
+        if LFIFeatures.Passive_Refocusing in self.exp_setting.lfi_features:
+            ret_str+="Refocusing feature: passive\n"
+        if LFIFeatures.None_Refocusing in self.exp_setting.lfi_features:
+            ret_str+="Refocusing feature: none\n"
+        
+        if LFIFeatures.Active_ViewChanging in self.exp_setting.
+
+        ret_str+=f"Comparison Type: {self.exp_setting.comparison_type}\n"
+        ret_str+=f"Save Format: {self.exp_setting.save_format}\n"
+        ret_str+=f"Post Processing: {self.exp_setting.post_processing}\n"
+        ret_str+=f"Video Save Type: {self.exp_setting.VideoSaveTypeStr}\n"
+        ret_str+=f"View Save Type: {self.exp_setting.ViewSaveTypeStr}\n"
+        ret_str+="-----------Subject List-----------\n"
 
 
     
