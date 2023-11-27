@@ -7,6 +7,7 @@ import shutil
 from time import sleep
 from PySide6.QtCore import QObject,QThread,Signal
 import logging
+from multiprocessing import pool
 logger=logging.getLogger("LogWindow")
 
 gray_color=(128,128,128)
@@ -21,7 +22,10 @@ class PreProcessThread(QObject):
         self.training_LFI_info=training_LFI_info
         self.test_LFI_info=test_LFI_info
         self.exp_setting=exp_setting
+        self.base=0
 
+    def percent_update(self,percent,message):
+        self.sub_task_finished.emit(self.base+percent,message)
     def run(self):
         self.sub_task_finished.emit(0,"Now start training data preprocessing")
         logger.info("Now start training data preprocessing")
@@ -30,20 +34,29 @@ class PreProcessThread(QObject):
             training_preprocess.mode="training"
             training_show_list=GetShowList(self.training_LFI_info,self.exp_setting,mode="training")
             training_preprocess.show_list=training_show_list
-            training_preprocess.Run()
+            for idx in range(len(training_show_list)):
+                message="Training preprocessing stage, lfi name: %s, dist type: %s, level: %d " % (training_show_list[idx][0],training_show_list[idx][1],training_show_list[idx][2])
+                logger.info(message)
+                self.sub_task_finished.emit(int((idx+1)/len(training_show_list)*50),message)
+                training_preprocess.RunSingle(idx)
         else:
-            self.sub_task_finished.emit(50,"The training data is None, skip the stage...")
+            self.sub_task_finished.emit(50,"The training data is None ...")
             sleep(2)
 
+        self.base=50
         self.sub_task_finished.emit(50,"Now start test data preprocessing")
         if self.test_LFI_info is not None:
             test_preprocess=ExpPreprocessing(self.test_LFI_info,self.exp_setting)
             test_preprocess.mode="test"
             test_show_list=GetShowList(self.test_LFI_info,self.exp_setting,mode="test")
             test_preprocess.show_list=test_show_list
-            test_preprocess.Run()
+            for idx in range(len(test_show_list)):
+                message="Test preprocessing stage, lfi name: %s, dist type: %s, level: %d " % (test_show_list[idx][0],test_show_list[idx][1],test_show_list[idx][2])
+                logger.info(message)
+                self.sub_task_finished.emit(int((self.base+idx+1)/len(test_show_list)*50+50),message)
+                test_preprocess.RunSingle(idx)
         else:
-            self.sub_task_finished.emit(100,"The test data is None, skip the stage...")
+            self.sub_task_finished.emit(100,"The test data is None ...")
             sleep(2)
 
         self.sub_task_finished.emit(100,"All has been done!")
@@ -187,13 +200,27 @@ def CalDenseRefocusing(lfi_info:SingleLFIInfo,post_fix):
         depth_map=cv2.resize(depth_map,(lfi_info.img_width,lfi_info.img_height))
 
     all_depth_values=np.unique(depth_map)
+    core_num=os.cpu_count()-1
+    if core_num < 1:
+        core_num=1
+    refocus_pool=pool.Pool(core_num)
     for depth_val in all_depth_values:
         output_name=os.path.join(refocusing_folder,f'{depth_val}.{post_fix}')
         if os.path.exists(output_name):
             continue
+        refocus_pool.apply_async(DenseRunAndWrite,(lf_image,device_meta,meta_data,depth_val,output_name))
+        '''
         refocus_img=run_refocus(lf_image,device_meta,meta_data,depth_val,{'InterpMethod':'cubic'})
         output_img=refocus_img[:,:,:3]
         cv2.imwrite(output_name,output_img)
+        '''
+    refocus_pool.close()
+    refocus_pool.join()
+
+def DenseRunAndWrite(lf_image,device_meta,meta_data,depth_val,output_name):
+    refocus_img=run_refocus(lf_image,device_meta,meta_data,depth_val,{'InterpMethod':'cubic'})
+    output_img=refocus_img[:,:,:3]
+    cv2.imwrite(output_name,output_img)
         
 def CalSparseRefocusing(lfi_info,post_fix):
     pass
@@ -215,9 +242,10 @@ def CheckPath(path):
         os.makedirs(path)
 
 class ExpPreprocessing(QObject):
-    process_percent_changed=Signal(int)
+    process_percent_changed=Signal(int,str)
 
     def __init__(self,all_lfi_info:ExpLFIInfo,exp_setting:ExpSetting) -> None:
+        super().__init__()
         self.exp_setting=exp_setting
         self.all_lfi_info=all_lfi_info
         
@@ -232,7 +260,16 @@ class ExpPreprocessing(QObject):
             self.RunPairWise()
         else:
             self.RunDoubleOrSingle()
-
+    
+    def RunSingle(self,idx):
+        show_list=self.show_list
+        show_info=show_list[idx]
+        left_lfi_info=self.all_lfi_info.GetLFIInfo(show_info[0],show_info[1],show_info[2])
+        right_lfi_info=self.all_lfi_info.GetLFIInfo(show_info[0],show_info[3],show_info[4])
+        cur_processor=SinglePreProcessing(left_lfi_info,self.exp_setting)
+        cur_processor.SetOriginLFIInfo(right_lfi_info)
+        cur_processor.Run()
+    
     def RunDoubleOrSingle(self):
         all_lfi_num=len(self.all_lfi_name)
         for idx,lf_name in enumerate(self.all_lfi_name):
@@ -240,7 +277,7 @@ class ExpPreprocessing(QObject):
             if LFIFeatures.None_Refocusing not in self.exp_setting.lfi_features:
                 GenerateRefocusedImg(cur_ori_lfi_info)
                 logger.info("Generate refocused images for %s" % lf_name)
-            self.process_percent_changed.emit(int((idx+1)/all_lfi_num*50/6*1))
+            self.process_percent_changed.emit(int((idx+1)/all_lfi_num*50/6*1),"Generate refocused images for %s" % lf_name)
             for dist_type in self.all_distortion_type:
                 for i in range(1,6):
                     single_lfi_info=self.all_lfi_info.GetLFIInfo(lf_name,dist_type,i)
@@ -248,13 +285,17 @@ class ExpPreprocessing(QObject):
                     logger.info("Generate refocused images for %s, dist type %s, level %d" %(lf_name,dist_type,i))
                     cur_processor.SetOriginLFIInfo(cur_ori_lfi_info)
                     cur_processor.Run()
-                    self.process_percent_changed.emit(int((idx+1)/all_lfi_num*50/6*(i+1)))
+                    self.process_percent_changed.emit(int((idx+1)/all_lfi_num*50/6*(i+1)),"Generate refocused images for %s, dist type %s, level %d" %(lf_name,dist_type,i))
             
     def RunPairWise(self):
         show_list=self.show_list
+        show_num=len(show_list)
         for info_index,show_info in enumerate(show_list):
             left_lfi_info=self.all_lfi_info.GetLFIInfo(show_info[0],show_info[1],show_info[2])
             right_lfi_info=self.all_lfi_info.GetLFIInfo(show_info[0],show_info[3],show_info[4])
+
+            logger.info("Now preprocessing pair %s and %s" %(left_lfi_info.lfi_name,right_lfi_info.lfi_name))
+            self.process_percent_changed.emit(int(info_index/show_num*50),"Now preprocessing pair %s and %s" %(left_lfi_info.lfi_name,right_lfi_info.lfi_name))
 
             cur_preprocessor=SinglePreProcessing(left_lfi_info,self.exp_setting)
             cur_preprocessor.SetOriginLFIInfo(right_lfi_info)
@@ -278,10 +319,8 @@ class SinglePreProcessing:
         
     def Run(self):
         # handle the right one when using the pair-wise comparison
-        if self.exp_setting.comparison_type == ComparisonType.PairComparison:
+        if LFIFeatures.None_Refocusing not in self.exp_setting.lfi_features:
             self.Generate_origin_refucusing()
-        if self.exp_setting.has_preprocess:
-            return
         if self.lfi_info.type == CompTypes.Origin:
             #self.Generate_refocusing()
             return

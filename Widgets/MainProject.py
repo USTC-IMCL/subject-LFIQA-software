@@ -1,8 +1,8 @@
 import os
 import sys
 sys.path.append('../UI')
-from PySide6.QtWidgets import QWidget, QDockWidget, QMainWindow, QTextBrowser, QApplication, QFileDialog, QMessageBox
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QWidget, QDockWidget, QMainWindow, QTextBrowser, QApplication, QFileDialog, QMessageBox, QProgressDialog
+from PySide6.QtCore import Qt, QThread
 from LogWindow import QLogTextEditor
 import ExpInfo
 from MainProject_ui import Ui_MainWindow
@@ -25,6 +25,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         #self.log_form.hide()
         self.action_new_project.triggered.connect(self.NewProject)
         self.action_load_project.triggered.connect(self.LoadProject)
+        self.action_preprocessing.triggered.connect(self.preprocess)
     
     def SetProject(self,project_name):
         self.cur_project_name=project_name
@@ -61,7 +62,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, self.log_dock)
         self.menuView.addAction(self.log_dock.toggleViewAction())
 
-    def _preprocess(self):
+    def preprocess(self):
         if self.cur_project is None:
             self.ShowMessage("Please select one project first!",1)
             logger.error("Please select one project first!")
@@ -71,51 +72,44 @@ class MainProject(QMainWindow,Ui_MainWindow):
         exp_setting=self.cur_project.exp_setting
 
         if exp_setting.has_preprocess:
+            b_preprocess=QMessageBox.question(self,"Preprocess","The experiment has been preprocessed, do you want to re-preprocess?",QMessageBox.Yes|QMessageBox.No)
+            if b_preprocess==QMessageBox.No:
+                logger.info("The experiment preprocessing is cancelled.")
+                return
 
+        exp_setting.has_preprocess=False
+        logger.info("Now we start preprocessing the experiment.")
 
-        #exp_setting.has_preprocess=False
-        if exp_setting.has_preprocess:
-            return True
+        self.preprocessing_dialog=QProgressDialog(self)
+        self.preprocessing_dialog.setWindowTitle('Now Preprocessing')
+        self.preprocessing_dialog.setValue(0)
+        self.preprocessing_dialog.setLabelText('It takes around 10 minuts, please wait...')
+        self.preprocessing_dialog.setCancelButton(None)
+        #self.preprocessing_dialog.setWindowModality(Qt.WindowModal)
+        self.preprocessing_dialog.show()
 
-        preprocessing_dialog=QtWidgets.QProgressDialog(self)
-        preprocessing_dialog.setWindowTitle('Now Preprocessing')
-        preprocessing_dialog.setValue(0)
-        preprocessing_dialog.setLabelText('It may take 10 minuts, please wait...')
-        preprocessing_dialog.setCancelButton(None)
-        preprocessing_dialog.setWindowModality(QtCore.Qt.WindowModal)
-        preprocessing_dialog.show()
+        self.preprocessing_thread=QThread(self)
+        self.preprocessing_worker=PreProcess.PreProcessThread(training_LFI_info,test_LFI_info,exp_setting)
+        self.preprocessing_worker.moveToThread(self.preprocessing_thread)
+        self.preprocessing_worker.sub_task_finished.connect(lambda i, s: self.SetPreprocessingDialog(self.preprocessing_dialog,i,s))
+        self.preprocessing_worker.total_finished.connect(self.PreprosessingFinishedCallback)
+        self.preprocessing_thread.started.connect(self.preprocessing_worker.run)
 
-        if training_LFI_info is not None:
-            training_preprocess=PreProcess.ExpPreprocessing(training_LFI_info,exp_setting)
-        if test_LFI_info is not None:
-            test_preprocess=PreProcess.ExpPreprocessing(test_LFI_info,exp_setting)
-
-        preprocessing_dialog.setLabelText('Now Preprocessing Training Data...')
-        if training_LFI_info is not None:
-            training_show_list=GetShowList(training_LFI_info,exp_setting,"training")
-            training_preprocess.mode="training"
-            training_preprocess.show_list=training_show_list
-            training_preprocess.Run()
-        preprocessing_dialog.setValue(50)
-
-        preprocessing_dialog.setLabelText('Now Preprocessing Test Data...')
-        if test_LFI_info is not None:
-            test_show_list=GetShowList(test_LFI_info,exp_setting,"test")
-            test_preprocess.mode="test"
-            test_preprocess.show_list=test_show_list
-            test_preprocess.Run()
-
-        preprocessing_dialog.setValue(100)
-        preprocessing_dialog.close()
-
-        exp_setting.has_preprocess=True
-
-        with open(self.exp_config_file,'wb') as fid:
-            pickle.dump(training_LFI_info,fid)
-            pickle.dump(test_LFI_info,fid)
-            pickle.dump(exp_setting,fid)
+        self.preprocessing_thread.start()
         
         return True
+    
+    def SetPreprocessingDialog(self,preprocessing_dialog:QProgressDialog,i:int,show_message:str): 
+        preprocessing_dialog.setLabelText(show_message)
+        preprocessing_dialog.setValue(i)
+    
+    def PreprosessingFinishedCallback(self):
+        self.cur_project.exp_setting.has_preprocess=True
+        self.cur_project.SaveToFile()
+
+        self.preprocessing_dialog.deleteLater()
+        self.preprocessing_worker.deleteLater()
+        #self.preprocessing_thread.deleteLater()
 
     def CreateFinished(self,b_preprocessing_now,target_config_file):
         #print(b_preprocessing_now)

@@ -265,15 +265,12 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
             logger.error("Invalid name! Please check the saving path of the project!")
             self.ShowMessage("Invalid path! Please check the path again!",2)
             return
-        else:
-            save_folder='./'+save_name
-            save_file=save_folder+'.'+project_post_fix
         
-        project_info=ProjectInfo(save_file)
+        project_info=ProjectInfo(save_name)
         project_info.SetParameters(self.training_all_lfi_info,self.test_all_lfi_info,self.exp_setting)
         project_info.SaveToFile()
 
-        self.Finished.emit(False,save_file)
+        self.Finished.emit(False,save_name)
 
         self.deleteLater()
         
