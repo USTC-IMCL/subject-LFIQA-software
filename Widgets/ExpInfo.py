@@ -418,11 +418,22 @@ class ProjectInfo:
     '''
     A whole project managing class
     '''
-    def __init__(self,project_path=None,software_version='2.0'):
-        self.project_path=project_path
+    def __init__(self,project_name=None,root_path='./',software_version='2.0'):
+        self.project_name=project_name
+        self.root_path=root_path
+
+        if self.project_name is None:
+            self.project_path=None
+            self.project_file=None
+        else:
+            self.project_path=os.path.join(root_path,project_name)
+            self.project_file=os.path.join(self.project_path,project_name+'.lfqoe')
+            if not os.path.exists(self.project_path):
+                os.makedirs(self.project_path)
+
         self.software_version=software_version
-        if not os.path.exists(project_path) or project_path is None:
-            self.project_name=None
+        self.project_version=software_version
+        if not os.path.exists(self.project_file) or self.project_path is None:
             self.training_LFI_info=None
             self.test_LFI_info=None
             self.exp_setting=None
@@ -431,26 +442,41 @@ class ProjectInfo:
         else:
             self.ReadFromFile()
     
+    def SetParameters(self,training_lfi_info,test_lfi_info,exp_setting):
+        self.training_LFI_info=training_lfi_info
+        self.test_LFI_info=test_lfi_info
+        self.exp_setting=exp_setting
+
     def ReadFromFile(self):
-        with open(self.project_path,'rb') as fid:
+        with open(self.project_file,'rb') as fid:
             self.project_version=pickle.load(fid)
             if self.project_version != self.software_version:
                 logger.error("The software version is not matched! The software version is %s, but the project version is %s"%(self.software_version,self.project_version))
                 return False
             self.project_name=pickle.load(fid)
+            self.project_path=pickle.load(fid)
             self.training_LFI_info=pickle.load(fid)
             self.test_LFI_info=pickle.load(fid)
             self.exp_setting=pickle.load(fid)
             self.subject_list=pickle.load(fid)
 
-    def SaveToFile(self,save_file): 
+    def SaveToFile(self,save_file=None): 
+        if save_file is None:
+            save_file=self.project_file
+        else:
+            self.project_file=save_file
+            self.project_path=os.path.dirname(self.project_path)
+            if not os.path.exists(self.project_path):
+                os.makedirs(self.project_path)
+
         with open(save_file,'wb') as fid:
             pickle.dump(self.project_version,fid)
             pickle.dump(self.project_name,fid)
+            pickle.dump(self.project_path,fid)
             pickle.dump(self.training_LFI_info,fid)
             pickle.dump(self.test_LFI_info,fid)
             pickle.dump(self.exp_setting,fid)
-            pickle.dump(self.subject_list)
+            pickle.dump(self.subject_list,fid)
     
     def PrintAll(self):
         ret_str=''
@@ -473,30 +499,38 @@ class ProjectInfo:
         if LFIFeatures.None_Refocusing in self.exp_setting.lfi_features:
             ret_str+="Refocusing feature: none\n"
         
-        if LFIFeatures.Active_ViewChanging in self.exp_setting.
+        if LFIFeatures.Active_ViewChanging in self.exp_setting.lfi_features:
+            ret_str+="View changing feature: active\n"
+        if LFIFeatures.Passive_ViewChanging in self.exp_setting.lfi_features:
+            ret_str+="View changing feature: passive\n"
+        if LFIFeatures.None_ViewChanging in self.exp_setting.lfi_features:
+            ret_str+="View changing feature: none\n"
 
-        ret_str+=f"Comparison Type: {self.exp_setting.comparison_type}\n"
-        ret_str+=f"Save Format: {self.exp_setting.save_format}\n"
-        ret_str+=f"Post Processing: {self.exp_setting.post_processing}\n"
-        ret_str+=f"Video Save Type: {self.exp_setting.VideoSaveTypeStr}\n"
-        ret_str+=f"View Save Type: {self.exp_setting.ViewSaveTypeStr}\n"
+        ret_str+=f"Comparison type: {self.exp_setting.comparison_type}\n"
+        ret_str+=f"Save format: {self.exp_setting.save_format}\n"
+        ret_str+=f"Post processing: {self.exp_setting.post_processing}\n"
+        ret_str+=f"Video save type: {self.exp_setting.VideoSaveTypeStr}\n"
+        ret_str+=f"View save type: {self.exp_setting.ViewSaveTypeStr}\n"
+        if self.exp_setting.has_preprocess:
+            ret_str+="Has been preprocess: Yes\n"
+        else:
+            ret_str+="Has been preprocess: No\n"
         ret_str+="-----------Subject List-----------\n"
-
-
+        return ret_str
     
     def PrintLFIInfo(self,lfi_info:ExpLFIInfo):
         ret_str=''
         ret_str+="All LFI:\n"
         all_lfi_names=lfi_info.GetAllLFNames()
-        all_dist_names=lfi_info.GetAllDistNames()
-        dist_names_str=['%s ' % x for x in all_dist_names]
+        all_dist_names=lfi_info.GetAllDistNames(all_lfi_names[0])
+        dist_names_str='['+' '.join(['%s ' % x for x in all_dist_names])+']'
         ret_str+="All Distortion: " + dist_names_str +"\n"
         ret_str+="All LFI: \n"
         for idx, lif_name in enumerate(all_lfi_names):
             origin_path=lfi_info.ori_paths[idx]
             dist_path=lfi_info.dist_paths[idx]
             lfi_type=lfi_info.lfi_types[idx]
-            angular_format=lfi_info.angular_formats[idx]
+            angular_format=lfi_info.angular_format
             ret_str+="Light field image name: %s\n" % lif_name
             ret_str+="Original path: %s\n" %origin_path
             ret_str+="Distortion path: %s\n" %dist_path

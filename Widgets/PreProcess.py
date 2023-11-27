@@ -4,9 +4,52 @@ import cv2
 from ExpInfo import *
 from DenseRefocusFunction import *
 import shutil
+from time import sleep
+from PySide6.QtCore import QObject,QThread,Signal
+import logging
+logger=logging.getLogger("LogWindow")
 
 gray_color=(128,128,128)
 ffmpeg_path='.\\ffmpeg.exe'
+
+class PreProcessThread(QObject):
+    sub_task_finished=Signal(int,str)
+    total_finished=Signal()
+
+    def __init__(self,training_LFI_info:ExpLFIInfo,test_LFI_info:ExpLFIInfo,exp_setting:ExpSetting):
+        super().__init__()
+        self.training_LFI_info=training_LFI_info
+        self.test_LFI_info=test_LFI_info
+        self.exp_setting=exp_setting
+
+    def run(self):
+        self.sub_task_finished.emit(0,"Now start training data preprocessing")
+        logger.info("Now start training data preprocessing")
+        if self.training_LFI_info is not None:
+            training_preprocess=ExpPreprocessing(self.training_LFI_info,self.exp_setting)
+            training_preprocess.mode="training"
+            training_show_list=GetShowList(self.training_LFI_info,self.exp_setting,mode="training")
+            training_preprocess.show_list=training_show_list
+            training_preprocess.Run()
+        else:
+            self.sub_task_finished.emit(50,"The training data is None, skip the stage...")
+            sleep(2)
+
+        self.sub_task_finished.emit(50,"Now start test data preprocessing")
+        if self.test_LFI_info is not None:
+            test_preprocess=ExpPreprocessing(self.test_LFI_info,self.exp_setting)
+            test_preprocess.mode="test"
+            test_show_list=GetShowList(self.test_LFI_info,self.exp_setting,mode="test")
+            test_preprocess.show_list=test_show_list
+            test_preprocess.Run()
+        else:
+            self.sub_task_finished.emit(100,"The test data is None, skip the stage...")
+            sleep(2)
+
+        self.sub_task_finished.emit(100,"All has been done!")
+        sleep(2)
+
+        self.total_finished.emit()
 
 class PictureMask:
     def __init__(self,img_height=0,img_width=0,lfi_features=None,comparison_type=None) -> None:
@@ -171,7 +214,9 @@ def CheckPath(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-class ExpPreprocessing:
+class ExpPreprocessing(QObject):
+    process_percent_changed=Signal(int)
+
     def __init__(self,all_lfi_info:ExpLFIInfo,exp_setting:ExpSetting) -> None:
         self.exp_setting=exp_setting
         self.all_lfi_info=all_lfi_info
@@ -189,16 +234,21 @@ class ExpPreprocessing:
             self.RunDoubleOrSingle()
 
     def RunDoubleOrSingle(self):
-        for lf_name in self.all_lfi_name:
+        all_lfi_num=len(self.all_lfi_name)
+        for idx,lf_name in enumerate(self.all_lfi_name):
             cur_ori_lfi_info=self.all_lfi_info.GetOriginLFIInfo(lf_name)
             if LFIFeatures.None_Refocusing not in self.exp_setting.lfi_features:
                 GenerateRefocusedImg(cur_ori_lfi_info)
+                logger.info("Generate refocused images for %s" % lf_name)
+            self.process_percent_changed.emit(int((idx+1)/all_lfi_num*50/6*1))
             for dist_type in self.all_distortion_type:
                 for i in range(1,6):
                     single_lfi_info=self.all_lfi_info.GetLFIInfo(lf_name,dist_type,i)
                     cur_processor=SinglePreProcessing(single_lfi_info,self.exp_setting)
+                    logger.info("Generate refocused images for %s, dist type %s, level %d" %(lf_name,dist_type,i))
                     cur_processor.SetOriginLFIInfo(cur_ori_lfi_info)
                     cur_processor.Run()
+                    self.process_percent_changed.emit(int((idx+1)/all_lfi_num*50/6*(i+1)))
             
     def RunPairWise(self):
         show_list=self.show_list
