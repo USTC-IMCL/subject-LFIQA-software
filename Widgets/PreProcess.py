@@ -53,7 +53,7 @@ class PreProcessThread(QObject):
             for idx in range(len(test_show_list)):
                 message="Test preprocessing stage, lfi name: %s, dist type: %s, level: %d " % (test_show_list[idx][0],test_show_list[idx][1],test_show_list[idx][2])
                 logger.info(message)
-                self.sub_task_finished.emit(int((self.base+idx+1)/len(test_show_list)*50+50),message)
+                self.sub_task_finished.emit(int((idx+1)/len(test_show_list)*50+50),message)
                 test_preprocess.RunSingle(idx)
         else:
             self.sub_task_finished.emit(100,"The test data is None ...")

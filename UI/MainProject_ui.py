@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'MainProject.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.3
+## Created by: Qt User Interface Compiler version 6.6.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -52,10 +52,10 @@ class Ui_MainWindow(object):
         self.action_preprocessing.setObjectName(u"action_preprocessing")
         icon1 = QIcon(QIcon.fromTheme(u"accessories-dictionary"))
         self.action_preprocessing.setIcon(icon1)
-        self.actionExperiment = QAction(MainWindow)
-        self.actionExperiment.setObjectName(u"actionExperiment")
-        self.actionStart_Testing = QAction(MainWindow)
-        self.actionStart_Testing.setObjectName(u"actionStart_Testing")
+        self.action_start_training = QAction(MainWindow)
+        self.action_start_training.setObjectName(u"action_start_training")
+        self.action_start_test = QAction(MainWindow)
+        self.action_start_test.setObjectName(u"action_start_test")
         self.actionSave_As = QAction(MainWindow)
         self.actionSave_As.setObjectName(u"actionSave_As")
         self.actionJPEG_Pleno = QAction(MainWindow)
@@ -99,8 +99,8 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionSave_As)
         self.menuSetting.addAction(self.action_show_log)
         self.menuRun.addAction(self.action_preprocessing)
-        self.menuRun.addAction(self.actionExperiment)
-        self.menuRun.addAction(self.actionStart_Testing)
+        self.menuRun.addAction(self.action_start_training)
+        self.menuRun.addAction(self.action_start_test)
         self.menuAbout.addAction(self.actionJPEG_Pleno)
         self.menuAbout.addAction(self.actionAuthors)
         self.menuAbout.addAction(self.actionLFIQoE)
@@ -119,8 +119,8 @@ class Ui_MainWindow(object):
         self.actionLog.setText(QCoreApplication.translate("MainWindow", u"Logs", None))
         self.action_log.setText(QCoreApplication.translate("MainWindow", u"Log", None))
         self.action_preprocessing.setText(QCoreApplication.translate("MainWindow", u"Pre Processing", None))
-        self.actionExperiment.setText(QCoreApplication.translate("MainWindow", u"Start Training", None))
-        self.actionStart_Testing.setText(QCoreApplication.translate("MainWindow", u"Start Test", None))
+        self.action_start_training.setText(QCoreApplication.translate("MainWindow", u"Start Training", None))
+        self.action_start_test.setText(QCoreApplication.translate("MainWindow", u"Start Test", None))
         self.actionSave_As.setText(QCoreApplication.translate("MainWindow", u"Save As", None))
         self.actionJPEG_Pleno.setText(QCoreApplication.translate("MainWindow", u"JPEG Pleno", None))
         self.actionAuthors.setText(QCoreApplication.translate("MainWindow", u"Authors", None))

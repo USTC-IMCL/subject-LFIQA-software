@@ -78,8 +78,8 @@ color: rgb(255, 255, 255);</string>
      <string>Run</string>
     </property>
     <addaction name="action_preprocessing"/>
-    <addaction name="actionExperiment"/>
-    <addaction name="actionStart_Testing"/>
+    <addaction name="action_start_training"/>
+    <addaction name="action_start_test"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="title">
@@ -142,12 +142,12 @@ color: rgb(255, 255, 255);</string>
     <string>Pre Processing</string>
    </property>
   </action>
-  <action name="actionExperiment">
+  <action name="action_start_training">
    <property name="text">
     <string>Start Training</string>
    </property>
   </action>
-  <action name="actionStart_Testing">
+  <action name="action_start_test">
    <property name="text">
     <string>Start Test</string>
    </property>

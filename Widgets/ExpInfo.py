@@ -520,8 +520,10 @@ class ProjectInfo:
     
     def PrintLFIInfo(self,lfi_info:ExpLFIInfo):
         ret_str=''
-        ret_str+="All LFI:\n"
         all_lfi_names=lfi_info.GetAllLFNames()
+        all_name_str='['+' '.join(['%s ' % x for x in all_lfi_names])+']'
+        print("All LFIs: " + all_name_str + "\n")
+        print(f"Num of LFIs: {len(all_lfi_names)}\n")
         all_dist_names=lfi_info.GetAllDistNames(all_lfi_names[0])
         dist_names_str='['+' '.join(['%s ' % x for x in all_dist_names])+']'
         ret_str+="All Distortion: " + dist_names_str +"\n"
