@@ -516,14 +516,17 @@ class ProjectInfo:
         else:
             ret_str+="Has been preprocess: No\n"
         ret_str+="-----------Subject List-----------\n"
+        ret_str+="Num of subjects: %d\n" % len(self.subject_list)
+        for idx,subject_name in enumerate(self.subject_list):
+            ret_str+="Subject %d name: %s\n" %(idx+1, subject_name)
         return ret_str
     
     def PrintLFIInfo(self,lfi_info:ExpLFIInfo):
         ret_str=''
         all_lfi_names=lfi_info.GetAllLFNames()
         all_name_str='['+' '.join(['%s ' % x for x in all_lfi_names])+']'
-        print("All LFIs: " + all_name_str + "\n")
-        print(f"Num of LFIs: {len(all_lfi_names)}\n")
+        ret_str+="All LFIs: " + all_name_str + "\n"
+        ret_str+=f"Num of LFIs: {len(all_lfi_names)}\n"
         all_dist_names=lfi_info.GetAllDistNames(all_lfi_names[0])
         dist_names_str='['+' '.join(['%s ' % x for x in all_dist_names])+']'
         ret_str+="All Distortion: " + dist_names_str +"\n"

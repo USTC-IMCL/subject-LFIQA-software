@@ -196,11 +196,14 @@ class MainProject(QMainWindow,Ui_MainWindow):
     def GetAndSaveResult(self,all_results,subject_name,show_index,show_list):
         self.output_folder=self.cur_project.project_path
         logger.info("The evaluation has been finished. Now saving results to %s ..." % self.output_folder)
+        self.cur_project.subject_list.append(subject_name)
         if self.exp_setting.save_format == ExpInfo.SaveFormat.CSV:
             self.SaveCSV(all_results,subject_name,show_index,show_list)
         else:
             self.SaveExcel(all_results,subject_name,show_index,show_list)
         self.show()
+        self.cur_project.SaveToFile()
+        self.ShowProjectSetting()
     
     def SaveExcel(self,all_results,subject_name,show_index,show_list):
         save_file=os.path.join(self.output_folder,subject_name+'.xlsx')
