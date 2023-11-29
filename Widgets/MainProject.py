@@ -21,10 +21,10 @@ class MainProject(QMainWindow,Ui_MainWindow):
         super().__init__()
         self.setupUi(self)
         self.make_dock_widget()
-        self.text_browser=QTextBrowser()
-        self.setCentralWidget(self.text_browser)
+        self.text_browser=None #QTextBrowser()
         self.cur_project_name=None
         self.cur_project=None
+        self.init_screen=True
         #self.log_form=Log_Form.LogForm()
         #self.log_form.hide()
         self.log_path='./Logs'
@@ -43,6 +43,9 @@ class MainProject(QMainWindow,Ui_MainWindow):
     def SetProject(self,project_name):
         self.cur_project_name=project_name
         self.cur_project=ExpInfo.ProjectInfo(project_name)
+        if self.init_screen:
+            self.log_dock.show()
+            self.init_screen=False
         self.ShowProjectSetting()
         
     def LoadProject(self):
@@ -53,9 +56,16 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
         self.cur_project_name=project_name
         self.cur_project=ExpInfo.ProjectInfo(project_name,project_root)
+        if self.init_screen:
+            self.log_dock.show()
+            self.init_screen=False
         self.ShowProjectSetting()
 
     def ShowProjectSetting(self):
+        if self.text_browser is None:
+            self.text_browser=QTextBrowser()
+            self.setCentralWidget(self.text_browser)
+        self.text_browser.show()
         self.text_browser.clear()
         self.text_browser.setText(self.cur_project.PrintAll())
     
@@ -73,6 +83,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.log_text_editor.setStyleSheet("background: gray;\ncolor: rgb(255, 255, 255);")
         self.log_dock.setWidget(self.log_text_editor)
         self.addDockWidget(Qt.RightDockWidgetArea, self.log_dock)
+        self.log_dock.hide()
         self.menuView.addAction(self.log_dock.toggleViewAction())
 
     def preprocess(self):
@@ -314,6 +325,12 @@ class MainProject(QMainWindow,Ui_MainWindow):
         show_index=list(range(len(show_list)))
         shuffle(show_index)
         return show_index,[show_list[i] for i in show_index]
+    
+    def CheckLFIImages(self):
+        '''
+        To check if the images for the experiment are all exist.
+        '''
+        
 
 
     

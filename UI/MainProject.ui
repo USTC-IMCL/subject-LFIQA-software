@@ -38,6 +38,45 @@
     <string notr="true">background: gray;
 color: rgb(255, 255, 255);</string>
    </property>
+   <widget class="QLabel" name="logo_label">
+    <property name="geometry">
+     <rect>
+      <x>320</x>
+      <y>130</y>
+      <width>151</width>
+      <height>151</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="pixmap">
+     <pixmap resource="UI_res.qrc">:/logo/imcl_logo</pixmap>
+    </property>
+    <property name="scaledContents">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLabel" name="text_label">
+    <property name="geometry">
+     <rect>
+      <x>280</x>
+      <y>290</y>
+      <width>241</width>
+      <height>141</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Z003</family>
+      <pointsize>20</pointsize>
+      <italic>true</italic>
+     </font>
+    </property>
+    <property name="text">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;Light Field Image &lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Quality Assessment &lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Software&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -66,7 +105,14 @@ color: rgb(255, 255, 255);</string>
     <property name="title">
      <string>Setting</string>
     </property>
-    <addaction name="action_show_log"/>
+    <widget class="QMenu" name="menuSkip">
+     <property name="title">
+      <string>Skip</string>
+     </property>
+     <addaction name="action_skip_refocusing"/>
+     <addaction name="action_skip_video_generation"/>
+    </widget>
+    <addaction name="menuSkip"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -97,7 +143,7 @@ color: rgb(255, 255, 255);</string>
   </widget>
   <action name="action_save_project">
    <property name="text">
-    <string>Save</string>
+    <string>Save...</string>
    </property>
   </action>
   <action name="action_load_project">
@@ -108,14 +154,6 @@ color: rgb(255, 255, 255);</string>
   <action name="action_new_project">
    <property name="text">
     <string>New Project</string>
-   </property>
-  </action>
-  <action name="action_show_log">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Skip Preprocessing</string>
    </property>
   </action>
   <action name="actionLog">
@@ -170,6 +208,22 @@ color: rgb(255, 255, 255);</string>
   <action name="actionLFIQoE">
    <property name="text">
     <string>LFIQoE</string>
+   </property>
+  </action>
+  <action name="action_skip_refocusing">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Refocusing stage</string>
+   </property>
+  </action>
+  <action name="action_skip_video_generation">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Video Generation</string>
    </property>
   </action>
  </widget>
