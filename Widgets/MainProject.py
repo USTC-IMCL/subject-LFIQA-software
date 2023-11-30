@@ -14,7 +14,14 @@ import PreProcess
 import logging
 from ScoringWidget import ScoringWidget, PairWiseScoringWidget
 import xlsxwriter
+from Log_Form import AboutForm
+from About_JPEG_ui import Ui_About_JPEG_Form
 logger=logging.getLogger("LogWindow")
+
+class AboutJPEGForm(AboutForm,Ui_About_JPEG_Form):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setupUi(self)
 
 class MainProject(QMainWindow,Ui_MainWindow):
     def __init__(self):
@@ -39,6 +46,10 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.action_preprocessing.triggered.connect(self.preprocess)
         self.action_start_training.triggered.connect(lambda: self.StartExperiment('training'))
         self.action_start_test.triggered.connect(lambda: self.StartExperiment("test"))
+        self.action_about_imcl.triggered.connect(lambda: self.AboutIMCL())
+        self.action_about_JPEG.triggered.connect(lambda: self.AboutJPEG())
+        self.about_imcl_form=None
+        self.about_JPEG_form=None
     
     def SetProject(self,project_name):
         self.cur_project_name=project_name
@@ -50,6 +61,9 @@ class MainProject(QMainWindow,Ui_MainWindow):
         
     def LoadProject(self):
         project_file=QFileDialog.getOpenFileName(self,'Open Project File','./','*.lfqoe')[0]
+        if project_file == '':
+            logger.warning("No project file is selected, loading cancelled...")
+            return
         project_name=project_file.split('/')[-1]
         project_name=project_name.split('.')[0]
         project_root=os.path.dirname(os.path.dirname(project_file))
@@ -162,17 +176,23 @@ class MainProject(QMainWindow,Ui_MainWindow):
         pass
 
     def StartExperiment(self,mode='training'):
+        if self.cur_project is None:
+            self.ShowMessage("Please select one project first!",1)
+            logger.warning("Please select one project first!")
+            return
+
         if self.cur_project.exp_setting.has_preprocess==False:
             self.ShowMessage("Please preprocess the experiment first!",1)
             logger.warning("Please preprocess the experiment first!")
             return
+        
         self.training_LFI_info=self.cur_project.training_LFI_info
         self.test_LFI_info=self.cur_project.test_LFI_info
         self.exp_setting=self.cur_project.exp_setting
 
-        if self.cur_project is None:
-            self.ShowMessage("Please select one project first!",1)
-            logger.warning("Please select one project first!")
+        if not self.CheckLFIImages(mode):
+            self.ShowMessage("Something is wrong! Please Check your log carefully.",2)
+            logger.error("Something is Wrong! Please check the logs above and fix it.")
             return
 
         subject_name, ok =QInputDialog.getText(self, 'Subject Record', 'Enter your name:')
@@ -326,14 +346,93 @@ class MainProject(QMainWindow,Ui_MainWindow):
         shuffle(show_index)
         return show_index,[show_list[i] for i in show_index]
     
-    def CheckLFIImages(self):
+    def SaveProject(self):
+        if self.cur_project is not None:
+            self.cur_project.SaveToFile()
+            self.ShowProjectSetting()
+    
+    def AboutIMCL(self):
+        if self.about_imcl_form is None:
+            self.about_imcl_form=AboutForm()
+            self.about_imcl_form.destroyed.connect(lambda: self.ClearAboutIMCL)
+        self.about_imcl_form.show()
+    
+    def ClearAboutIMCL(self):
+        self.about_imcl_form=None
+    
+    def AboutJPEG(self):
+        if self.about_JPEG_form is None:
+            self.about_JPEG_form=AboutJPEGForm()
+            self.about_JPEG_form.destroyed.connect(lambda: self.ClearAboutJPEG)
+        self.about_JPEG_form.show()
+    
+    def ClearAboutJPEG(self):
+        self.about_JPEG_form=None
+
+    def CheckLFIImages(self,mode="training"):
         '''
         To check if the images for the experiment are all exist.
         '''
+        if mode == "training":
+            logger.info("Before starting the training, check all images/videos...")
+            all_lfi_info=self.cur_project.training_LFI_info
+        else:
+            logger.info("Before starting the test, check all images/videos...")
+            all_lfi_info=self.cur_project.test_LFI_info
+        exp_setting=self.cur_project.exp_setting
         
+        '''
+        Check the show images if view feature is active, passive or None
+        The right way is to get the show list first.
+        '''
+        show_list=ExpInfo.GetShowList(all_lfi_info,exp_setting,mode)
+        for show_lfi_array in show_list:
+            lfi_name=show_lfi_array[0]
+            dist_name=show_lfi_array[1]
+            dist_level=show_lfi_array[2]
 
+            cur_lfi_info=all_lfi_info.GetLFIInfo(lfi_name,dist_name,dist_level)
+            show_views_path=cur_lfi_info.show_views_path
+            show_refocus_path=cur_lfi_info.show_refocusing_views_path
+            angular_width=cur_lfi_info.angular_width
+            angular_height=cur_lfi_info.angular_height
 
+            if ExpInfo.LFIFeatures.Active_ViewChanging in exp_setting.lfi_features:
+                for row_index in range(angular_height):
+                    for col_index in range(angular_width):
+                        show_view_name=cur_lfi_info.GetViewName(col_index,row_index)
+                        show_view_name=os.path.join(show_views_path,show_view_name)
+                        if not os.path.exists(show_view_name):
+                            logger.error("Can not find the image %s! Please check yor preprocessing carefully. The experiment will be cancelled. Quit now..." % show_view_name)
+                            return False
+            if ExpInfo.LFIFeatures.Passive_ViewChanging in exp_setting.lfi_features:
+                show_view_video=cur_lfi_info.passive_video
+                if not os.path.exists(show_view_video):
+                    logger.error("Can not find the video %s! Please check yor preprocessing carefully. The experiment will be cancelled. Quit now..." % show_view_video)
+                    return False
+            if ExpInfo.LFIFeatures.Active_Refocusing in exp_setting.lfi_features:
+                all_depth_value=cur_lfi_info.GetAllPossibleDepthVal()
+                for depth_value in all_depth_value:
+                    image_name=os.path.join(show_refocus_path,'%d.png' %depth_value)
+                    if not os.path.exists(image_name):
+                        logger.error("Can not find the image %s! Please check yor preprocessing carefully. The experiment will be cancelled. Quit now..." % image_name)
+                        return False
+            if ExpInfo.LFIFeatures.Passive_Refocusing in exp_setting.lfi_features:
+                show_refocusing_video=cur_lfi_info.passive_refocusing_video
+                if not os.path.exists(show_refocusing_video):
+                    logger.error("Can not find the video %s! Please check yor preprocessing carefully. The experiment will be cancelled. Quit now..." % show_refocusing_video)
+                    return False
+        return True
+
+    def closeEvent(self, closeEvent) -> None: 
+        if self.about_imcl_form is not None:
+            self.about_imcl_form.deleteLater()
+        if self.about_JPEG_form is not None:
+            self.about_JPEG_form.deleteLater()
+        closeEvent.accept()
+        self.deleteLater()
     
+
 if __name__ == "__main__":
     app=QApplication()
     main_window=MainProject()

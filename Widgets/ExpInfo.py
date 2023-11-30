@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QApplication
 import json
 import pickle
 import logging
+from numpy import unique
 logger=logging.getLogger("LogWindow")
 
 class CompTypes(IntEnum):
@@ -216,6 +217,14 @@ class SingleLFIInfo:
             return str(a_w)+"_"+str(a_h)
         else:
             return str(a_h)+"_"+str(a_w)
+    
+    def GetAllPossibleDepthVal(self):
+        depth_map=cv2.imread(self.depth_path,cv2.IMREAD_GRAYSCALE)
+        if depth_map.shape[0]!=self.img_height or depth_map.shape[1]!=self.img_width:
+            depth_map=cv2.resize(depth_map,(self.img_width,self.img_height))
+
+        all_depth_values=unique(depth_map)
+        return all_depth_values
     
     @property
     def IsValid(self):

@@ -99,7 +99,6 @@ color: rgb(255, 255, 255);</string>
     <addaction name="action_new_project"/>
     <addaction name="action_load_project"/>
     <addaction name="action_save_project"/>
-    <addaction name="actionSave_As"/>
    </widget>
    <widget class="QMenu" name="menuSetting">
     <property name="title">
@@ -131,9 +130,8 @@ color: rgb(255, 255, 255);</string>
     <property name="title">
      <string>About</string>
     </property>
-    <addaction name="actionJPEG_Pleno"/>
-    <addaction name="actionAuthors"/>
-    <addaction name="actionLFIQoE"/>
+    <addaction name="action_about_JPEG"/>
+    <addaction name="action_about_imcl"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuSetting"/>
@@ -195,17 +193,12 @@ color: rgb(255, 255, 255);</string>
     <string>Save As</string>
    </property>
   </action>
-  <action name="actionJPEG_Pleno">
+  <action name="action_about_JPEG">
    <property name="text">
     <string>JPEG Pleno</string>
    </property>
   </action>
-  <action name="actionAuthors">
-   <property name="text">
-    <string>Authors</string>
-   </property>
-  </action>
-  <action name="actionLFIQoE">
+  <action name="action_about_imcl">
    <property name="text">
     <string>LFIQoE</string>
    </property>

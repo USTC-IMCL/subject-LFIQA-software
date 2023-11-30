@@ -237,6 +237,7 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         self.deleteLater()
         
     def CancelClose(self):
+        logger.warning("Configuring cancelled...")
         self.CancelClosed.emit()
         self.deleteLater()
         
