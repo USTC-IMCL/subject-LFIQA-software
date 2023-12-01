@@ -16,6 +16,7 @@ from ScoringWidget import ScoringWidget, PairWiseScoringWidget
 import xlsxwriter
 from Log_Form import AboutForm
 from About_JPEG_ui import Ui_About_JPEG_Form
+import PostProcess
 logger=logging.getLogger("LogWindow")
 
 class AboutJPEGForm(AboutForm,Ui_About_JPEG_Form):
@@ -32,6 +33,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.cur_project_name=None
         self.cur_project=None
         self.init_screen=True
+        self.project_root='./Projects'
         #self.log_form=Log_Form.LogForm()
         #self.log_form.hide()
         self.log_path='./Logs'
@@ -40,6 +42,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         today_str=date.today().strftime("%Y-%m-%d")
         self.log_file=os.path.join(self.log_path,today_str+'.log')
         self.file_handler=logging.FileHandler(self.log_file)
+        self.file_handler.setFormatter(self.log_text_editor.log_format)
         logger.addHandler(self.file_handler)
         self.action_new_project.triggered.connect(self.NewProject)
         self.action_load_project.triggered.connect(self.LoadProject)
@@ -48,19 +51,22 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.action_start_test.triggered.connect(lambda: self.StartExperiment("test"))
         self.action_about_imcl.triggered.connect(lambda: self.AboutIMCL())
         self.action_about_JPEG.triggered.connect(lambda: self.AboutJPEG())
+        self.action_close.triggered.connect(lambda: self.CloseProject())
+        self.action_post_processing.triggered.connect(lambda: self.PostProcessing())
         self.about_imcl_form=None
         self.about_JPEG_form=None
+        self.output_folder=None
     
     def SetProject(self,project_name):
         self.cur_project_name=project_name
-        self.cur_project=ExpInfo.ProjectInfo(project_name)
+        self.cur_project=ExpInfo.ProjectInfo(project_name,self.project_root)
         if self.init_screen:
             self.log_dock.show()
             self.init_screen=False
         self.ShowProjectSetting()
         
     def LoadProject(self):
-        project_file=QFileDialog.getOpenFileName(self,'Open Project File','./','*.lfqoe')[0]
+        project_file=QFileDialog.getOpenFileName(self,'Open Project File','./Projects/','*.lfqoe')[0]
         if project_file == '':
             logger.warning("No project file is selected, loading cancelled...")
             return
@@ -74,6 +80,16 @@ class MainProject(QMainWindow,Ui_MainWindow):
             self.log_dock.show()
             self.init_screen=False
         self.ShowProjectSetting()
+    
+    def CloseProject(self):
+        self.cur_project=None
+        self.cur_project_name=None
+        if self.text_browser is not None:
+            self.text_browser.clear()
+            self.text_browser.deleteLater()
+            self.text_browser=None
+        self.init_screen=True
+        self.log_dock.hide()
 
     def ShowProjectSetting(self):
         if self.text_browser is None:
@@ -86,6 +102,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
     def NewProject(self):
         print("Create a new project now.")
         config_form=Config_Form.CreateNewExperiment()
+        config_form.output_folder_root=self.project_root
         config_form.show()
         config_form.CancelClosed.connect(self.CreateCanceled)
         config_form.Finished.connect(self.CreateFinished)
@@ -98,13 +115,20 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.log_dock.setWidget(self.log_text_editor)
         self.addDockWidget(Qt.RightDockWidgetArea, self.log_dock)
         self.log_dock.hide()
-        self.menuView.addAction(self.log_dock.toggleViewAction())
+        self.action_log=self.log_dock.toggleViewAction()
+        self.menuView.addAction(self.action_log)
 
     def preprocess(self):
         if self.cur_project is None:
             self.ShowMessage("Please select one project first!",1)
             logger.error("Please select one project first!")
             return
+        
+        if self.action_skip_all.isChecked():
+            self.ShowMessage("Skip all is checked. All preprocessing is skipped!",1)
+            logger.error("Skip all is checked. All preprocessing is skipped!")
+            return
+
         training_LFI_info=self.cur_project.training_LFI_info
         test_LFI_info=self.cur_project.test_LFI_info
         exp_setting=self.cur_project.exp_setting
@@ -126,8 +150,10 @@ class MainProject(QMainWindow,Ui_MainWindow):
         #self.preprocessing_dialog.setWindowModality(Qt.WindowModal)
         self.preprocessing_dialog.show()
 
+        skip_refocusing=self.action_skip_refocusing.isChecked()
         self.preprocessing_thread=QThread(self)
         self.preprocessing_worker=PreProcess.PreProcessThread(training_LFI_info,test_LFI_info,exp_setting)
+        self.preprocessing_worker.skip_refocusing=skip_refocusing
         self.preprocessing_worker.moveToThread(self.preprocessing_thread)
         self.preprocessing_worker.sub_task_finished.connect(lambda i, s: self.SetPreprocessingDialog(self.preprocessing_dialog,i,s))
         self.preprocessing_worker.total_finished.connect(self.PreprosessingFinishedCallback)
@@ -181,10 +207,14 @@ class MainProject(QMainWindow,Ui_MainWindow):
             logger.warning("Please select one project first!")
             return
 
+        skip_all=self.action_skip_all.isChecked()
         if self.cur_project.exp_setting.has_preprocess==False:
-            self.ShowMessage("Please preprocess the experiment first!",1)
-            logger.warning("Please preprocess the experiment first!")
-            return
+            if not skip_all:
+                self.ShowMessage("Please preprocess the experiment first!",1)
+                logger.warning("Please preprocess the experiment first!")
+                return
+            else:
+                logger.warning("The experiment will begin without preprocessing. But you need to preprocess it yourself manually.")
         
         self.training_LFI_info=self.cur_project.training_LFI_info
         self.test_LFI_info=self.cur_project.test_LFI_info
@@ -195,11 +225,15 @@ class MainProject(QMainWindow,Ui_MainWindow):
             logger.error("Something is Wrong! Please check the logs above and fix it.")
             return
 
-        subject_name, ok =QInputDialog.getText(self, 'Subject Record', 'Enter your name:')
+        if mode == "training":
+            subject_name=''
+            ok=True
+        else:
+            subject_name, ok =QInputDialog.getText(self, 'Subject Record', 'Enter your name:')
         if not ok:
             logger.warning("Experiment cancelled.")
             return
-        if not subject_name:
+        if not subject_name and mode != "training":
             tmp=QErrorMessage(self)
             tmp.setWindowTitle('Error')
             tmp.showMessage('Do not allow empty name, nothing will be recorded.')
@@ -222,10 +256,15 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
         self.hide()
         score_page.show()
-        score_page.scoring_finished.connect(lambda all_results: self.GetAndSaveResult(all_results,subject_name,show_index,new_show_list))
+        if mode == "test":
+            score_page.scoring_finished.connect(lambda all_results: self.GetAndSaveResult(all_results,subject_name,show_index,new_show_list))
+        else:
+            score_page.scoring_finished.connect(lambda all_results: self.show())
     
     def GetAndSaveResult(self,all_results,subject_name,show_index,show_list):
-        self.output_folder=self.cur_project.project_path
+        self.output_folder=self.cur_project.project_path+"/SubjectsResults"
+        if not os.path.exists(self.output_folder):
+            os.makedirs(self.output_folder)
         logger.info("The evaluation has been finished. Now saving results to %s ..." % self.output_folder)
         self.cur_project.subject_list.append(subject_name)
         if self.exp_setting.save_format == ExpInfo.SaveFormat.CSV:
@@ -422,8 +461,25 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 if not os.path.exists(show_refocusing_video):
                     logger.error("Can not find the video %s! Please check yor preprocessing carefully. The experiment will be cancelled. Quit now..." % show_refocusing_video)
                     return False
+        logger.info("Everything is Ok. Start the experiment...")
         return True
 
+    def PostProcessing(self):
+        if self.cur_project is None:
+            self.ShowMessage("Please select one project first!",1)
+            logger.warning("Please select one project first!")
+            return
+        subject_list=self.cur_project.subject_list
+        if len(subject_list)<2:
+            self.ShowMessage("The subjects number should be greater than 2. Not enough subjects.",1)
+            logger.warning("The subjects number should be greater than 2. Not enough subjects.")
+            return
+        if self.output_folder is None:
+            self.output_folder=self.cur_project.project_path+"/SubjectsResults"
+        exp_setting=self.cur_project.exp_setting
+        PostProcess.PostProcess(exp_setting,self.output_folder)
+        
+        
     def closeEvent(self, closeEvent) -> None: 
         if self.about_imcl_form is not None:
             self.about_imcl_form.deleteLater()

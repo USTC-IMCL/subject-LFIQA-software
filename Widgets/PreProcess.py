@@ -23,6 +23,8 @@ class PreProcessThread(QObject):
         self.test_LFI_info=test_LFI_info
         self.exp_setting=exp_setting
         self.base=0
+        self.skip_refocusing=False
+        self.skip_video=False
 
     def percent_update(self,percent,message):
         self.sub_task_finished.emit(self.base+percent,message)
@@ -38,7 +40,7 @@ class PreProcessThread(QObject):
                 message="Training preprocessing stage, lfi name: %s, dist type: %s, level: %d " % (training_show_list[idx][0],training_show_list[idx][1],training_show_list[idx][2])
                 logger.info(message)
                 self.sub_task_finished.emit(int((idx+1)/len(training_show_list)*50),message)
-                training_preprocess.RunSingle(idx)
+                training_preprocess.RunSingle(idx,self.skip_refocusing,self.skip_video)
         else:
             self.sub_task_finished.emit(50,"The training data is None ...")
             sleep(2)
@@ -54,7 +56,7 @@ class PreProcessThread(QObject):
                 message="Test preprocessing stage, lfi name: %s, dist type: %s, level: %d " % (test_show_list[idx][0],test_show_list[idx][1],test_show_list[idx][2])
                 logger.info(message)
                 self.sub_task_finished.emit(int((idx+1)/len(test_show_list)*50+50),message)
-                test_preprocess.RunSingle(idx)
+                test_preprocess.RunSingle(idx,self.skip_refocusing,self.skip_video)
         else:
             self.sub_task_finished.emit(100,"The test data is None ...")
             sleep(2)
@@ -261,7 +263,7 @@ class ExpPreprocessing(QObject):
         else:
             self.RunDoubleOrSingle()
     
-    def RunSingle(self,idx):
+    def RunSingle(self,idx,skip_refocusing=False,skip_passive_video=False):
         show_list=self.show_list
         show_info=show_list[idx]
         left_lfi_info=self.all_lfi_info.GetLFIInfo(show_info[0],show_info[1],show_info[2])
@@ -317,16 +319,18 @@ class SinglePreProcessing:
     def SetOriginLFIInfo(self,origin_lfi:SingleLFIInfo):
         self.origin_lfi_info=origin_lfi
         
-    def Run(self):
+    def Run(self,skip_refocusing=False,skip_passive_video=False):
         # handle the right one when using the pair-wise comparison
         if LFIFeatures.None_Refocusing not in self.exp_setting.lfi_features:
-            self.Generate_origin_refucusing()
+            if not skip_refocusing:
+                self.Generate_origin_refucusing()
         if self.lfi_info.type == CompTypes.Origin:
             #self.Generate_refocusing()
             return
         else:
-            if LFIFeatures.Refocusing in self.exp_setting.lfi_features:
-                self.Generate_refocusing()
+            if LFIFeatures.None_Refocusing not in self.exp_setting.lfi_features:
+                if not skip_refocusing:
+                    self.Generate_refocusing()
             if LFIFeatures.Active_Refocusing in self.exp_setting.lfi_features:
                 self.Generate_show_refocus(self.cmp_root)
             if LFIFeatures.Passive_Refocusing in self.exp_setting.lfi_features:
@@ -350,11 +354,11 @@ class SinglePreProcessing:
             self.lfi_info.show_refocusing_views_path=self.lfi_info.refocusing_views_path
             return
 
-        # 2 view, but single stimuli and 3D display
         if target_path is None:
             target_path=self.lfi_info.refocusing_views_path
         self.lfi_info.show_refocusing_views_path=os.path.join(target_path,'show_refocusing')
         CheckPath(self.lfi_info.show_refocusing_views_path)
+
         all_refocus_views=os.listdir(self.lfi_info.refocusing_views_path)
         rem_names=[]
         for refocus_img in all_refocus_views:
@@ -363,6 +367,7 @@ class SinglePreProcessing:
         for rem_name in rem_names:
             all_refocus_views.remove(rem_name)
         
+        # 2 view, but single stimuli and 3D display
         if LFIFeatures.Stereo_horizontal in self.exp_setting.lfi_features and self.exp_setting.comparison_type == ComparisonType.SingleStimuli:
             for dist_refocus_img in all_refocus_views:
                 dist_refocus_img_path=os.path.join(self.lfi_info.refocusing_views_path,dist_refocus_img)

@@ -61,6 +61,8 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         self.current_page_index=0
         self.ConfigStackWidget.setCurrentIndex(self.current_page_index)
 
+        self.output_folder_root=None
+
         # page 0
         self.page_0_btn_cancel.clicked.connect(self.CancelClose)
         self.page_0_btn_next.clicked.connect(self.Page0Next)
@@ -179,7 +181,10 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         exp_setting.pair_wise_config=pair_wise_path
         self.exp_setting=exp_setting
 
-        project_info=ProjectInfo(save_name)
+        if self.output_folder_root is not None:
+            project_info=ProjectInfo(save_name,self.output_folder_root)
+        else:
+            project_info=ProjectInfo(save_name)
         project_info.SetParameters(self.training_all_lfi_info,self.test_all_lfi_info,exp_setting)
         project_info.SaveToFile()
         
@@ -266,8 +271,11 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
             logger.error("Invalid name! Please check the saving path of the project!")
             self.ShowMessage("Invalid path! Please check the path again!",2)
             return
-        
-        project_info=ProjectInfo(save_name)
+
+        if self.output_folder_root is not None:
+            project_info=ProjectInfo(save_name,self.output_folder_root) 
+        else:
+            project_info=ProjectInfo(save_name)
         project_info.SetParameters(self.training_all_lfi_info,self.test_all_lfi_info,self.exp_setting)
         project_info.SaveToFile()
 

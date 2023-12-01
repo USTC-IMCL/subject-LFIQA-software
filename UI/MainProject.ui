@@ -94,24 +94,17 @@ color: rgb(255, 255, 255);</string>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>Project File</string>
+     <string>Project</string>
     </property>
     <addaction name="action_new_project"/>
     <addaction name="action_load_project"/>
     <addaction name="action_save_project"/>
+    <addaction name="action_close"/>
    </widget>
    <widget class="QMenu" name="menuSetting">
     <property name="title">
      <string>Setting</string>
     </property>
-    <widget class="QMenu" name="menuSkip">
-     <property name="title">
-      <string>Skip</string>
-     </property>
-     <addaction name="action_skip_refocusing"/>
-     <addaction name="action_skip_video_generation"/>
-    </widget>
-    <addaction name="menuSkip"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -125,6 +118,7 @@ color: rgb(255, 255, 255);</string>
     <addaction name="action_preprocessing"/>
     <addaction name="action_start_training"/>
     <addaction name="action_start_test"/>
+    <addaction name="action_post_processing"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="title">
@@ -141,7 +135,7 @@ color: rgb(255, 255, 255);</string>
   </widget>
   <action name="action_save_project">
    <property name="text">
-    <string>Save...</string>
+    <string>Save</string>
    </property>
   </action>
   <action name="action_load_project">
@@ -151,7 +145,7 @@ color: rgb(255, 255, 255);</string>
   </action>
   <action name="action_new_project">
    <property name="text">
-    <string>New Project</string>
+    <string>New...</string>
    </property>
   </action>
   <action name="actionLog">
@@ -217,6 +211,29 @@ color: rgb(255, 255, 255);</string>
    </property>
    <property name="text">
     <string>Video Generation</string>
+   </property>
+  </action>
+  <action name="action_skip_all">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>All (Only for Debug)</string>
+   </property>
+  </action>
+  <action name="action_close">
+   <property name="text">
+    <string>Close...</string>
+   </property>
+  </action>
+  <action name="actionMigrate">
+   <property name="text">
+    <string>Migrate</string>
+   </property>
+  </action>
+  <action name="action_post_processing">
+   <property name="text">
+    <string>Post Processing</string>
    </property>
   </action>
  </widget>
