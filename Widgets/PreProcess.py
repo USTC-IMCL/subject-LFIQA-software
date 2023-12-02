@@ -8,6 +8,9 @@ from time import sleep
 from PySide6.QtCore import QObject,QThread,Signal
 import logging
 from multiprocessing import pool
+import subprocess
+from LogWindow import StreamToLogger
+import sys
 logger=logging.getLogger("LogWindow")
 
 gray_color=(128,128,128)
@@ -442,12 +445,21 @@ class SinglePreProcessing:
 
         output_video=os.path.join(self.lfi_info.show_refocusing_views_path,f"refocus.{video_post_fix}")
         self.lfi_info.passive_refocusing_video=output_video
-        if os.path.exists(output_video):
-            os.remove(output_video)
+
+        #if os.path.exists(output_video):
+        #    os.remove(output_video)
 
         #cmd=f'{ffmpeg_path} -f concat -safe 0 -r 30 -i {output_txt} -c:v libx26 -x265-params "lossless=1:qp=0" -r 30 -pix_fmt yuv420p {output_video}'
-        cmd=f'ffmpeg -f concat -safe 0 -r 30 -i {output_txt} -c:v libx264 -qp 0 -r 30 -pix_fmt yuv420p {output_video}'
-        os.system(cmd)
+        cmd=f'ffmpeg -f concat -safe 0 -r 30 -i {output_txt} -c:v libx264 -qp 0 -r 30 -pix_fmt yuv420p -y {output_video}'
+        #logger.info(cmd)
+        proc=subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
+        out_info,out_error=proc.communicate()
+        if len(out_info) > 0:
+            pass
+            #logger.info(out_info)
+        if len(out_error)>0:
+            pass
+            #logger.error(out_error)
     
     def Generate_show_views(self,target_path=None):
         if LFIFeatures.TwoD in self.exp_setting.lfi_features and self.exp_setting.comparison_type == ComparisonType.SingleStimuli:
@@ -541,12 +553,19 @@ class SinglePreProcessing:
         output_video=os.path.join(show_path,f"views.{video_post_fix}")
         self.lfi_info.passive_video=output_video
 
-        if os.path.exists(output_video):
-            os.remove(output_video)
+        #if os.path.exists(output_video):
+        #    os.remove(output_video)
 
         #cmd=f'{ffmpeg_path} -f concat -safe 0 -i {output_txt} -c:v libx265 -x265-params "lossless=1:qp=0" -r 30 -pix_fmt yuv420p {output_video}'
-        cmd=f'ffmpeg -f concat -safe 0 -r 30 -i {output_txt} -c:v libx264 -qp 0 -r 30 -pix_fmt yuv420p {output_video}'
-        os.system(cmd)
+        cmd=f'ffmpeg -f concat -safe 0 -r 30 -i {output_txt} -c:v libx264 -qp 0 -r 30 -pix_fmt yuv420p -y {output_video}'
+        proc=subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
+        out_info,out_error=proc.communicate()
+        if len(out_info) > 0:
+            pass
+            #logger.info(out_info)
+        if len(out_error)>0:
+            pass
+            #logger.error(out_error)
 
 
 if __name__ == "__main__":

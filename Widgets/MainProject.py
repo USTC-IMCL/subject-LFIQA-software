@@ -19,7 +19,7 @@ from About_JPEG_ui import Ui_About_JPEG_Form
 import PostProcess
 logger=logging.getLogger("LogWindow")
 
-class AboutJPEGForm(AboutForm,Ui_About_JPEG_Form):
+class AboutJPEGForm(QWidget,Ui_About_JPEG_Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setupUi(self)
@@ -88,6 +88,8 @@ class MainProject(QMainWindow,Ui_MainWindow):
             self.text_browser.clear()
             self.text_browser.deleteLater()
             self.text_browser=None
+        self.text_label.show()
+        self.logo_label.show()
         self.init_screen=True
         self.log_dock.hide()
 
@@ -172,7 +174,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.cur_project.SaveToFile()
 
         self.preprocessing_dialog.deleteLater()
-        self.preprocessing_worker.deleteLater()
+        #self.preprocessing_worker.deleteLater()
         self.ShowProjectSetting()
         #self.preprocessing_thread.deleteLater()
 
@@ -439,8 +441,8 @@ class MainProject(QMainWindow,Ui_MainWindow):
             if ExpInfo.LFIFeatures.Active_ViewChanging in exp_setting.lfi_features:
                 for row_index in range(angular_height):
                     for col_index in range(angular_width):
-                        show_view_name=cur_lfi_info.GetViewName(col_index,row_index)
-                        show_view_name=os.path.join(show_views_path,show_view_name)
+                        show_view_name=cur_lfi_info.GetPureViewName(col_index,row_index)
+                        show_view_name=os.path.join(show_views_path,"%s.%s" %(show_view_name,exp_setting.ViewSaveTypeStr))
                         if not os.path.exists(show_view_name):
                             logger.error("Can not find the image %s! Please check yor preprocessing carefully. The experiment will be cancelled. Quit now..." % show_view_name)
                             return False
