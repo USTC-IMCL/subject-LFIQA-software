@@ -1,12 +1,12 @@
 import sys
 sys.path.append('./Widgets')
 sys.path.append('./UI')
-from Log_Form import *
-from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6 import QtWidgets
+import MainProject
 
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication()
-    window = LogForm()
+    window = MainProject.MainProject()
     window.show()
     sys.exit(app.exec())

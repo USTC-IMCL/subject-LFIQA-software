@@ -4,6 +4,8 @@ import xlsxreader
 from openpyxl import load_workbook
 import xlsxwriter
 import numpy as np
+import logging
+logger=logging.getLogger("LogWindow")
 
 def PostProcess(exp_setting:ExpSetting,output_folder):
     if exp_setting.save_format == SaveFormat.CSV:
@@ -16,7 +18,7 @@ def PostProcess(exp_setting:ExpSetting,output_folder):
     all_files = [x for x in all_files if x.endswith(post_fix)]
     
     if len(all_files) == 0:
-        print("No files found in the output folder")
+        logger.error("No files found!")
         return
     
     all_subjects_scores={}

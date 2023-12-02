@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="logo">
+    <file>res/jpegpleno-logo.png</file>
     <file alias="imcl_logo">res/LOGO_imcl_transparent.png</file>
   </qresource>
 </RCC>

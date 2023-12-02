@@ -1,0 +1,162 @@
+# -*- coding: utf-8 -*-
+
+################################################################################
+## Form generated from reading UI file 'MainProject.ui'
+##
+## Created by: Qt User Interface Compiler version 6.5.3
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
+
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
+    QCursor, QFont, QFontDatabase, QGradient,
+    QIcon, QImage, QKeySequence, QLinearGradient,
+    QPainter, QPalette, QPixmap, QRadialGradient,
+    QTransform)
+from PySide6.QtWidgets import (QApplication, QLabel, QMainWindow, QMenu,
+    QMenuBar, QSizePolicy, QWidget)
+import UI_res_rc
+
+class Ui_MainWindow(object):
+    def setupUi(self, MainWindow):
+        if not MainWindow.objectName():
+            MainWindow.setObjectName(u"MainWindow")
+        MainWindow.resize(800, 600)
+        font = QFont()
+        font.setPointSize(14)
+        MainWindow.setFont(font)
+        icon = QIcon()
+        icon.addFile(u":/logo/imcl_logo", QSize(), QIcon.Normal, QIcon.Off)
+        MainWindow.setWindowIcon(icon)
+        MainWindow.setWindowOpacity(0.900000000000000)
+        MainWindow.setStyleSheet(u"")
+        self.action_save_project = QAction(MainWindow)
+        self.action_save_project.setObjectName(u"action_save_project")
+        self.action_load_project = QAction(MainWindow)
+        self.action_load_project.setObjectName(u"action_load_project")
+        self.action_new_project = QAction(MainWindow)
+        self.action_new_project.setObjectName(u"action_new_project")
+        self.actionLog = QAction(MainWindow)
+        self.actionLog.setObjectName(u"actionLog")
+        self.actionLog.setCheckable(True)
+        self.action_log = QAction(MainWindow)
+        self.action_log.setObjectName(u"action_log")
+        self.action_log.setCheckable(True)
+        self.action_preprocessing = QAction(MainWindow)
+        self.action_preprocessing.setObjectName(u"action_preprocessing")
+        icon1 = QIcon(QIcon.fromTheme(u"accessories-dictionary"))
+        self.action_preprocessing.setIcon(icon1)
+        self.action_start_training = QAction(MainWindow)
+        self.action_start_training.setObjectName(u"action_start_training")
+        self.action_start_test = QAction(MainWindow)
+        self.action_start_test.setObjectName(u"action_start_test")
+        self.actionSave_As = QAction(MainWindow)
+        self.actionSave_As.setObjectName(u"actionSave_As")
+        self.action_about_JPEG = QAction(MainWindow)
+        self.action_about_JPEG.setObjectName(u"action_about_JPEG")
+        self.action_about_imcl = QAction(MainWindow)
+        self.action_about_imcl.setObjectName(u"action_about_imcl")
+        self.action_skip_refocusing = QAction(MainWindow)
+        self.action_skip_refocusing.setObjectName(u"action_skip_refocusing")
+        self.action_skip_refocusing.setCheckable(True)
+        self.action_skip_video_generation = QAction(MainWindow)
+        self.action_skip_video_generation.setObjectName(u"action_skip_video_generation")
+        self.action_skip_video_generation.setCheckable(True)
+        self.action_skip_all = QAction(MainWindow)
+        self.action_skip_all.setObjectName(u"action_skip_all")
+        self.action_skip_all.setCheckable(True)
+        self.action_close = QAction(MainWindow)
+        self.action_close.setObjectName(u"action_close")
+        self.actionMigrate = QAction(MainWindow)
+        self.actionMigrate.setObjectName(u"actionMigrate")
+        self.action_post_processing = QAction(MainWindow)
+        self.action_post_processing.setObjectName(u"action_post_processing")
+        self.centralwidget = QWidget(MainWindow)
+        self.centralwidget.setObjectName(u"centralwidget")
+        self.centralwidget.setFont(font)
+        self.centralwidget.setStyleSheet(u"background: gray;\n"
+"color: rgb(255, 255, 255);")
+        self.logo_label = QLabel(self.centralwidget)
+        self.logo_label.setObjectName(u"logo_label")
+        self.logo_label.setGeometry(QRect(320, 130, 151, 151))
+        self.logo_label.setPixmap(QPixmap(u":/logo/imcl_logo"))
+        self.logo_label.setScaledContents(True)
+        self.text_label = QLabel(self.centralwidget)
+        self.text_label.setObjectName(u"text_label")
+        self.text_label.setGeometry(QRect(280, 290, 241, 141))
+        font1 = QFont()
+        font1.setFamilies([u"Z003"])
+        font1.setPointSize(20)
+        font1.setItalic(True)
+        self.text_label.setFont(font1)
+        MainWindow.setCentralWidget(self.centralwidget)
+        self.menubar = QMenuBar(MainWindow)
+        self.menubar.setObjectName(u"menubar")
+        self.menubar.setGeometry(QRect(0, 0, 800, 23))
+        font2 = QFont()
+        font2.setPointSize(10)
+        self.menubar.setFont(font2)
+        self.menuFile = QMenu(self.menubar)
+        self.menuFile.setObjectName(u"menuFile")
+        self.menuSetting = QMenu(self.menubar)
+        self.menuSetting.setObjectName(u"menuSetting")
+        self.menuView = QMenu(self.menubar)
+        self.menuView.setObjectName(u"menuView")
+        self.menuRun = QMenu(self.menubar)
+        self.menuRun.setObjectName(u"menuRun")
+        self.menuAbout = QMenu(self.menubar)
+        self.menuAbout.setObjectName(u"menuAbout")
+        MainWindow.setMenuBar(self.menubar)
+
+        self.menubar.addAction(self.menuFile.menuAction())
+        self.menubar.addAction(self.menuSetting.menuAction())
+        self.menubar.addAction(self.menuView.menuAction())
+        self.menubar.addAction(self.menuRun.menuAction())
+        self.menubar.addAction(self.menuAbout.menuAction())
+        self.menuFile.addAction(self.action_new_project)
+        self.menuFile.addAction(self.action_load_project)
+        self.menuFile.addAction(self.action_save_project)
+        self.menuFile.addAction(self.action_close)
+        self.menuRun.addAction(self.action_preprocessing)
+        self.menuRun.addAction(self.action_start_training)
+        self.menuRun.addAction(self.action_start_test)
+        self.menuRun.addAction(self.action_post_processing)
+        self.menuAbout.addAction(self.action_about_JPEG)
+        self.menuAbout.addAction(self.action_about_imcl)
+
+        self.retranslateUi(MainWindow)
+
+        QMetaObject.connectSlotsByName(MainWindow)
+    # setupUi
+
+    def retranslateUi(self, MainWindow):
+        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Light Field Quality of Experience", None))
+        self.action_save_project.setText(QCoreApplication.translate("MainWindow", u"Save", None))
+        self.action_load_project.setText(QCoreApplication.translate("MainWindow", u"Load...", None))
+        self.action_new_project.setText(QCoreApplication.translate("MainWindow", u"New...", None))
+        self.actionLog.setText(QCoreApplication.translate("MainWindow", u"Logs", None))
+        self.action_log.setText(QCoreApplication.translate("MainWindow", u"Log", None))
+        self.action_preprocessing.setText(QCoreApplication.translate("MainWindow", u"Pre Processing", None))
+        self.action_start_training.setText(QCoreApplication.translate("MainWindow", u"Start Training", None))
+        self.action_start_test.setText(QCoreApplication.translate("MainWindow", u"Start Test", None))
+        self.actionSave_As.setText(QCoreApplication.translate("MainWindow", u"Save As", None))
+        self.action_about_JPEG.setText(QCoreApplication.translate("MainWindow", u"JPEG Pleno", None))
+        self.action_about_imcl.setText(QCoreApplication.translate("MainWindow", u"LFIQoE", None))
+        self.action_skip_refocusing.setText(QCoreApplication.translate("MainWindow", u"Refocusing stage", None))
+        self.action_skip_video_generation.setText(QCoreApplication.translate("MainWindow", u"Video Generation", None))
+        self.action_skip_all.setText(QCoreApplication.translate("MainWindow", u"All (Only for Debug)", None))
+        self.action_close.setText(QCoreApplication.translate("MainWindow", u"Close...", None))
+        self.actionMigrate.setText(QCoreApplication.translate("MainWindow", u"Migrate", None))
+        self.action_post_processing.setText(QCoreApplication.translate("MainWindow", u"Post Processing", None))
+        self.logo_label.setText("")
+        self.text_label.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\">Light Field Image </p><p align=\"center\">Quality Assessment </p><p align=\"center\">Software</p></body></html>", None))
+        self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"Project", None))
+        self.menuSetting.setTitle(QCoreApplication.translate("MainWindow", u"Setting", None))
+        self.menuView.setTitle(QCoreApplication.translate("MainWindow", u"View", None))
+        self.menuRun.setTitle(QCoreApplication.translate("MainWindow", u"Run", None))
+        self.menuAbout.setTitle(QCoreApplication.translate("MainWindow", u"About", None))
+    # retranslateUi
+

@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="font">
+   <font>
+    <pointsize>14</pointsize>
+   </font>
+  </property>
+  <property name="windowTitle">
+   <string>Light Field Quality of Experience</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="UI_res.qrc">
+    <normaloff>:/logo/imcl_logo</normaloff>:/logo/imcl_logo</iconset>
+  </property>
+  <property name="windowOpacity">
+   <double>0.900000000000000</double>
+  </property>
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <property name="font">
+    <font>
+     <pointsize>14</pointsize>
+    </font>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">background: gray;
+color: rgb(255, 255, 255);</string>
+   </property>
+   <widget class="QLabel" name="logo_label">
+    <property name="geometry">
+     <rect>
+      <x>320</x>
+      <y>130</y>
+      <width>151</width>
+      <height>151</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="pixmap">
+     <pixmap resource="UI_res.qrc">:/logo/imcl_logo</pixmap>
+    </property>
+    <property name="scaledContents">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLabel" name="text_label">
+    <property name="geometry">
+     <rect>
+      <x>280</x>
+      <y>290</y>
+      <width>241</width>
+      <height>141</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Z003</family>
+      <pointsize>20</pointsize>
+      <italic>true</italic>
+     </font>
+    </property>
+    <property name="text">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;Light Field Image &lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Quality Assessment &lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Software&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>10</pointsize>
+    </font>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>Project</string>
+    </property>
+    <addaction name="action_new_project"/>
+    <addaction name="action_load_project"/>
+    <addaction name="action_save_project"/>
+    <addaction name="action_close"/>
+   </widget>
+   <widget class="QMenu" name="menuSetting">
+    <property name="title">
+     <string>Setting</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuRun">
+    <property name="title">
+     <string>Run</string>
+    </property>
+    <addaction name="action_preprocessing"/>
+    <addaction name="action_start_training"/>
+    <addaction name="action_start_test"/>
+    <addaction name="action_post_processing"/>
+   </widget>
+   <widget class="QMenu" name="menuAbout">
+    <property name="title">
+     <string>About</string>
+    </property>
+    <addaction name="action_about_JPEG"/>
+    <addaction name="action_about_imcl"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuSetting"/>
+   <addaction name="menuView"/>
+   <addaction name="menuRun"/>
+   <addaction name="menuAbout"/>
+  </widget>
+  <action name="action_save_project">
+   <property name="text">
+    <string>Save</string>
+   </property>
+  </action>
+  <action name="action_load_project">
+   <property name="text">
+    <string>Load...</string>
+   </property>
+  </action>
+  <action name="action_new_project">
+   <property name="text">
+    <string>New...</string>
+   </property>
+  </action>
+  <action name="actionLog">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Logs</string>
+   </property>
+  </action>
+  <action name="action_log">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Log</string>
+   </property>
+  </action>
+  <action name="action_preprocessing">
+   <property name="icon">
+    <iconset theme="accessories-dictionary"/>
+   </property>
+   <property name="text">
+    <string>Pre Processing</string>
+   </property>
+  </action>
+  <action name="action_start_training">
+   <property name="text">
+    <string>Start Training</string>
+   </property>
+  </action>
+  <action name="action_start_test">
+   <property name="text">
+    <string>Start Test</string>
+   </property>
+  </action>
+  <action name="actionSave_As">
+   <property name="text">
+    <string>Save As</string>
+   </property>
+  </action>
+  <action name="action_about_JPEG">
+   <property name="text">
+    <string>JPEG Pleno</string>
+   </property>
+  </action>
+  <action name="action_about_imcl">
+   <property name="text">
+    <string>LFIQoE</string>
+   </property>
+  </action>
+  <action name="action_skip_refocusing">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Refocusing stage</string>
+   </property>
+  </action>
+  <action name="action_skip_video_generation">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Video Generation</string>
+   </property>
+  </action>
+  <action name="action_skip_all">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>All (Only for Debug)</string>
+   </property>
+  </action>
+  <action name="action_close">
+   <property name="text">
+    <string>Close...</string>
+   </property>
+  </action>
+  <action name="actionMigrate">
+   <property name="text">
+    <string>Migrate</string>
+   </property>
+  </action>
+  <action name="action_post_processing">
+   <property name="text">
+    <string>Post Processing</string>
+   </property>
+  </action>
+ </widget>
+ <resources>
+  <include location="UI_res.qrc"/>
+ </resources>
+ <connections/>
+</ui>

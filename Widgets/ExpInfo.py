@@ -4,6 +4,9 @@ from enum import IntEnum
 from PySide6.QtWidgets import QApplication
 import json
 import pickle
+import logging
+from numpy import unique
+logger=logging.getLogger("LogWindow")
 
 class CompTypes(IntEnum):
     Origin=0
@@ -215,6 +218,14 @@ class SingleLFIInfo:
         else:
             return str(a_h)+"_"+str(a_w)
     
+    def GetAllPossibleDepthVal(self):
+        depth_map=cv2.imread(self.depth_path,cv2.IMREAD_GRAYSCALE)
+        if depth_map.shape[0]!=self.img_height or depth_map.shape[1]!=self.img_width:
+            depth_map=cv2.resize(depth_map,(self.img_width,self.img_height))
+
+        all_depth_values=unique(depth_map)
+        return all_depth_values
+    
     @property
     def IsValid(self):
         return self.is_valid
@@ -412,6 +423,141 @@ def GetShowList(lfi_info:ExpLFIInfo, exp_setting:ExpSetting,mode="trainging"):
     return show_list
 
 
+class ProjectInfo:
+    '''
+    A whole project managing class
+    '''
+    def __init__(self,project_name=None,root_path='./',software_version='2.0'):
+        self.project_name=project_name
+        self.root_path=root_path
+
+        if self.project_name is None:
+            self.project_path=None
+            self.project_file=None
+        else:
+            self.project_path=os.path.join(root_path,project_name)
+            self.project_file=os.path.join(self.project_path,project_name+'.lfqoe')
+            if not os.path.exists(self.project_path):
+                os.makedirs(self.project_path)
+
+        self.software_version=software_version
+        self.project_version=software_version
+        if not os.path.exists(self.project_file) or self.project_path is None:
+            self.training_LFI_info=None
+            self.test_LFI_info=None
+            self.exp_setting=None
+            self.version=None
+            self.subject_list=[]
+        else:
+            self.ReadFromFile()
+    
+    def SetParameters(self,training_lfi_info,test_lfi_info,exp_setting):
+        self.training_LFI_info=training_lfi_info
+        self.test_LFI_info=test_lfi_info
+        self.exp_setting=exp_setting
+
+    def ReadFromFile(self):
+        with open(self.project_file,'rb') as fid:
+            self.project_version=pickle.load(fid)
+            if self.project_version != self.software_version:
+                logger.error("The software version is not matched! The software version is %s, but the project version is %s"%(self.software_version,self.project_version))
+                return False
+            self.project_name=pickle.load(fid)
+            self.project_path=pickle.load(fid)
+            self.training_LFI_info=pickle.load(fid)
+            self.test_LFI_info=pickle.load(fid)
+            self.exp_setting=pickle.load(fid)
+            self.subject_list=pickle.load(fid)
+
+    def SaveToFile(self,save_file=None): 
+        if save_file is None:
+            save_file=self.project_file
+        else:
+            self.project_file=save_file
+            self.project_path=os.path.dirname(self.project_path)
+            if not os.path.exists(self.project_path):
+                os.makedirs(self.project_path)
+
+        with open(save_file,'wb') as fid:
+            pickle.dump(self.project_version,fid)
+            pickle.dump(self.project_name,fid)
+            pickle.dump(self.project_path,fid)
+            pickle.dump(self.training_LFI_info,fid)
+            pickle.dump(self.test_LFI_info,fid)
+            pickle.dump(self.exp_setting,fid)
+            pickle.dump(self.subject_list,fid)
+    
+    def PrintAll(self):
+        ret_str=''
+        ret_str+=f"Project Name: {self.project_name}\n"
+        ret_str+=f"Project Version: {self.project_version}\n"
+        ret_str+="-----------Training LFI Info-----------\n"
+        ret_str+=self.PrintLFIInfo(self.training_LFI_info)
+        ret_str+="-----------Test LFI Info-----------\n"
+        ret_str+=self.PrintLFIInfo(self.test_LFI_info)
+        ret_str+="-----------Experiment Setting-----------\n"
+        if LFIFeatures.TwoD in self.exp_setting.lfi_features:
+            ret_str+="Display type: 2D\n"
+        else:
+            ret_str+="Dispylay type: 3D\n"
+
+        if LFIFeatures.Active_Refocusing in self.exp_setting.lfi_features:
+            ret_str+="Refocusing feature: active\n"
+        if LFIFeatures.Passive_Refocusing in self.exp_setting.lfi_features:
+            ret_str+="Refocusing feature: passive\n"
+        if LFIFeatures.None_Refocusing in self.exp_setting.lfi_features:
+            ret_str+="Refocusing feature: none\n"
+        
+        if LFIFeatures.Active_ViewChanging in self.exp_setting.lfi_features:
+            ret_str+="View changing feature: active\n"
+        if LFIFeatures.Passive_ViewChanging in self.exp_setting.lfi_features:
+            ret_str+="View changing feature: passive\n"
+        if LFIFeatures.None_ViewChanging in self.exp_setting.lfi_features:
+            ret_str+="View changing feature: none\n"
+
+        ret_str+=f"Comparison type: {self.exp_setting.comparison_type}\n"
+        ret_str+=f"Save format: {self.exp_setting.save_format}\n"
+        ret_str+=f"Post processing: {self.exp_setting.post_processing}\n"
+        ret_str+=f"Video save type: {self.exp_setting.VideoSaveTypeStr}\n"
+        ret_str+=f"View save type: {self.exp_setting.ViewSaveTypeStr}\n"
+        if self.exp_setting.has_preprocess:
+            ret_str+="Has been preprocess: Yes\n"
+        else:
+            ret_str+="Has been preprocess: No\n"
+        ret_str+="-----------Subject List-----------\n"
+        ret_str+="Num of subjects: %d\n" % len(self.subject_list)
+        for idx,subject_name in enumerate(self.subject_list):
+            ret_str+="Subject %d name: %s\n" %(idx+1, subject_name)
+        return ret_str
+    
+    def PrintLFIInfo(self,lfi_info:ExpLFIInfo):
+        ret_str=''
+        all_lfi_names=lfi_info.GetAllLFNames()
+        all_name_str='['+' '.join(['%s ' % x for x in all_lfi_names])+']'
+        ret_str+="All LFIs: " + all_name_str + "\n"
+        ret_str+=f"Num of LFIs: {len(all_lfi_names)}\n"
+        all_dist_names=lfi_info.GetAllDistNames(all_lfi_names[0])
+        dist_names_str='['+' '.join(['%s ' % x for x in all_dist_names])+']'
+        ret_str+="All Distortion: " + dist_names_str +"\n"
+        ret_str+="All LFI: \n"
+        for idx, lif_name in enumerate(all_lfi_names):
+            origin_path=lfi_info.ori_paths[idx]
+            dist_path=lfi_info.dist_paths[idx]
+            lfi_type=lfi_info.lfi_types[idx]
+            angular_format=lfi_info.angular_format
+            ret_str+="Light field image name: %s\n" % lif_name
+            ret_str+="Original path: %s\n" %origin_path
+            ret_str+="Distortion path: %s\n" %dist_path
+            if lfi_type == LFITypes.Sparse:
+                ret_str+="Light field image type: Sparse\n"
+            else:
+                ret_str+="Light field image type: Dense\n"
+            if angular_format == AngularFormat.XY:
+                ret_str+="Angular format: XY\n"
+            else:
+                ret_str+="Angular format: HW\n"
+        return ret_str
+
 def ReadExpConfig(file_path):
     training_LFI_info=None
     test_LFI_info=None
@@ -421,5 +567,3 @@ def ReadExpConfig(file_path):
         test_LFI_info=pickle.load(fid)
         exp_setting=pickle.load(fid)
     return training_LFI_info,test_LFI_info,exp_setting
-
-        

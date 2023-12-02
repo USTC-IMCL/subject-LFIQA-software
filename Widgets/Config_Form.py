@@ -7,12 +7,14 @@ sys.path.append('../Widgets/')
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtCore import QRect
-from PySide6.QtWidgets import QWidget,QMessageBox
+from PySide6.QtWidgets import QWidget,QMessageBox, QInputDialog
 from NewExperiment_ui import Ui_NewExperimentForm as NewExperimentForm
 from LFIGroupBox_ui import Ui_LFIGroupWidget
 from ExpInfo import *
 import pickle
 import PreProcess
+import logging
+logger=logging.getLogger("LogWindow")
 
 
 class LFIGroupBox(QtWidgets.QWidget,Ui_LFIGroupWidget,QtCore.QObject):
@@ -58,6 +60,8 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
 
         self.current_page_index=0
         self.ConfigStackWidget.setCurrentIndex(self.current_page_index)
+
+        self.output_folder_root=None
 
         # page 0
         self.page_0_btn_cancel.clicked.connect(self.CancelClose)
@@ -152,15 +156,15 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
     def FinishConfig(self):
         if self.radio_btn_refocusing_none.isChecked() and self.radio_btn_view_change_none.isChecked():
             self.ShowMessage("You must select at least one feature!",2)
+            logger.error("In config experiment settings, you must select at least one feature!")
             return 
         project_post_fix='lfqoe'
-        save_file=self.GetSaveFileName()
-        if save_file is None:
-            self.ShowMessage("Invalid path! Please check the path again!",2)
+        self.project_post_fix=project_post_fix
+        save_name=self.GetProjectName()
+        if save_name is None:
+            self.ShowMessage("Invalid name! Please check the name again!",2)
+            logger.error("Invalid name! Please check the saving name of the project!")
             return
-        else:
-            if not save_file.endswith(project_post_fix):
-                save_file=save_file+'.'+project_post_fix
         
         disp_type=LFIFeatures(self.button_group_display_type.checkedId())
         view_change_type=LFIFeatures(self.button_group_view_change.checkedId())
@@ -175,17 +179,27 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
 
         exp_setting=ExpSetting(all_lfi_features,cmp_type,save_format_type)
         exp_setting.pair_wise_config=pair_wise_path
+        self.exp_setting=exp_setting
 
-        with open(save_file,'wb') as f:
-            pickle.dump(self.training_all_lfi_info,f)
-            pickle.dump(self.test_all_lfi_info,f)
-            pickle.dump(exp_setting,f)
+        if self.output_folder_root is not None:
+            project_info=ProjectInfo(save_name,self.output_folder_root)
+        else:
+            project_info=ProjectInfo(save_name)
+        project_info.SetParameters(self.training_all_lfi_info,self.test_all_lfi_info,exp_setting)
+        project_info.SaveToFile()
         
-        bPreProcess=self.OptionDialog("Do you want to preprocess the data now?")
-        self.Finished.emit(bPreProcess,save_file)
+        self.Finished.emit(False,save_name)
 
         self.deleteLater()
         
+    def GetProjectName(self):
+        project_name, ok = QtWidgets.QInputDialog.getText(self, 'Project Name', 'Please input the project name:')
+        if ok:
+            return project_name
+        else:
+            logger.error("The project name can not be empty!")
+            return None
+
     def GetSaveFileName(self):
         file_selected=QtWidgets.QFileDialog.getSaveFileName(self)
         file_selected=file_selected[0]
@@ -228,6 +242,7 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         self.deleteLater()
         
     def CancelClose(self):
+        logger.warning("Configuring cancelled...")
         self.CancelClosed.emit()
         self.deleteLater()
         
@@ -250,21 +265,21 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
     
     def SaveJsonConfig(self):
         project_post_fix='lfqoe'
-        save_file=self.GetSaveFileName()
-        if save_file is None:
+        self.project_post_fix=project_post_fix
+        save_name=self.GetProjectName()
+        if save_name is None:
+            logger.error("Invalid name! Please check the saving path of the project!")
             self.ShowMessage("Invalid path! Please check the path again!",2)
             return
+
+        if self.output_folder_root is not None:
+            project_info=ProjectInfo(save_name,self.output_folder_root) 
         else:
-            if not save_file.endswith(project_post_fix):
-                save_file=save_file+'.'+project_post_fix
-        
-        with open(save_file,'wb') as f:
-            pickle.dump(self.training_all_lfi_info,f)
-            pickle.dump(self.test_all_lfi_info,f)
-            pickle.dump(self.exp_setting,f)
-        
-        bPreProcess=self.OptionDialog("Do you want to preprocess the data now?")
-        self.Finished.emit(bPreProcess,save_file)
+            project_info=ProjectInfo(save_name)
+        project_info.SetParameters(self.training_all_lfi_info,self.test_all_lfi_info,self.exp_setting)
+        project_info.SaveToFile()
+
+        self.Finished.emit(False,save_name)
 
         self.deleteLater()
         
@@ -310,6 +325,7 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
             
     def ConfigFromJson(self,config_path):
         if config_path=="" or not os.path.exists(config_path):
+            logger.error("Invalid path! Please Check the Json Path again!")
             return False , "Invalid path! Please Check the Json Path again!"
         '''
         config with json here 
@@ -318,10 +334,13 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
             all_config=json.load(fid)
         
         if "Training" not in all_config.keys():
+            logger.error("Invalid json! There should be a Training key to config the training!")
             return False, "Invalid json! There should be a Training key to config the training!"
         if "Test" not in all_config.keys():
+            logger.error("Invalid json! There should be a Test key to config the training!")
             return False, "Invalid json! There should be a Test key to config the training!"
         if "Exp_Info" not in all_config.keys():
+            logger.error("Invalid json! There should be an Exp_Info key to config the experiment!")
             return False, "Invalid json! There should be an Exp_Info key to config the experiment!"
         training_lfi_config=all_config['Training']
         test_lfi_config=all_config['Test']
@@ -333,6 +352,7 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         exp_setting=self.GetConfigExpSetting(exp_setting_config)
 
         if exp_setting is None:
+            logger.error("Invalid json! For refocusing and view-changing features, at least you need to choose one of them!")
             return False, "Invalid json! For refocusing and view-changing features, at least you need to choose one of them!"
 
         self.training_all_lfi_info=training_lfi_info

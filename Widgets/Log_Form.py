@@ -1,5 +1,6 @@
 from typing import Optional
 import PySide6.QtCore
+import PySide6.QtGui
 import PySide6.QtWidgets
 import sys
 from random import shuffle
