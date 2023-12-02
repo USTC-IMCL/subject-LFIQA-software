@@ -1,9 +1,7 @@
 import sys
 sys.path.append('./Widgets')
 sys.path.append('./UI')
-import logging
-from Log_Form import *
-from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6 import QtWidgets
 import MainProject
 
 
