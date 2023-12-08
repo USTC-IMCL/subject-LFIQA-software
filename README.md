@@ -108,7 +108,7 @@ This section explains the operation to evaluate the light field image.
 
 ## Postprocessing
 
-  Click the Run -> Post Processing button to start the post processing. The project will record all your subjects so you just need to click the button. It will calculate the PLCC between each subjects and others mean scores.
+  Click the Run -> Post Processing button to start the post processing. The project will record all your subjects so you just need to click the button. It will calculate the PLCC between each subjects and others' mean scores.
 
 ## Acknowledgement
 
