@@ -115,7 +115,7 @@ This section explains the operation to evaluate the light field image.
    If you want to revise the source code and compile it manually, use the pyinstaller:
 
    ```
-   pyinstall --onefile -w -p ./UI -p ./Widgets --add-data "your/path/to/ffmpeg;./" LFIQoE.py
+   pyinstaller --onefile -w -p ./UI -p ./Widgets --add-data "your/path/to/ffmpeg;./" LFIQoE.py
    ```
 
 ## Acknowledgement
