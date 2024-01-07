@@ -166,20 +166,83 @@ Please use the Json file to configure your experiment. An example is shown below
         }
     ],
     "Exp_Info":{
-        "Display_Type":"2D",
-        "Score_Levels":5,
-        "ThreeD_Type":"LeftRight",
-        "View_Changing":"Active",
-        "Refocusing":"Active",
-        "Comparison":"DoubleStimuli",
-        "Save_Format":"CSV",
-        "PairWise_Path":"PairWise.json",
-        "Skip_Preprocessing": false
+        "Display_Type":"2D", (2D or 3D)
+        "Score_Levels":5, (not used yet)
+        "ThreeD_Type":"LeftRight", (LeftRight, UpDown or Full)
+        "View_Changing":"Active", (Active, passive or None)
+        "Refocusing":"Active", (Active, passive or None)
+        "Comparison":"DoubleStimuli", (can be DoubleStimuli, SingleStimulous or PairComparison)
+        "Save_Format":"CSV", (CSV or Excel)
+        "PairWise_Path":"PairWise.json", (Your path to the pair list json)
+        "Skip_Preprocessing": false 
     }
 }
 ```
 
-The configuration file must contain 3 keys: training, test and Exp_Info. The training and test describe your light field images (SRCs and HRCs). You need to denote the distortion type, distortion level and distortion path for each HRC. The distoriton level can be a string or an int number. The distortion path should be 
+The configuration file must contain 3 keys: training, test and Exp_Info. The training and test describe your light field images (SRCs and HRCs). You need to denote the distortion type, distortion level and distortion path for each HRC. The distoriton level can be a string or an int number. The distortion path should be the root folder of the HRC, which means all possible views or passive videos should be in this folder (but may be in some subfolder).
+
+If you want a pair comparison, set the comparison to paircomparison. A pair list json example is shown below. It describes 3 pairs for training and 3 pairs for test.
+
+```
+{
+    "training":
+    {
+        "0":
+        {
+            "lfi_name": "Bikes",
+            "left": "HEVC",
+            "left_level": 1,
+            "right":"JPEG",
+            "right_level": "2"
+        }
+        ,
+        "1":
+        {
+            "lfi_name": "Bikes",
+            "left": "HEVC",
+            "left_level": 3,
+            "right":"JPEG",
+            "right_level": 3
+        },
+        "2":
+        {
+            "lfi_name": "Bikes",
+            "left": "HEVC",
+            "left_level": 3,
+            "right":"JPEG",
+            "right_level": "2"
+        }
+    },
+    "test":
+    {
+        "0":
+        {
+            "lfi_name": "Bikes",
+            "left": "HEVC",
+            "left_level": 1,
+            "right":"JPEG",
+            "right_level": 3
+        }
+        ,
+        "1":
+        {
+            "lfi_name": "Bikes",
+            "left": "HEVC",
+            "left_level": 5,
+            "right":"JPEG",
+            "right_level": "2"
+        },
+        "2":
+        {
+            "lfi_name": "Bikes",
+            "left": "HEVC",
+            "left_level": 3,
+            "right":"JPEG",
+            "right_level": "4" 
+        }
+    }
+}
+```
 
 ## Preprocessing
 
@@ -193,7 +256,38 @@ If you use a passive feature for your experiment, you may find a .mp4 file in th
 
 ## Custom preprocessing
 
-Sometimes 
+Sometimes you may want to preprocess it manually. Then keep the skip_preprocessing to true. Then organize your folder as following:
+
+```
+├── SRC-distortion-path
+│   └── show_views
+|      └── xxx_yyy.png (stitched views)
+|      └── view.mp4 (your passive video)
+│   └── show_refocusing
+|      └── depth_value.png (stitched refocusing image)
+|      └── refocus.mp4 (your passive video)
+|   └── training
+|      └── PairComparison_{Your_pair_key_in_the_pair_list_json}
+│         └── show_views
+|            └── xxx_yyy.png (stitched views)
+|            └── view.mp4 (your passive video)
+│         └── show_refocusing
+|            └── depth_value.png (stitched refocusing image)
+|            └── refocus.mp4 (your passive video)
+|      └── PairComparison_.....
+|   └── test
+|      └── PairComparison_{Your_pair_key_in_the_pair_list_json}
+│         └── show_views
+|            └── xxx_yyy.png (stitched views)
+|            └── view.mp4 (your passive video)
+│         └── show_refocusing
+|            └── depth_value.png (stitched refocusing image)
+|            └── refocus.mp4 (your passive video)
+|      └── PairComparison_.....
+.......
+```
+
+Please organize the folder based on your experiment and you do not need to generate all the folders above. For example, if you use a passive view changing only configuration, then you just need a show_views folder and put the view.mp4 in it.
 
 ## How to evaluate
 
