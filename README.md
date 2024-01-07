@@ -24,33 +24,6 @@ If you want a passive light field image feature (i.e. passive view changing or p
 2. (Recommended) Alternatively, you can download the [binary file](https://github.com/USTC-IMCL/subject-LFIQA-software/releases/tag/V2.0). Put it to anywhere you like and double click it.
 
 
-## Data Preparation
-
-Before Config your own experiment, you need to prepare your own data. The folders are organized as below:
-
-```
-├── your light field name 1
-│   └── Origin
-│   └── distorted
-│     └── distortion_type_1
-|        └── 1
-|        └── 2
-|        └── 3
-|        └── 4
-|        └── 5
-│     └── distortion_type_2
-│     └── distortion_type_3
-│     └── distortion_type_4
-    ......
-├── your light field name 2
-│   └── Origin
-│   └── distorted
-.......
-```
-The Origin folder contains origin light field views. Each distorted type has 5 levels (it is fixed in this version, see konwn issue section).
-
-In each folder, e.g. the Origin or the distortion_type_2/1, the views are named in x_y.png or h_w.png format. The x/y (w/h) represents col index and row index respectively in the angular domain. The number of the angular index should be continuous but **it does not need to start from 0**. Also, any formats including png, jpg, bmp or ppm are acceptable. But we do not consider the bit depth greater than 8.
-
 **If you want a refocusing feature, please put the lambda file and the depth map in each folder. The lambda file is only for the dense light field image. The module for sparse light field images need to be further implemented.**
 
 ## Configuration
@@ -58,7 +31,155 @@ Click the Project->New button to create a new experiment.
 
 ![image](https://github.com/USTC-IMCL/subject-LFIQA-software/assets/9655283/533d0341-1a55-4f6b-8805-35e58cb802f5)
 
-Use the Json file to configure your experiment.
+Please use the Json file to configure your experiment. An example is shown below:
+
+```
+{
+    "Training":[
+        {
+            "Name":"Bikes",
+            "Width": 625 ,
+            "Height": 434,
+            "Angular_Height": 11,
+            "Angular_Width": 11,
+            "Type":"Dense",
+            "Angular_Format":"XY",
+            "SRC":"C:/Users/ZSY/Downloads/Bikes/Ori",
+            "HRC":
+            [ 
+                {
+                    "Distortion_Type":"HEVC",
+                    "Distortion_Level":1,
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/HEVC/1"
+                },
+                {
+                    "Distortion_Type":"HEVC",
+                    "Distortion_Level":2,
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/HEVC/2"
+                },
+                {
+                    "Distortion_Type":"HEVC",
+                    "Distortion_Level":3,
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/HEVC/3"
+                },
+                {
+                    "Distortion_Type":"HEVC",
+                    "Distortion_Level":4,
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/HEVC/4"
+                },
+                {
+                    "Distortion_Type":"HEVC",
+                    "Distortion_Level":5,
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/HEVC/5"
+                },
+                {
+                    "Distortion_Type":"JPEG",
+                    "Distortion_Level":"1",
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/JPEG/1"
+                },
+                {
+                    "Distortion_Type":"JPEG",
+                    "Distortion_Level":"2",
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/JPEG/2"
+                },
+                {
+                    "Distortion_Type":"JPEG",
+                    "Distortion_Level":3,
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/JPEG/3"
+                },
+                {
+                    "Distortion_Type":"JPEG",
+                    "Distortion_Level":"4",
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/JPEG/4"
+                },
+                {
+                    "Distortion_Type":"JPEG",
+                    "Distortion_Level":"5",
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/JPEG/5"
+                }
+            ]
+        }
+    ],
+    "Test":[
+        {
+            "Name":"Bikes",
+            "Width": 625 ,
+            "Height": 434,
+            "Angular_Height": 11,
+            "Angular_Width": 11,
+            "Type":"Dense",
+            "Angular_Format":"XY",
+            "SRC":"C:/Users/ZSY/Downloads/Bikes/Ori",
+            "HRC":
+            [ 
+                {
+                    "Distortion_Type":"HEVC",
+                    "Distortion_Level":1,
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/HEVC/1"
+                },
+                {
+                    "Distortion_Type":"HEVC",
+                    "Distortion_Level":2,
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/HEVC/2"
+                },
+                {
+                    "Distortion_Type":"HEVC",
+                    "Distortion_Level":3,
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/HEVC/3"
+                },
+                {
+                    "Distortion_Type":"HEVC",
+                    "Distortion_Level":4,
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/HEVC/4"
+                },
+                {
+                    "Distortion_Type":"HEVC",
+                    "Distortion_Level":5,
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/HEVC/5"
+                },
+                {
+                    "Distortion_Type":"JPEG",
+                    "Distortion_Level":"1",
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/JPEG/1"
+                },
+                {
+                    "Distortion_Type":"JPEG",
+                    "Distortion_Level":"2",
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/JPEG/2"
+                },
+                {
+                    "Distortion_Type":"JPEG",
+                    "Distortion_Level":3,
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/JPEG/3"
+                },
+                {
+                    "Distortion_Type":"JPEG",
+                    "Distortion_Level":"4",
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/JPEG/4"
+                },
+                {
+                    "Distortion_Type":"JPEG",
+                    "Distortion_Level":"5",
+                    "Distortion_Path":"C:/Users/ZSY/Downloads/Bikes/dist/JPEG/5"
+                }
+            ]
+        }
+    ],
+    "Exp_Info":{
+        "Display_Type":"2D",
+        "Score_Levels":5,
+        "ThreeD_Type":"LeftRight",
+        "View_Changing":"Active",
+        "Refocusing":"Active",
+        "Comparison":"DoubleStimuli",
+        "Save_Format":"CSV",
+        "PairWise_Path":"PairWise.json",
+        "Skip_Preprocessing": false
+    }
+}
+```
+
+The configuration file must contain 3 keys: training, test and Exp_Info. The training and test describe your light field images (SRCs and HRCs). You need to denote the distortion type, distortion level and distortion path for each HRC. The distoriton level can be a string or an int number. The distortion path should be 
 
 ## Preprocessing
 
@@ -69,6 +190,10 @@ Click the Run -> Preprocessing to generate images or videos for your experiments
 Note that now the refocusing module only supports light field images captured by Lytro. But the extension for different rigs will be supported in the future.
 
 If you use a passive feature for your experiment, you may find a .mp4 file in the folder. It is generated by concating show views. To make sure a **view synchronization**, we stiching the comparing views into one single frame and compress it with ffmpeg **losslessly**. The views order or the focusing moving order is fixed now (but can be extended).
+
+## Custom preprocessing
+
+Sometimes 
 
 ## How to evaluate
 
