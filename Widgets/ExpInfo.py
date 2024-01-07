@@ -162,7 +162,7 @@ class SingleLFIInfo:
             return None
         view_num=0
         for img_file in all_files:
-            if self.post_fix in img_file:
+            if self.post_fix in img_file and PathManager.thumbnail_name not in img_file:
                 view_num+=1
         if view_num==0:
             return None
@@ -829,10 +829,11 @@ class ScoringExpLFIInfo:
             self.angular_width-=1
             self.max_width-=1
 
-        if in_lfi_info.angular_format == "HW":
-            in_lfi_info.angular_format=AngularFormat.HW
-        else:
-            in_lfi_info.angular_format=AngularFormat.XY
+        if type(in_lfi_info.angular_format) == str:
+            if in_lfi_info.angular_format == "HW":
+                in_lfi_info.angular_format=AngularFormat.HW
+            else:
+                in_lfi_info.angular_format=AngularFormat.XY
 
         self.angular_format=in_lfi_info.angular_format
         self.depth_path=in_lfi_info.depth_path
