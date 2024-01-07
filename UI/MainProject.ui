@@ -105,6 +105,13 @@ color: rgb(255, 255, 255);</string>
     <property name="title">
      <string>Setting</string>
     </property>
+    <widget class="QMenu" name="menuSkip">
+     <property name="title">
+      <string>Skip</string>
+     </property>
+     <addaction name="action_skip_all"/>
+    </widget>
+    <addaction name="menuSkip"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -213,14 +220,6 @@ color: rgb(255, 255, 255);</string>
     <string>Video Generation</string>
    </property>
   </action>
-  <action name="action_skip_all">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>All (Only for Debug)</string>
-   </property>
-  </action>
   <action name="action_close">
    <property name="text">
     <string>Close...</string>
@@ -234,6 +233,14 @@ color: rgb(255, 255, 255);</string>
   <action name="action_post_processing">
    <property name="text">
     <string>Post Processing</string>
+   </property>
+  </action>
+  <action name="action_skip_all">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Preprocessing</string>
    </property>
   </action>
  </widget>

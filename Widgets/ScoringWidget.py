@@ -8,6 +8,7 @@ from PySide6.QtCore import Qt, QUrl
 from PySide6.QtMultimedia import QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from ExpInfo import *
+import PathManager
 sys.path.append('../UI')
 sys.path.append('../Widgets/')
 from ScoreTable_ui import Ui_ScoreTable as ScoreTable
@@ -101,17 +102,16 @@ class EventMask:
 class PairWiseScoringWidget(QtWidgets.QStackedWidget):
     scoring_finished=QtCore.Signal(list)
     
-    def __init__(self, all_lfi_info:ExpLFIInfo, exp_setting:ExpSetting, show_list):
+    def __init__(self, all_lfi_info:AllScoringLFI, exp_setting:ExpSetting, all_show_index):
         super().__init__()
 
         self.setStyleSheet('background-color:gray;')
 
         self.all_lfi_info=all_lfi_info
         self.exp_setting=exp_setting
-        self.show_list=show_list
+        self.all_show_index=all_show_index
         self.current_lfi_show_index=0
-        self.all_lfi_names=all_lfi_info.GetAllLFNames()
-        self.all_dist_types=all_lfi_info.GetAllDistNames(self.all_lfi_names[0])
+
         self.all_view_scores=[]
         self.all_refocusing_scores=[]
         self.show_page_list=[] # view changing, refocusing
@@ -120,16 +120,17 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
         self.max_page_num=0
 
         screen = QApplication.primaryScreen().geometry()
-        self.resize(screen.width(), screen.height())
+        self.setGeometry(0,0,screen.width(), screen.height())
 
         self.setWindowFlag(Qt.FramelessWindowHint)
         self.setWindowFlag(Qt.WindowStaysOnTopHint)
         #self.setAttribute(Qt.WA_TranslucentBackground)
         
-        cur_lf_info=self.GetSingleLFIInfo(self.current_lfi_show_index)
+        #cur_lf_info=self.GetSingleLFIInfo(self.current_lfi_show_index)
+        cur_scoring_lfi_info=self.all_lfi_info.GetScoringExpLFIInfo(self.all_show_index[self.current_lfi_show_index])
 
-        self.SetPageShowing(cur_lf_info,init_flag=True)
-        self.SetPageShowing(cur_lf_info)
+        self.SetPageShowing(cur_scoring_lfi_info,init_flag=True)
+        self.SetPageShowing(cur_scoring_lfi_info)
         for page in self.show_page_list:
             if page is not None:
                 page.setParent(self)
@@ -142,11 +143,9 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
 
         self.all_page_num=self.max_page_num+1
 
-    def GetSingleLFIInfo(self,show_index)->SingleLFIInfo:
-        cur_lfi_name=self.show_list[show_index][0]
-        cur_left_dist=self.show_list[show_index][1]
-        cur_left_dist_level=self.show_list[show_index][2]
-        return self.all_lfi_info.GetLFIInfo(cur_lfi_name,cur_left_dist,cur_left_dist_level)
+    def GetSingleLFIInfo(self,show_index)->ScoringExpLFIInfo:
+        cur_index=self.all_show_index[show_index]
+        return self.all_lfi_info.GetScoringExpLFIInfo(cur_index)
     
     def ShowingNext(self,ret_score,score_list,i=0):
         if i+1>=self.max_page_num:
@@ -159,7 +158,7 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
         # get score, then set new lfi image
         score_list.append(ret_score)
         self.current_lfi_show_index+=1
-        if self.current_lfi_show_index >= len(self.show_list):
+        if self.current_lfi_show_index >= self.all_lfi_info.GetLFINum():
             self.current_page_index+=1
             self.setCurrentIndex(self.current_page_index)
             return
@@ -169,39 +168,39 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
         self.current_page_index=0
         self.setCurrentIndex(self.current_page_index)
     
-    def SetPageShowing(self,cur_lf_info:SingleLFIInfo,init_flag=False):
+    def SetPageShowing(self,cur_lf_info:ScoringExpLFIInfo,init_flag=False):
         exp_setting=self.exp_setting
         if LFIFeatures.Active_Refocusing in exp_setting.lfi_features and LFIFeatures.Active_ViewChanging in exp_setting.lfi_features:
             if init_flag:
-                page_showing=ImagePage(exp_setting,cur_lf_info,cur_lf_info.show_views_path,cur_lf_info.show_refocusing_views_path)
+                page_showing=ImagePage(exp_setting,cur_lf_info,cur_lf_info.active_view_path,cur_lf_info.active_refocusing_path)
                 self.addWidget(page_showing)
                 page_showing.pair_finished.connect(lambda x: self.ShowingNext(x,self.all_view_scores,0))
                 self.max_page_num+=1
                 self.show_page_list.append(page_showing)
                 self.show_page_list.append(None)
             else:
-                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.show_views_path,cur_lf_info.show_refocusing_views_path)
+                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.active_view_path,cur_lf_info.active_refocusing_path)
             return 
 
         if LFIFeatures.Active_ViewChanging in exp_setting.lfi_features and LFIFeatures.Active_Refocusing not in exp_setting.lfi_features:
             if init_flag:
-                page_showing=ImagePage(exp_setting,cur_lf_info,cur_lf_info.show_views_path,None)
+                page_showing=ImagePage(exp_setting,cur_lf_info,cur_lf_info.active_view_path,None)
                 self.addWidget(page_showing)
                 page_showing.pair_finished.connect(lambda x: self.ShowingNext(x,self.all_view_scores,0))
                 self.max_page_num+=1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.show_views_path,None)
+                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.active_view_path,None)
         
         if LFIFeatures.Passive_ViewChanging in exp_setting.lfi_features:
             if init_flag:
-                page_showing=VideoPage(exp_setting,cur_lf_info,cur_lf_info.passive_video)
+                page_showing=VideoPage(exp_setting,cur_lf_info,cur_lf_info.passive_view_video_path)
                 self.addWidget(page_showing)
                 page_showing.pair_finished.connect(lambda x: self.ShowingNext(x,self.all_view_scores,0))
                 self.max_page_num+=1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.passive_video)
+                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.passive_view_video_path)
         
         if LFIFeatures.None_ViewChanging in exp_setting.lfi_features:
             if init_flag:
@@ -209,29 +208,32 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
         
         if LFIFeatures.Active_Refocusing in exp_setting.lfi_features:
             if init_flag:
-                page_showing=ImagePage(exp_setting,cur_lf_info,None,cur_lf_info.show_refocusing_views_path)
+                page_showing=ImagePage(exp_setting,cur_lf_info,None,cur_lf_info.active_refocusing_path)
                 self.addWidget(page_showing)
                 page_showing.pair_finished.connect(lambda x: self.ShowingNext(x,self.all_refocusing_scores,1))
                 self.max_page_num+=1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[1].SetNewLFI(exp_setting,cur_lf_info,None,cur_lf_info.show_refocusing_views_path)
+                self.show_page_list[1].SetNewLFI(exp_setting,cur_lf_info,None,cur_lf_info.active_refocusing_path)
         
         if LFIFeatures.Passive_Refocusing in exp_setting.lfi_features:
             if init_flag:
-                page_showing=VideoPage(exp_setting,cur_lf_info,cur_lf_info.passive_refocusing_video)
+                page_showing=VideoPage(exp_setting,cur_lf_info,cur_lf_info.passive_refocusing_video_path)
                 self.addWidget(page_showing)
                 page_showing.pair_finished.connect(lambda x: self.ShowingNext(x,self.all_refocusing_scores,1))
                 self.max_page_num+=1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[1].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.passive_refocusing_video)
+                self.show_page_list[1].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.passive_refocusing_video_path)
         
         if LFIFeatures.None_Refocusing in exp_setting.lfi_features:
             if init_flag:
                 self.show_page_list.append(None)
     
     def NextPage(self):
+        '''
+        Dirty Code
+        '''
         self.current_page_index+=1
         if self.current_page_index >= self.all_page_num:
             self.current_page_index=0
@@ -259,15 +261,15 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
 class ScoringWidget(QtWidgets.QStackedWidget):
     scoring_finished=QtCore.Signal(list)
     
-    def __init__(self, all_lfi_info:ExpLFIInfo, exp_setting:ExpSetting, show_list):
+    def __init__(self, all_lfi_info:AllScoringLFI, exp_setting:ExpSetting, all_show_index):
         super().__init__()
         self.setStyleSheet('background-color:gray;')
         self.all_lfi_info=all_lfi_info
         self.exp_setting=exp_setting
-        self.show_list=show_list
+        self.all_show_index=all_show_index
+
         self.current_lfi_show_index=0
-        self.all_lfi_names=all_lfi_info.GetAllLFNames()
-        self.all_dist_types=all_lfi_info.GetAllDistNames(self.all_lfi_names[0])
+
         self.all_scores=[]
         self.show_page_list=[] # view changing, refocusing
 
@@ -282,10 +284,10 @@ class ScoringWidget(QtWidgets.QStackedWidget):
         self.setWindowFlag(Qt.WindowStaysOnTopHint)
         #self.setAttribute(Qt.WA_TranslucentBackground)
         
-        cur_lf_info=self.GetSingleLFIInfo(self.current_lfi_show_index)
+        cur_lfi_scoring_info=self.GetSingleLFIInfo(self.current_lfi_show_index)
 
-        self.SetPageShowing(cur_lf_info,init_flag=True)
-        self.SetPageShowing(cur_lf_info)
+        self.SetPageShowing(cur_lfi_scoring_info,init_flag=True)
+        self.SetPageShowing(cur_lfi_scoring_info)
         for show_page in self.show_page_list:
             if show_page is not None:
                 show_page.setParent(self)
@@ -307,18 +309,15 @@ class ScoringWidget(QtWidgets.QStackedWidget):
         #self.setCurrentIndex(1)
         self.all_page_num=self.max_page_num+2
 
-    def GetSingleLFIInfo(self,show_index)->SingleLFIInfo:
-        cur_lfi_name=self.show_list[show_index][0]
-        cur_left_dist=self.show_list[show_index][1]
-        cur_left_dist_level=self.show_list[show_index][2]
-        return self.all_lfi_info.GetLFIInfo(cur_lfi_name,cur_left_dist,cur_left_dist_level)
-    
+    def GetSingleLFIInfo(self,show_index)->ScoringExpLFIInfo:
+        cur_index=self.all_show_index[show_index]
+        return self.all_lfi_info.GetScoringExpLFIInfo(cur_index)
     
     def RecordScore(self,ret_scores):
         # get score, then set new lfi image
         self.all_scores.append(ret_scores)
         self.current_lfi_show_index+=1
-        if self.current_lfi_show_index >= len(self.show_list):
+        if self.current_lfi_show_index >= self.all_lfi_info.GetLFINum():
             self.current_page_index+=1
             self.setCurrentIndex(self.current_page_index)
             return
@@ -328,11 +327,11 @@ class ScoringWidget(QtWidgets.QStackedWidget):
         self.current_page_index=0
         self.setCurrentIndex(self.current_page_index)
     
-    def SetPageShowing(self,cur_lf_info:SingleLFIInfo,init_flag=False):
+    def SetPageShowing(self,cur_lf_info:ScoringExpLFIInfo,init_flag=False):
         exp_setting=self.exp_setting
         if LFIFeatures.Active_Refocusing in exp_setting.lfi_features and LFIFeatures.Active_ViewChanging in exp_setting.lfi_features:
             if init_flag:
-                page_showing=ImagePage(exp_setting,cur_lf_info,cur_lf_info.show_views_path,cur_lf_info.show_refocusing_views_path)
+                page_showing=ImagePage(exp_setting,cur_lf_info,cur_lf_info.active_view_path,cur_lf_info.active_refocusing_path)
                 page_showing.setParent(self)
                 self.addWidget(page_showing)
                 page_showing.eval_finished.connect(self.NextPage)
@@ -340,28 +339,28 @@ class ScoringWidget(QtWidgets.QStackedWidget):
                 self.show_page_list.append(page_showing)
                 self.show_page_list.append(None)
             else:
-                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.show_views_path,cur_lf_info.show_refocusing_views_path)
+                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.active_view_path,cur_lf_info.active_refocusing_path)
             return 
 
         if LFIFeatures.Active_ViewChanging in exp_setting.lfi_features and LFIFeatures.Active_Refocusing not in exp_setting.lfi_features:
             if init_flag:
-                page_showing=ImagePage(exp_setting,cur_lf_info,cur_lf_info.show_views_path,None)
+                page_showing=ImagePage(exp_setting,cur_lf_info,cur_lf_info.active_view_path,None)
                 self.addWidget(page_showing)
                 page_showing.eval_finished.connect(self.NextPage)
                 self.max_page_num+=1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.show_views_path,None)
+                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.active_view_path,None)
         
         if LFIFeatures.Passive_ViewChanging in exp_setting.lfi_features:
             if init_flag:
-                page_showing=VideoPage(exp_setting,cur_lf_info,cur_lf_info.passive_video)
+                page_showing=VideoPage(exp_setting,cur_lf_info,cur_lf_info.passive_view_video_path)
                 self.addWidget(page_showing)
                 page_showing.finish_video.connect(self.NextPage)
                 self.max_page_num+=1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.passive_video)
+                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.passive_view_video_path)
         
         if LFIFeatures.None_ViewChanging in exp_setting.lfi_features:
             if init_flag:
@@ -369,23 +368,23 @@ class ScoringWidget(QtWidgets.QStackedWidget):
         
         if LFIFeatures.Active_Refocusing in exp_setting.lfi_features:
             if init_flag:
-                page_showing=ImagePage(exp_setting,cur_lf_info,None,cur_lf_info.show_refocusing_views_path)
+                page_showing=ImagePage(exp_setting,cur_lf_info,None,cur_lf_info.active_refocusing_path)
                 self.addWidget(page_showing)
                 page_showing.eval_finished.connect(self.NextPage)
                 self.max_page_num+=1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[1].SetNewLFI(exp_setting,cur_lf_info,None,cur_lf_info.show_refocusing_views_path)
+                self.show_page_list[1].SetNewLFI(exp_setting,cur_lf_info,None,cur_lf_info.active_refocusing_path)
         
         if LFIFeatures.Passive_Refocusing in exp_setting.lfi_features:
             if init_flag:
-                page_showing=VideoPage(exp_setting,cur_lf_info,cur_lf_info.passive_refocusing_video)
+                page_showing=VideoPage(exp_setting,cur_lf_info,cur_lf_info.passive_refocusing_video_path)
                 self.addWidget(page_showing)
                 page_showing.finish_video.connect(self.NextPage)
                 self.max_page_num+=1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[1].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.passive_refocusing_video)
+                self.show_page_list[1].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.passive_refocusing_video_path)
         
         if LFIFeatures.None_Refocusing in exp_setting.lfi_features:
             if init_flag:
@@ -432,7 +431,7 @@ class ImagePage(QtWidgets.QWidget):
     eval_finished=QtCore.Signal()
     pair_finished=QtCore.Signal(int)
     
-    def __init__(self, exp_setting:ExpSetting,dist_lfi_info:SingleLFIInfo, view_path, refocusing_path=None):
+    def __init__(self, exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, view_path, refocusing_path=None):
         super().__init__()
         self.setStyleSheet("background-color:gray;")
         self.setMouseTracking(True)
@@ -461,7 +460,7 @@ class ImagePage(QtWidgets.QWidget):
         self.clicking_mask=None
         self.SetNewLFI(exp_setting,dist_lfi_info,view_path,refocusing_path)
 
-    def SetNewLFI(self,exp_setting:ExpSetting,dist_lfi_info:SingleLFIInfo, view_path, refocusing_path=None):
+    def SetNewLFI(self,exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, view_path, refocusing_path=None):
         self.lfi_info=dist_lfi_info
         self.view_path=view_path
         self.refocusing_path=refocusing_path
@@ -571,8 +570,9 @@ class ImagePage(QtWidgets.QWidget):
             return super().keyPressEvent(event)
 
     def MakeViewPath(self,angular_x,angular_y):
-        view_name=self.lfi_info.GetPureViewName(angular_x,angular_y)
-        view_path=os.path.join(self.view_path,view_name+"."+self.post_fix)
+        view_path=self.lfi_info.GetActiveView(angular_y,angular_x)
+        #view_name=self.lfi_info.GetPureViewName(angular_x,angular_y)
+        #view_path=os.path.join(self.view_path,view_name+"."+self.post_fix)
         return view_path
         
     def MinMaxClip(self, in_value, min_value, max_value):
@@ -586,7 +586,7 @@ class VideoPage(QtWidgets.QWidget):
     finish_video=QtCore.Signal()
     pair_finished=QtCore.Signal(int)
 
-    def __init__(self, exp_setting:ExpSetting,dist_lfi_info:SingleLFIInfo, video_path):
+    def __init__(self, exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, video_path):
         super().__init__()
         self.setStyleSheet("background-color:gray;")
     
@@ -603,13 +603,16 @@ class VideoPage(QtWidgets.QWidget):
         self.player.playingChanged.connect(self.EndPlaying)
         self.SetNewLFI(exp_setting,dist_lfi_info,video_path)
         
-    def SetNewLFI(self,exp_setting:ExpSetting,dist_lfi_info:SingleLFIInfo, video_path):
+    def SetNewLFI(self,exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, video_path):
         self.exp_setting=exp_setting
         self.dist_lfi_info=dist_lfi_info
         self.video_path=video_path
         self.base_path=os.path.dirname(video_path)
         self.img_label=QtWidgets.QLabel(self)
-        self.thumbnail_path=os.path.join(self.base_path,"thumbnail."+exp_setting.ViewSaveTypeStr)
+        if video_path == dist_lfi_info.passive_view_video_path:
+            self.thumbnail_path=dist_lfi_info.passive_view_thumbnail
+        else:
+            self.thumbnail_path=dist_lfi_info.passive_refocusing_thumbnail
 
         img_width=dist_lfi_info.img_width
         img_height=dist_lfi_info.img_height
@@ -622,9 +625,13 @@ class VideoPage(QtWidgets.QWidget):
 
         self.img_label.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(self.thumbnail_path)))
         self.img_label.show()
+        self.video_widget.hide()
 
         self.video_height,self.video_width=self.event_mask.widget_height,self.event_mask.widget_width
         self.SetVideo()
+
+        if exp_setting.comparison_type == ComparisonType.PairComparison:
+            self.arrow_key_flag=True
     
     def SetEventMask(self, event_mask:EventMask):
         self.event_mask=event_mask

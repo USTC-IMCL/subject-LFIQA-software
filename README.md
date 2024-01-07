@@ -110,6 +110,16 @@ This section explains the operation to evaluate the light field image.
 
   Click the Run -> Post Processing button to start the post processing. The project will record all your subjects so you just need to click the button. It will calculate the PLCC between each subjects and others' mean scores.
 
+## Compile to exe file
+
+   If you want to revise the source code and compile it manually, use the pyinstaller:
+
+   ```
+   pyinstall --onefile -w -p ./UI -p ./Widgets --add-data "your/path/to/ffmpeg;./" LFIQoE.py
+   ```
+
 ## Acknowledgement
+
+We follow the BSD license.
 
 Any problem or quesition please email me: zsy7788@mail.ustc.edu.cn. Any new issue for this project is welcome.

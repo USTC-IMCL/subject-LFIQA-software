@@ -17,6 +17,7 @@ import xlsxwriter
 from Log_Form import AboutForm
 from About_JPEG_ui import Ui_About_JPEG_Form
 import PostProcess
+import PathManager
 logger=logging.getLogger("LogWindow")
 
 class AboutJPEGForm(QWidget,Ui_About_JPEG_Form):
@@ -47,6 +48,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.action_new_project.triggered.connect(self.NewProject)
         self.action_load_project.triggered.connect(self.LoadProject)
         self.action_preprocessing.triggered.connect(self.preprocess)
+        #self.action_preprocessing.triggered.connect(self.PreprosessingFinishedCallback)
         self.action_start_training.triggered.connect(lambda: self.StartExperiment('training'))
         self.action_start_test.triggered.connect(lambda: self.StartExperiment("test"))
         self.action_about_imcl.triggered.connect(lambda: self.AboutIMCL())
@@ -123,17 +125,22 @@ class MainProject(QMainWindow,Ui_MainWindow):
     def preprocess(self):
         if self.cur_project is None:
             self.ShowMessage("Please select one project first!",1)
-            logger.error("Please select one project first!")
+            logger.warning("Please select one project first!")
             return
         
         if self.action_skip_all.isChecked():
             self.ShowMessage("Skip all is checked. All preprocessing is skipped!",1)
-            logger.error("Skip all is checked. All preprocessing is skipped!")
+            logger.warning("Skip all is checked. All preprocessing is skipped!")
             return
 
         training_LFI_info=self.cur_project.training_LFI_info
         test_LFI_info=self.cur_project.test_LFI_info
         exp_setting=self.cur_project.exp_setting
+
+        if exp_setting.skip_preprocessing:
+            self.ShowMessage("The skip preprocessing is used during the configuration. You must preprocess it manually!",1)
+            logger.warning("The skip preprocessing is used during the configuration. You must preprocess it manually!")
+            return
 
         if exp_setting.has_preprocess:
             b_preprocess=QMessageBox.question(self,"Preprocess","The experiment has been preprocessed, do you want to re-preprocess?",QMessageBox.Yes|QMessageBox.No)
@@ -162,6 +169,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.preprocessing_thread.started.connect(self.preprocessing_worker.run)
 
         self.preprocessing_thread.start()
+        #self.preprocessing_worker.run()
 
         return True
     
@@ -171,6 +179,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
     
     def PreprosessingFinishedCallback(self):
         self.cur_project.exp_setting.has_preprocess=True
+        self.cur_project.InitAllScoringLFIInfo()
         self.cur_project.SaveToFile()
 
         self.preprocessing_dialog.deleteLater()
@@ -209,14 +218,10 @@ class MainProject(QMainWindow,Ui_MainWindow):
             logger.warning("Please select one project first!")
             return
 
-        skip_all=self.action_skip_all.isChecked()
         if self.cur_project.exp_setting.has_preprocess==False:
-            if not skip_all:
                 self.ShowMessage("Please preprocess the experiment first!",1)
                 logger.warning("Please preprocess the experiment first!")
                 return
-            else:
-                logger.warning("The experiment will begin without preprocessing. But you need to preprocess it yourself manually.")
         
         self.training_LFI_info=self.cur_project.training_LFI_info
         self.test_LFI_info=self.cur_project.test_LFI_info
@@ -230,7 +235,9 @@ class MainProject(QMainWindow,Ui_MainWindow):
         if mode == "training":
             subject_name=''
             ok=True
+            all_scoring_lfi_info=self.cur_project.training_scoring_lfi_info
         else:
+            all_scoring_lfi_info=self.cur_project.test_scoring_lfi_info
             subject_name, ok =QInputDialog.getText(self, 'Subject Record', 'Enter your name:')
         if not ok:
             logger.warning("Experiment cancelled.")
@@ -241,6 +248,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
             tmp.showMessage('Do not allow empty name, nothing will be recorded.')
             return
 
+        '''
         if mode == "training":
             show_list=ExpInfo.GetShowList(self.training_LFI_info,self.exp_setting,"training")
             score_info=self.training_LFI_info
@@ -250,34 +258,41 @@ class MainProject(QMainWindow,Ui_MainWindow):
             show_list=ExpInfo.GetShowList(self.test_LFI_info,self.exp_setting,"test")
             score_info=self.test_LFI_info
             show_index,new_show_list=self.GetRandomShowList(show_list)
+        '''
+
+        show_lfi_num=all_scoring_lfi_info.GetLFINum()
+        if mode ==  "training":
+            all_show_index=list(range(show_lfi_num))
+        else:
+            all_show_index=all_scoring_lfi_info.GetRandomShowOrder()
         
         if self.exp_setting.comparison_type ==  ExpInfo.ComparisonType.PairComparison:
-            score_page=PairWiseScoringWidget(score_info,self.exp_setting,new_show_list)
+            score_page=PairWiseScoringWidget(all_scoring_lfi_info,self.exp_setting,all_show_index)
         else:
-            score_page=ScoringWidget(score_info,self.exp_setting,new_show_list)
+            score_page=ScoringWidget(all_scoring_lfi_info,self.exp_setting,all_show_index)
 
         self.hide()
         score_page.show()
         if mode == "test":
-            score_page.scoring_finished.connect(lambda all_results: self.GetAndSaveResult(all_results,subject_name,show_index,new_show_list))
+            score_page.scoring_finished.connect(lambda all_results: self.GetAndSaveResult(all_results,subject_name,all_show_index,all_scoring_lfi_info))
         else:
             score_page.scoring_finished.connect(lambda all_results: self.show())
     
-    def GetAndSaveResult(self,all_results,subject_name,show_index,show_list):
-        self.output_folder=self.cur_project.project_path+"/SubjectsResults"
+    def GetAndSaveResult(self,all_results,subject_name,all_show_index,show_list:ExpInfo.AllScoringLFI):
+        self.output_folder=os.path.join(self.cur_project.project_path,PathManager.subject_results_folder)
         if not os.path.exists(self.output_folder):
             os.makedirs(self.output_folder)
         logger.info("The evaluation has been finished. Now saving results to %s ..." % self.output_folder)
         self.cur_project.subject_list.append(subject_name)
         if self.exp_setting.save_format == ExpInfo.SaveFormat.CSV:
-            self.SaveCSV(all_results,subject_name,show_index,show_list)
+            self.SaveCSV(all_results,subject_name,all_show_index,show_list)
         else:
-            self.SaveExcel(all_results,subject_name,show_index,show_list)
+            self.SaveExcel(all_results,subject_name,all_show_index,show_list)
         self.show()
         self.cur_project.SaveToFile()
         self.ShowProjectSetting()
     
-    def SaveExcel(self,all_results,subject_name,show_index,show_list):
+    def SaveExcel(self,all_results,subject_name,all_show_index,show_list:ExpInfo.AllScoringLFI):
         save_file=os.path.join(self.output_folder,subject_name+'.xlsx')
         workbook=xlsxwriter.Workbook(save_file)
         worksheet=workbook.add_worksheet(subject_name)
@@ -288,10 +303,11 @@ class MainProject(QMainWindow,Ui_MainWindow):
             worksheet.write(0,2,'distortion')
             worksheet.write(0,3,'Image Quality')
             worksheet.write(0,4,'Overall Score')
-            for i in range(len(show_index)):
-                cur_img_name=show_list[i][0]
-                distortion=show_list[i][1]+'_'+str(show_list[i][2])
-                worksheet.write(i+1,0,show_index[i])
+            for i,scoring_index in enumerate(all_show_index):
+                cur_scoring_lfi_info=show_list.GetScoringExpLFIInfo(scoring_index)
+                cur_img_name=cur_scoring_lfi_info.lfi_name
+                distortion=cur_scoring_lfi_info.exp_name
+                worksheet.write(i+1,0,scoring_index)
                 worksheet.write(i+1,1,cur_img_name)
                 worksheet.write(i+1,2,distortion)
                 worksheet.write(i+1,3,all_results[i][0])
@@ -301,16 +317,16 @@ class MainProject(QMainWindow,Ui_MainWindow):
             refocusing_score=all_results[1]
             if ExpInfo.LFIFeatures.Active_ViewChanging in self.exp_setting.lfi_features and ExpInfo.LFIFeatures.Active_Refocusing in self.exp_setting.lfi_features:
                 worksheet.write(0,2,'Overall Score')
-                for i in range(len(show_index)):
-                    tmp=[str(x) for x in show_list[i]]
-                    cur_img_name='_'.join(tmp)
-                    worksheet.write(i+1,0,show_index[i])
+                for i,scoring_index in enumerate(all_show_index):
+                    cur_scoring_lfi_info=show_list.GetScoringExpLFIInfo(scoring_index)
+                    cur_img_name=cur_scoring_lfi_info.exp_name
+                    worksheet.write(i+1,0,scoring_index)
                     worksheet.write(i+1,1,cur_img_name)
                     worksheet.write(i+1,2,view_changing_score[i])
             
             else:
                 save_array=[]
-                for i in range(len(show_index)):
+                for i,scoring_index in range(all_show_index):
                     save_array.append([])
                     if all_results[0] is not None:
                         save_array[i].append(view_changing_score[i])
@@ -324,10 +340,10 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 if refocusing_score is not None:
                     worksheet.write(0,current_col,'Refocusing Score')
                 
-                for i in range(len(show_index)):
-                    tmp=[str(x) for x in show_list[i]]
-                    cur_img_name='_'.join(tmp)
-                    worksheet.write(i+1,0,show_index[i])
+                for i,scoring_index in enumerate(all_show_index):
+                    cur_scoring_lfi_info=show_list.GetScoringExpLFIInfo(scoring_index)
+                    cur_img_name=cur_scoring_lfi_info.exp_name
+                    worksheet.write(i+1,0,scoring_index)
                     worksheet.write(i+1,1,cur_img_name)
                     current_col=2
                     for value in save_array[i]:
@@ -335,29 +351,30 @@ class MainProject(QMainWindow,Ui_MainWindow):
                         current_col+=1
         workbook.close()
     
-    def SaveCSV(self,all_results,subject_name,show_index,show_list):
+    def SaveCSV(self,all_results,subject_name,all_show_index,show_list:ExpInfo.AllScoringLFI):
         save_file=os.path.join(self.output_folder,subject_name+'.csv')
         with open(save_file,'w') as fid:
             fid.write('Image Index,Image Name')
             if self.exp_setting.comparison_type != ExpInfo.ComparisonType.PairComparison:
                 fid.write(',distortion,Image Quality Score, Overall Score\n')
-                for i in range(len(show_index)):
-                    cur_img_name=show_list[i][0]
-                    distortion=show_list[i][1]+'_'+str(show_list[i][2])
-                    fid.write(f'{show_index[i]},{cur_img_name},{distortion},{all_results[i][0]},{all_results[i][1]}\n')
+                for i,scoring_index in enumerate(all_show_index):
+                    cur_scoring_lfi_info=show_list.GetScoringExpLFIInfo(scoring_index)
+                    cur_img_name=cur_scoring_lfi_info.lfi_name
+                    distortion=cur_scoring_lfi_info.exp_name
+                    fid.write(f'{scoring_index},{cur_img_name},{distortion},{all_results[i][0]},{all_results[i][1]}\n')
             else:
                 view_changing_score=all_results[0]
                 refocusing_score=all_results[1]
                 if ExpInfo.LFIFeatures.Active_ViewChanging in self.exp_setting.lfi_features and ExpInfo.LFIFeatures.Active_Refocusing in self.exp_setting.lfi_features:
                     fid.write(',Overall Score\n')
-                    for i in range(len(show_index)):
-                        tmp=[str(x) for x in show_list[i]]
-                        cur_img_name='_'.join(tmp)
-                        fid.write(f'{show_index[i]},{cur_img_name},{view_changing_score[i]}\n')
+                    for i,scoring_index in enumerate(all_show_index):
+                        cur_scoring_lfi_info=show_list.GetScoringExpLFIInfo(scoring_index)
+                        cur_img_name=cur_scoring_lfi_info.exp_name
+                        fid.write(f'{scoring_index},{cur_img_name},{view_changing_score[i]}\n')
             
                 else:
                     save_array=[]
-                    for i in range(len(show_index)):
+                    for i in range(len(all_show_index)):
                         save_array.append([])
                         if all_results[0] is not None:
                             save_array[i].append(view_changing_score[i])
@@ -372,10 +389,10 @@ class MainProject(QMainWindow,Ui_MainWindow):
                         fid.write(',Refocusing Score')
                     fid.write('\n')
                 
-                    for i in range(len(show_index)):
-                        tmp=[str(x) for x in show_list[i]]
-                        cur_img_name='_'.join(tmp)
-                        fid.write(f'{show_index[i]},{cur_img_name}')
+                    for i,scoring_index in enumerate(all_show_index):
+                        cur_scoring_lfi_info=show_list.GetScoringExpLFIInfo(scoring_index)
+                        cur_img_name=cur_scoring_lfi_info.exp_name
+                        fid.write(f'{scoring_index},{cur_img_name}')
                         current_col=2
                         for value in save_array[i]:
                             fid.write(f',{value}')
@@ -416,50 +433,49 @@ class MainProject(QMainWindow,Ui_MainWindow):
         '''
         if mode == "training":
             logger.info("Before starting the training, check all images/videos...")
-            all_lfi_info=self.cur_project.training_LFI_info
+            all_lfi_info=self.cur_project.training_scoring_lfi_info
         else:
             logger.info("Before starting the test, check all images/videos...")
-            all_lfi_info=self.cur_project.test_LFI_info
+            all_lfi_info=self.cur_project.test_scoring_lfi_info
         exp_setting=self.cur_project.exp_setting
         
         '''
         Check the show images if view feature is active, passive or None
         The right way is to get the show list first.
         '''
-        show_list=ExpInfo.GetShowList(all_lfi_info,exp_setting,mode)
-        for show_lfi_array in show_list:
-            lfi_name=show_lfi_array[0]
-            dist_name=show_lfi_array[1]
-            dist_level=show_lfi_array[2]
+        scoring_num=all_lfi_info.GetLFINum()
+        for scoring_index in range(scoring_num):
+            cur_lfi_scoring_info=all_lfi_info.GetScoringExpLFIInfo(scoring_index)
+            lfi_name=cur_lfi_scoring_info.lfi_name
 
-            cur_lfi_info=all_lfi_info.GetLFIInfo(lfi_name,dist_name,dist_level)
-            show_views_path=cur_lfi_info.show_views_path
-            show_refocus_path=cur_lfi_info.show_refocusing_views_path
-            angular_width=cur_lfi_info.angular_width
-            angular_height=cur_lfi_info.angular_height
+            show_refocus_path=cur_lfi_scoring_info.active_refocusing_path
+            angular_width=cur_lfi_scoring_info.angular_width
+            angular_height=cur_lfi_scoring_info.angular_height
 
             if ExpInfo.LFIFeatures.Active_ViewChanging in exp_setting.lfi_features:
                 for row_index in range(angular_height):
                     for col_index in range(angular_width):
-                        show_view_name=cur_lfi_info.GetPureViewName(col_index,row_index)
-                        show_view_name=os.path.join(show_views_path,"%s.%s" %(show_view_name,exp_setting.ViewSaveTypeStr))
+                        show_view_name=cur_lfi_scoring_info.GetActiveView(row_index,col_index)
                         if not os.path.exists(show_view_name):
                             logger.error("Can not find the image %s! Please check yor preprocessing carefully. The experiment will be cancelled. Quit now..." % show_view_name)
                             return False
             if ExpInfo.LFIFeatures.Passive_ViewChanging in exp_setting.lfi_features:
-                show_view_video=cur_lfi_info.passive_video
+                show_view_video=cur_lfi_scoring_info.passive_view_video_path
                 if not os.path.exists(show_view_video):
                     logger.error("Can not find the video %s! Please check yor preprocessing carefully. The experiment will be cancelled. Quit now..." % show_view_video)
                     return False
             if ExpInfo.LFIFeatures.Active_Refocusing in exp_setting.lfi_features:
-                all_depth_value=cur_lfi_info.GetAllPossibleDepthVal()
+                if not os.path.exists(cur_lfi_scoring_info.depth_path):
+                    logger.error(f"Can not find the depth map {cur_lfi_scoring_info.depth_path}! The active refocusing needs a depth image to map you clicking position to a certain refocusing depth. Please check your data carefully. Quit now...")
+                    return False
+                all_depth_value=cur_lfi_scoring_info.GetAllPossibleDepthVal()
                 for depth_value in all_depth_value:
-                    image_name=os.path.join(show_refocus_path,'%d.png' %depth_value)
+                    image_name=os.path.join(show_refocus_path,f'{depth_value}.{cur_lfi_scoring_info.img_post_fix}')
                     if not os.path.exists(image_name):
                         logger.error("Can not find the image %s! Please check yor preprocessing carefully. The experiment will be cancelled. Quit now..." % image_name)
                         return False
             if ExpInfo.LFIFeatures.Passive_Refocusing in exp_setting.lfi_features:
-                show_refocusing_video=cur_lfi_info.passive_refocusing_video
+                show_refocusing_video=cur_lfi_scoring_info.passive_refocusing_video_path
                 if not os.path.exists(show_refocusing_video):
                     logger.error("Can not find the video %s! Please check yor preprocessing carefully. The experiment will be cancelled. Quit now..." % show_refocusing_video)
                     return False
@@ -477,7 +493,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
             logger.warning("The subjects number should be greater than 2. Not enough subjects.")
             return
         if self.output_folder is None:
-            self.output_folder=self.cur_project.project_path+"/SubjectsResults"
+            self.output_folder=os.path.join(self.cur_project.project_path,PathManager.subject_results_folder)
         exp_setting=self.cur_project.exp_setting
         PostProcess.PostProcess(exp_setting,self.output_folder)
         

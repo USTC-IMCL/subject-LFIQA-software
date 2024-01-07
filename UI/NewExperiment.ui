@@ -34,7 +34,7 @@ color: rgb(255, 255, 255);</string>
     </rect>
    </property>
    <property name="currentIndex">
-    <number>3</number>
+    <number>0</number>
    </property>
    <widget class="QWidget" name="page_0">
     <widget class="QLabel" name="HintLabel">
@@ -43,7 +43,7 @@ color: rgb(255, 255, 255);</string>
        <x>20</x>
        <y>10</y>
        <width>631</width>
-       <height>131</height>
+       <height>251</height>
       </rect>
      </property>
      <property name="font">
@@ -52,16 +52,16 @@ color: rgb(255, 255, 255);</string>
       </font>
      </property>
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Please Choose the way you want to config your new experiment. &lt;br/&gt;&lt;/p&gt;&lt;p&gt;Then click the next step.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Only configuration from Json file is supported.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;Please select your json file first.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;Then click the next step.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
     <widget class="QGroupBox" name="groupBox">
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>150</y>
+       <y>290</y>
        <width>731</width>
-       <height>321</height>
+       <height>181</height>
       </rect>
      </property>
      <property name="font">
@@ -76,7 +76,7 @@ color: rgb(255, 255, 255);</string>
       <property name="geometry">
        <rect>
         <x>50</x>
-        <y>160</y>
+        <y>38</y>
         <width>211</width>
         <height>131</height>
        </rect>
@@ -90,29 +90,11 @@ color: rgb(255, 255, 255);</string>
        <string>Config with Json</string>
       </property>
      </widget>
-     <widget class="QRadioButton" name="radio_btn_manually">
-      <property name="geometry">
-       <rect>
-        <x>50</x>
-        <y>30</y>
-        <width>211</width>
-        <height>131</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>14</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Config manually</string>
-      </property>
-     </widget>
      <widget class="QLineEdit" name="page_0_json_path">
       <property name="geometry">
        <rect>
         <x>250</x>
-        <y>212</y>
+        <y>90</y>
         <width>341</width>
         <height>31</height>
        </rect>
@@ -127,7 +109,7 @@ color: rgb(255, 255, 255);</string>
       <property name="geometry">
        <rect>
         <x>590</x>
-        <y>212</y>
+        <y>90</y>
         <width>24</width>
         <height>31</height>
        </rect>

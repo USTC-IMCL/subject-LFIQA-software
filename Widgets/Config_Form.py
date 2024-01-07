@@ -247,9 +247,6 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         self.deleteLater()
         
     def Page0Next(self):
-        if self.radio_btn_manually.isChecked():
-            self.current_page_index+=1
-            self.ConfigStackWidget.setCurrentIndex(self.current_page_index)
         if self.radio_btn_json.isChecked():
             json_path=self.page_0_json_path.text()
             ret_info=self.ConfigFromJson(json_path)
@@ -276,6 +273,8 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
             project_info=ProjectInfo(save_name,self.output_folder_root) 
         else:
             project_info=ProjectInfo(save_name)
+
+
         project_info.SetParameters(self.training_all_lfi_info,self.test_all_lfi_info,self.exp_setting)
         project_info.SaveToFile()
 
@@ -346,20 +345,93 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         test_lfi_config=all_config['Test']
         exp_setting_config=all_config['Exp_Info']
 
-        training_lfi_info=self.GetConfigAllLFIInfo(training_lfi_config)
-        test_lfi_info=self.GetConfigAllLFIInfo(test_lfi_config)
-
-        exp_setting=self.GetConfigExpSetting(exp_setting_config)
-
-        if exp_setting is None:
+        self.exp_setting=self.GetConfigExpSetting(exp_setting_config)
+        if self.exp_setting is None:
             logger.error("Invalid json! For refocusing and view-changing features, at least you need to choose one of them!")
             return False, "Invalid json! For refocusing and view-changing features, at least you need to choose one of them!"
 
+        skip_preprocessing=exp_setting_config["Skip_Preprocessing"]
+        training_lfi_info=self.GetConfigInfoWithSpecificJson(training_lfi_config)
+        test_lfi_info=self.GetConfigInfoWithSpecificJson(test_lfi_config)
+        if skip_preprocessing:
+            self.exp_setting.has_preprocess=True
+
         self.training_all_lfi_info=training_lfi_info
         self.test_all_lfi_info=test_lfi_info
-        self.exp_setting=exp_setting
 
         return True,None
+
+    def GetConfigInfoWithSpecificJson(self,all_lfi_config):
+        skip_preprocessing=self.exp_setting.skip_preprocessing
+        if len(all_lfi_config) == 0:
+            logger.warning("A blank configuration!")
+            return None
+        angular_format=all_lfi_config[0]["Angular_Format"]
+        if angular_format == "HW":
+            angular_format=AngularFormat.HW
+        else:
+            angular_format=AngularFormat.XY
+        all_lfi_info=ExpLFIInfo(angular_format=angular_format)
+
+        for lif_config in all_lfi_config:
+            spatial_height=lif_config["Height"]
+            spatial_width=lif_config["Width"]
+            angular_height=lif_config["Angular_Height"]
+            angular_width=lif_config["Angular_Width"]
+            spatial_size=(spatial_height,spatial_width)
+            angular_size=(angular_height,angular_width)
+
+            lf_type=lif_config["Type"]
+            lfi_angular_format=lif_config["Angular_Format"]
+            if lfi_angular_format == "HW":
+                lfi_angular_format=AngularFormat.HW
+            else:
+                lfi_angular_format=AngularFormat.XY
+            lfi_name=lif_config["Name"]
+
+            SRC_path=lif_config["SRC"]
+            if SRC_path is not None or SRC_path != "":
+                all_lfi_info.AddOriginLF(lfi_name,lf_type,lfi_angular_format,spatial_size,angular_size,SRC_path)
+            
+            all_dist_lfi=lif_config["HRC"]
+            for dist_lfi in all_dist_lfi:
+                cur_dist_type=dist_lfi["Distortion_Type"]
+                cur_dist_level=dist_lfi["Distortion_Level"]
+                cur_dist_path=dist_lfi["Distortion_Path"]
+                all_lfi_info.AddSingleLFIInfo(lfi_name,lf_type,lfi_angular_format,spatial_size,angular_size,cur_dist_type,cur_dist_level,cur_dist_path,skip_preprocessing,self.exp_setting.comparison_type)
+
+            return all_lfi_info
+
+    def GetConfigAllLFIInfoWithoutPreprocessing(self,all_lfi_config):
+        if len(all_lfi_config) == 0:
+            return None
+        angular_format=all_lfi_config[0]["Angular_Format"]
+        if angular_format == "HW":
+            angular_format=AngularFormat.HW
+        else:
+            angular_format=AngularFormat.XY
+        all_lfi_info=ExpLFIInfo(angular_format=angular_format)
+
+        for lfi_config in all_lfi_config:
+            spatial_height=lfi_config["Height"]
+            spatial_width=lfi_config["Width"]
+            angular_height=lfi_config["Angular_Height"]
+            angular_width=lfi_config["Angular_Width"]
+            spatial_size=(spatial_height,spatial_width)
+            angular_size=(angular_height,angular_width)
+
+            SRC_path=lfi_config["SRC"]
+            
+            in_path=lfi_config["Input_Folder"]
+            lf_type=lfi_config["Type"]
+            lfi_angular_format=lfi_config["Angular_Format"]
+            if lfi_angular_format=="HW":
+                lfi_angular_format=AngularFormat.HW
+            else:
+                lfi_angular_format=AngularFormat.XY
+            lfi_name=lfi_config["Name"]
+            all_lfi_info.AddLFIInfo(lfi_name,lf_type,lfi_angular_format,spatial_size,angular_size,in_path)
+        return all_lfi_info
 
     def GetConfigExpSetting(self,exp_config):
         disp_type=exp_config["Display_Type"]
@@ -419,9 +491,11 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
 
         exp_setting=ExpSetting(all_lfi_features,cmp_type,save_format)
         exp_setting.pair_wise_config=pair_wise_path
+        exp_setting.skip_preprocessing=exp_config["Skip_Preprocessing"]
 
         return exp_setting
 
+    '''
     def GetConfigAllLFIInfo(self,all_config):
         lfi_num=len(all_config)
 
@@ -436,7 +510,7 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
 
         for cur_config in all_config:
             cur_lfi_name=cur_config["Name"]
-            cur_lfi_origin_path=cur_config["Origin_Path"]
+            cur_lfi_origin_path=cur_config["SRC"]
             cur_lfi_dist_path=cur_config["Distorted_Path"]
             cur_lfi_type=cur_config["Type"]
             cur_lfi_format=cur_config["Angular_Format"]
@@ -456,7 +530,7 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
                 angular_format=AngularFormat.HW
 
         return ExpLFIInfo(all_lfi_names,all_lfi_ori_paths,all_lfi_dist_paths,all_lfi_types,angular_format)
-
+    '''
         
     def GetAllLFIInfo(self,all_lfi_boxes,angular_format):
         lfi_box_num=len(all_lfi_boxes)
@@ -477,7 +551,6 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
             all_lfi_dist_paths.append(cur_dist_path)
             all_lfi_types.append(cur_lfi_type)
         return ExpLFIInfo(all_lfi_names,all_lfi_ori_paths,all_lfi_dist_paths,all_lfi_types,angular_format)
-        
     
     def DeleteBox(self,box_index,scrollAreaWidgetContents,all_lfi_boxes):
         lf_box_num=len(all_lfi_boxes)-1

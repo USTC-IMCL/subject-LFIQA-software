@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'MainProject.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.3
+## Created by: Qt User Interface Compiler version 6.6.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -65,15 +65,15 @@ class Ui_MainWindow(object):
         self.action_skip_video_generation = QAction(MainWindow)
         self.action_skip_video_generation.setObjectName(u"action_skip_video_generation")
         self.action_skip_video_generation.setCheckable(True)
-        self.action_skip_all = QAction(MainWindow)
-        self.action_skip_all.setObjectName(u"action_skip_all")
-        self.action_skip_all.setCheckable(True)
         self.action_close = QAction(MainWindow)
         self.action_close.setObjectName(u"action_close")
         self.actionMigrate = QAction(MainWindow)
         self.actionMigrate.setObjectName(u"actionMigrate")
         self.action_post_processing = QAction(MainWindow)
         self.action_post_processing.setObjectName(u"action_post_processing")
+        self.action_skip_all = QAction(MainWindow)
+        self.action_skip_all.setObjectName(u"action_skip_all")
+        self.action_skip_all.setCheckable(True)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.centralwidget.setFont(font)
@@ -103,6 +103,8 @@ class Ui_MainWindow(object):
         self.menuFile.setObjectName(u"menuFile")
         self.menuSetting = QMenu(self.menubar)
         self.menuSetting.setObjectName(u"menuSetting")
+        self.menuSkip = QMenu(self.menuSetting)
+        self.menuSkip.setObjectName(u"menuSkip")
         self.menuView = QMenu(self.menubar)
         self.menuView.setObjectName(u"menuView")
         self.menuRun = QMenu(self.menubar)
@@ -120,6 +122,8 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.action_load_project)
         self.menuFile.addAction(self.action_save_project)
         self.menuFile.addAction(self.action_close)
+        self.menuSetting.addAction(self.menuSkip.menuAction())
+        self.menuSkip.addAction(self.action_skip_all)
         self.menuRun.addAction(self.action_preprocessing)
         self.menuRun.addAction(self.action_start_training)
         self.menuRun.addAction(self.action_start_test)
@@ -147,14 +151,15 @@ class Ui_MainWindow(object):
         self.action_about_imcl.setText(QCoreApplication.translate("MainWindow", u"LFIQoE", None))
         self.action_skip_refocusing.setText(QCoreApplication.translate("MainWindow", u"Refocusing stage", None))
         self.action_skip_video_generation.setText(QCoreApplication.translate("MainWindow", u"Video Generation", None))
-        self.action_skip_all.setText(QCoreApplication.translate("MainWindow", u"All (Only for Debug)", None))
         self.action_close.setText(QCoreApplication.translate("MainWindow", u"Close...", None))
         self.actionMigrate.setText(QCoreApplication.translate("MainWindow", u"Migrate", None))
         self.action_post_processing.setText(QCoreApplication.translate("MainWindow", u"Post Processing", None))
+        self.action_skip_all.setText(QCoreApplication.translate("MainWindow", u"Preprocessing", None))
         self.logo_label.setText("")
         self.text_label.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\">Light Field Image </p><p align=\"center\">Quality Assessment </p><p align=\"center\">Software</p></body></html>", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"Project", None))
         self.menuSetting.setTitle(QCoreApplication.translate("MainWindow", u"Setting", None))
+        self.menuSkip.setTitle(QCoreApplication.translate("MainWindow", u"Skip", None))
         self.menuView.setTitle(QCoreApplication.translate("MainWindow", u"View", None))
         self.menuRun.setTitle(QCoreApplication.translate("MainWindow", u"Run", None))
         self.menuAbout.setTitle(QCoreApplication.translate("MainWindow", u"About", None))

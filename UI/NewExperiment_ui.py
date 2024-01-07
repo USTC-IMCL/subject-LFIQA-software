@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'NewExperiment.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.1
+## Created by: Qt User Interface Compiler version 6.6.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -39,29 +39,25 @@ class Ui_NewExperimentForm(object):
         self.page_0.setObjectName(u"page_0")
         self.HintLabel = QLabel(self.page_0)
         self.HintLabel.setObjectName(u"HintLabel")
-        self.HintLabel.setGeometry(QRect(20, 10, 631, 131))
+        self.HintLabel.setGeometry(QRect(20, 10, 631, 251))
         font = QFont()
         font.setPointSize(14)
         self.HintLabel.setFont(font)
         self.groupBox = QGroupBox(self.page_0)
         self.groupBox.setObjectName(u"groupBox")
-        self.groupBox.setGeometry(QRect(20, 150, 731, 321))
+        self.groupBox.setGeometry(QRect(20, 290, 731, 181))
         self.groupBox.setFont(font)
         self.radio_btn_json = QRadioButton(self.groupBox)
         self.radio_btn_json.setObjectName(u"radio_btn_json")
-        self.radio_btn_json.setGeometry(QRect(50, 160, 211, 131))
+        self.radio_btn_json.setGeometry(QRect(50, 38, 211, 131))
         self.radio_btn_json.setFont(font)
-        self.radio_btn_manually = QRadioButton(self.groupBox)
-        self.radio_btn_manually.setObjectName(u"radio_btn_manually")
-        self.radio_btn_manually.setGeometry(QRect(50, 30, 211, 131))
-        self.radio_btn_manually.setFont(font)
         self.page_0_json_path = QLineEdit(self.groupBox)
         self.page_0_json_path.setObjectName(u"page_0_json_path")
-        self.page_0_json_path.setGeometry(QRect(250, 212, 341, 31))
+        self.page_0_json_path.setGeometry(QRect(250, 90, 341, 31))
         self.page_0_json_path.setFont(font)
         self.btn_select_json = QToolButton(self.groupBox)
         self.btn_select_json.setObjectName(u"btn_select_json")
-        self.btn_select_json.setGeometry(QRect(590, 212, 24, 31))
+        self.btn_select_json.setGeometry(QRect(590, 90, 24, 31))
         self.horizontalLayoutWidget_7 = QWidget(self.page_0)
         self.horizontalLayoutWidget_7.setObjectName(u"horizontalLayoutWidget_7")
         self.horizontalLayoutWidget_7.setGeometry(QRect(480, 520, 270, 43))
@@ -559,7 +555,7 @@ class Ui_NewExperimentForm(object):
 
         self.retranslateUi(NewExperimentForm)
 
-        self.ConfigStackWidget.setCurrentIndex(3)
+        self.ConfigStackWidget.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(NewExperimentForm)
@@ -567,10 +563,9 @@ class Ui_NewExperimentForm(object):
 
     def retranslateUi(self, NewExperimentForm):
         NewExperimentForm.setWindowTitle(QCoreApplication.translate("NewExperimentForm", u"Create New Experiment", None))
-        self.HintLabel.setText(QCoreApplication.translate("NewExperimentForm", u"<html><head/><body><p>Please Choose the way you want to config your new experiment. <br/></p><p>Then click the next step.</p></body></html>", None))
+        self.HintLabel.setText(QCoreApplication.translate("NewExperimentForm", u"<html><head/><body><p>Only configuration from Json file is supported.</p><p><br/>Please select your json file first.</p><p><br/>Then click the next step.</p></body></html>", None))
         self.groupBox.setTitle(QCoreApplication.translate("NewExperimentForm", u"Configuration", None))
         self.radio_btn_json.setText(QCoreApplication.translate("NewExperimentForm", u"Config with Json", None))
-        self.radio_btn_manually.setText(QCoreApplication.translate("NewExperimentForm", u"Config manually", None))
         self.btn_select_json.setText(QCoreApplication.translate("NewExperimentForm", u"...", None))
         self.page_0_btn_next.setText(QCoreApplication.translate("NewExperimentForm", u"Next Step", None))
         self.page_0_btn_cancel.setText(QCoreApplication.translate("NewExperimentForm", u"Cancel", None))

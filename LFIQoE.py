@@ -1,6 +1,7 @@
 import sys
 sys.path.append('./Widgets')
 sys.path.append('./UI')
+sys.path.append('./Utils')
 from PySide6 import QtWidgets
 import MainProject
 

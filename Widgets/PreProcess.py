@@ -11,10 +11,12 @@ from multiprocessing import pool
 import subprocess
 from LogWindow import StreamToLogger
 import sys
+import PathManager
 logger=logging.getLogger("LogWindow")
+sys.stdout=StreamToLogger(logger,logging.INFO)
+sys.stderr=StreamToLogger(logger,logging.ERROR)
 
 gray_color=(128,128,128)
-ffmpeg_path='.\\ffmpeg.exe'
 
 class PreProcessThread(QObject):
     sub_task_finished=Signal(int,str)
@@ -40,7 +42,7 @@ class PreProcessThread(QObject):
             training_show_list=GetShowList(self.training_LFI_info,self.exp_setting,mode="training")
             training_preprocess.show_list=training_show_list
             for idx in range(len(training_show_list)):
-                message="Training preprocessing stage, lfi name: %s, dist type: %s, level: %d " % (training_show_list[idx][0],training_show_list[idx][1],training_show_list[idx][2])
+                message=f"Training preprocessing stage, lfi name: {training_show_list[idx][0]}, dist type: {training_show_list[idx][1]}, level: {training_show_list[idx][2]}" 
                 logger.info(message)
                 self.sub_task_finished.emit(int((idx+1)/len(training_show_list)*50),message)
                 training_preprocess.RunSingle(idx,self.skip_refocusing,self.skip_video)
@@ -56,7 +58,7 @@ class PreProcessThread(QObject):
             test_show_list=GetShowList(self.test_LFI_info,self.exp_setting,mode="test")
             test_preprocess.show_list=test_show_list
             for idx in range(len(test_show_list)):
-                message="Test preprocessing stage, lfi name: %s, dist type: %s, level: %d " % (test_show_list[idx][0],test_show_list[idx][1],test_show_list[idx][2])
+                message=f"Test preprocessing stage, lfi name: {test_show_list[idx][0]}, dist type: {test_show_list[idx][1]}, level: {test_show_list[idx][2]}"
                 logger.info(message)
                 self.sub_task_finished.emit(int((idx+1)/len(test_show_list)*50+50),message)
                 test_preprocess.RunSingle(idx,self.skip_refocusing,self.skip_video)
@@ -260,59 +262,22 @@ class ExpPreprocessing(QObject):
         self.show_list=None
         self.mode="training"
 
-    def Run(self):
-        if self.exp_setting.comparison_type == ComparisonType.PairComparison:
-            self.RunPairWise()
-        else:
-            self.RunDoubleOrSingle()
-    
     def RunSingle(self,idx,skip_refocusing=False,skip_passive_video=False):
         show_list=self.show_list
         show_info=show_list[idx]
         left_lfi_info=self.all_lfi_info.GetLFIInfo(show_info[0],show_info[1],show_info[2])
         right_lfi_info=self.all_lfi_info.GetLFIInfo(show_info[0],show_info[3],show_info[4])
-        cur_processor=SinglePreProcessing(left_lfi_info,self.exp_setting)
+        cur_processor=SinglePreProcessing(left_lfi_info,self.exp_setting,show_info[5])
         cur_processor.SetOriginLFIInfo(right_lfi_info)
         cur_processor.Run()
     
-    def RunDoubleOrSingle(self):
-        all_lfi_num=len(self.all_lfi_name)
-        for idx,lf_name in enumerate(self.all_lfi_name):
-            cur_ori_lfi_info=self.all_lfi_info.GetOriginLFIInfo(lf_name)
-            if LFIFeatures.None_Refocusing not in self.exp_setting.lfi_features:
-                GenerateRefocusedImg(cur_ori_lfi_info)
-                logger.info("Generate refocused images for %s" % lf_name)
-            self.process_percent_changed.emit(int((idx+1)/all_lfi_num*50/6*1),"Generate refocused images for %s" % lf_name)
-            for dist_type in self.all_distortion_type:
-                for i in range(1,6):
-                    single_lfi_info=self.all_lfi_info.GetLFIInfo(lf_name,dist_type,i)
-                    cur_processor=SinglePreProcessing(single_lfi_info,self.exp_setting)
-                    logger.info("Generate refocused images for %s, dist type %s, level %d" %(lf_name,dist_type,i))
-                    cur_processor.SetOriginLFIInfo(cur_ori_lfi_info)
-                    cur_processor.Run()
-                    self.process_percent_changed.emit(int((idx+1)/all_lfi_num*50/6*(i+1)),"Generate refocused images for %s, dist type %s, level %d" %(lf_name,dist_type,i))
-            
-    def RunPairWise(self):
-        show_list=self.show_list
-        show_num=len(show_list)
-        for info_index,show_info in enumerate(show_list):
-            left_lfi_info=self.all_lfi_info.GetLFIInfo(show_info[0],show_info[1],show_info[2])
-            right_lfi_info=self.all_lfi_info.GetLFIInfo(show_info[0],show_info[3],show_info[4])
-
-            logger.info("Now preprocessing pair %s and %s" %(left_lfi_info.lfi_name,right_lfi_info.lfi_name))
-            self.process_percent_changed.emit(int(info_index/show_num*50),"Now preprocessing pair %s and %s" %(left_lfi_info.lfi_name,right_lfi_info.lfi_name))
-
-            cur_preprocessor=SinglePreProcessing(left_lfi_info,self.exp_setting)
-            cur_preprocessor.SetOriginLFIInfo(right_lfi_info)
-            cur_preprocessor.cmp_root=os.path.join(left_lfi_info.view_path,'%s/cmp_%d' % (self.mode,info_index))
-            cur_preprocessor.Run()
-
 class SinglePreProcessing:
-    def __init__(self,lfi_info:SingleLFIInfo,exp_setting:ExpSetting):
+    def __init__(self,lfi_info:SingleLFIInfo,exp_setting:ExpSetting,exp_show_path_manager:PathManager.ExpShowPathManager):
         self.lfi_info=lfi_info
         self.exp_setting=exp_setting
         self.image_height=lfi_info.img_height
         self.image_width=lfi_info.img_width
+        self.exp_show_path_manager=exp_show_path_manager
         
         self.picture_mask=PictureMask(self.image_height,self.image_width,exp_setting.lfi_features,exp_setting.comparison_type)
 
@@ -323,6 +288,7 @@ class SinglePreProcessing:
         self.origin_lfi_info=origin_lfi
         
     def Run(self,skip_refocusing=False,skip_passive_video=False):
+        self.lfi_info.refocusing_views_path=self.exp_show_path_manager.Get_refocusing_view_path()
         # handle the right one when using the pair-wise comparison
         if LFIFeatures.None_Refocusing not in self.exp_setting.lfi_features:
             if not skip_refocusing:
@@ -335,12 +301,12 @@ class SinglePreProcessing:
                 if not skip_refocusing:
                     self.Generate_refocusing()
             if LFIFeatures.Active_Refocusing in self.exp_setting.lfi_features:
-                self.Generate_show_refocus(self.cmp_root)
+                self.Generate_show_refocus()
             if LFIFeatures.Passive_Refocusing in self.exp_setting.lfi_features:
                 self.Generate_passive_refocus_video()
             
             if LFIFeatures.Active_ViewChanging in self.exp_setting.lfi_features:
-                self.Generate_show_views(self.cmp_root)
+                self.Generate_show_views()
             if LFIFeatures.Passive_ViewChanging in self.exp_setting.lfi_features:
                 self.Generaet_passive_view_video()
 
@@ -350,16 +316,14 @@ class SinglePreProcessing:
     def Generate_origin_refucusing(self):
         GenerateRefocusedImg(self.origin_lfi_info,self.exp_setting.ViewSaveTypeStr)
     
-    def Generate_show_refocus(self,target_path=None):
+    def Generate_show_refocus(self):
         # Note that entering this function means we need an active refocusing
         # 1 view
         if LFIFeatures.TwoD in self.exp_setting.lfi_features and self.exp_setting.comparison_type == ComparisonType.SingleStimuli:
             self.lfi_info.show_refocusing_views_path=self.lfi_info.refocusing_views_path
             return
 
-        if target_path is None:
-            target_path=self.lfi_info.refocusing_views_path
-        self.lfi_info.show_refocusing_views_path=os.path.join(target_path,'show_refocusing')
+        self.lfi_info.show_refocusing_views_path=self.exp_show_path_manager.Get_show_refocus_path()
         CheckPath(self.lfi_info.show_refocusing_views_path)
 
         all_refocus_views=os.listdir(self.lfi_info.refocusing_views_path)
@@ -406,8 +370,8 @@ class SinglePreProcessing:
     def Generate_passive_refocus_video(self):
         # currently only from nearest to farthest
         # but we still nee the show refocusing images first!
-        self.Generate_show_refocus(self.cmp_root)
-        show_path=self.lfi_info.show_refocusing_views_path
+        self.Generate_show_refocus()
+        show_path=self.exp_show_path_manager.Get_show_refocus_path()
         all_show_views=os.listdir(show_path)
         # check the height and width
         for view in all_show_views:
@@ -443,35 +407,38 @@ class SinglePreProcessing:
                 file_name=file_name.replace('\\','/')
                 fid.write('file %s\n' % file_name)
 
-        output_video=os.path.join(self.lfi_info.show_refocusing_views_path,f"refocus.{video_post_fix}")
+        output_video=self.exp_show_path_manager.Get_passive_refocus_video_path()
         self.lfi_info.passive_refocusing_video=output_video
 
         #if os.path.exists(output_video):
         #    os.remove(output_video)
 
         #cmd=f'{ffmpeg_path} -f concat -safe 0 -r 30 -i {output_txt} -c:v libx26 -x265-params "lossless=1:qp=0" -r 30 -pix_fmt yuv420p {output_video}'
-        cmd=f'ffmpeg -f concat -safe 0 -r 30 -i {output_txt} -c:v libx264 -qp 0 -r 30 -pix_fmt yuv420p -y {output_video}'
+        cmd=f'{PathManager.ffmpeg_path} -f concat -safe 0 -r 30 -i {output_txt} -c:v libx264 -qp 0 -r 30 -pix_fmt yuv420p -y {output_video}'
+        os.system(cmd)
         #logger.info(cmd)
+        '''
         proc=subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
         out_info,out_error=proc.communicate()
         if len(out_info) > 0:
-            pass
-            #logger.info(out_info)
+            logger.info(out_info)
         if len(out_error)>0:
-            pass
-            #logger.error(out_error)
+            logger.error(out_error)
+        '''
     
-    def Generate_show_views(self,target_path=None):
+    def Generate_show_views(self):
+        self.lfi_info.show_views_path=self.exp_show_path_manager.Get_show_view_path()
+        CheckPath(self.lfi_info.show_views_path)
+
+        # Only one view. Just copy file to the target folder.
         if LFIFeatures.TwoD in self.exp_setting.lfi_features and self.exp_setting.comparison_type == ComparisonType.SingleStimuli:
-            self.lfi_info.show_views_path=self.lfi_info.view_path
-            return
+            for row in range(self.lfi_info.angular_height):
+                for col in range(self.lfi_info.angular_width):
+                    dist_view=self.lfi_info.GetViewPath(col,row)
+                    target_view=os.path.join(self.lfi_info.show_views_path,self.lfi_info.GetViewName(col,row))
+                    shutil.copyfile(dist_view,target_view)
 
         # 2 view, but single stimuli and 3D display
-        if target_path is None:
-            target_path=self.lfi_info.view_path
-        self.lfi_info.show_views_path=os.path.join(target_path,'show_views')
-        CheckPath(self.lfi_info.show_views_path)
-        
         if LFIFeatures.Stereo_horizontal in self.exp_setting.lfi_features and self.exp_setting.comparison_type == ComparisonType.SingleStimuli:
             for row in range(self.lfi_info.angular_height):
                 for col in range(self.lfi_info.angular_width-1):
@@ -511,8 +478,8 @@ class SinglePreProcessing:
     def Generaet_passive_view_video(self):
         # currently only from nearest to farthest
         # but we still nee the show refocusing images first!
-        self.Generate_show_views(self.cmp_root)
-        show_path=self.lfi_info.show_views_path
+        self.Generate_show_views()
+        show_path=self.exp_show_path_manager.Get_show_view_path()
 
         all_views=os.listdir(show_path)
         for view in all_views:
@@ -550,23 +517,23 @@ class SinglePreProcessing:
                 file_name=file_name.replace('\\','/')
                 fid.write('file %s\n' % file_name)
 
-        output_video=os.path.join(show_path,f"views.{video_post_fix}")
+        output_video=self.exp_show_path_manager.Get_passive_view_video_path()
         self.lfi_info.passive_video=output_video
 
         #if os.path.exists(output_video):
         #    os.remove(output_video)
 
         #cmd=f'{ffmpeg_path} -f concat -safe 0 -i {output_txt} -c:v libx265 -x265-params "lossless=1:qp=0" -r 30 -pix_fmt yuv420p {output_video}'
-        cmd=f'ffmpeg -f concat -safe 0 -r 30 -i {output_txt} -c:v libx264 -qp 0 -r 30 -pix_fmt yuv420p -y {output_video}'
+        cmd=f'{PathManager.ffmpeg_path} -f concat -safe 0 -r 30 -i {output_txt} -c:v libx264 -qp 0 -r 30 -pix_fmt yuv420p -y {output_video}'
+        os.system(cmd)
+        '''
         proc=subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
         out_info,out_error=proc.communicate()
         if len(out_info) > 0:
-            pass
-            #logger.info(out_info)
+            logger.info(out_info)
         if len(out_error)>0:
-            pass
-            #logger.error(out_error)
-
+            logger.error(out_error)
+        '''
 
 if __name__ == "__main__":
     test_file_path='../debug.lfqoe'

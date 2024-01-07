@@ -6,6 +6,13 @@ import json
 import pickle
 import logging
 from numpy import unique
+import sys
+import shutil
+from random import shuffle
+sys.path.append('../Utils/')
+
+import PathManager
+
 logger=logging.getLogger("LogWindow")
 
 class CompTypes(IntEnum):
@@ -99,7 +106,7 @@ def MakeAJsonTemplate(output_path_file):
         json.dump(json_dict,f,indent=4)
     
 class SingleLFIInfo:
-    def __init__(self, lfi_name="", type_name="", type=CompTypes.Distorted, lfi_type=LFITypes.Dense, angular_format=AngularFormat.XY, views_path=""):
+    def __init__(self, lfi_name="", type_name="", type=CompTypes.Distorted, lfi_type=LFITypes.Dense, angular_format=AngularFormat.XY, views_path="",skip_preprocessing=False):
         '''
         type_name: Origin, or the name of the distortion type
         type: CompTypes, Origin or Distorted
@@ -115,7 +122,7 @@ class SingleLFIInfo:
         self.view_path=views_path
         self.lfi_type=lfi_type
 
-        self.refocusing_views_path=os.path.join(views_path,"views_refocusing")
+        self.refocusing_views_path=os.path.join(views_path,PathManager.inner_views_refocusing_path)
         self.show_refocusing_views_path=None
         self.show_views_path=None
         self.passive_refocusing_video=None
@@ -136,11 +143,11 @@ class SingleLFIInfo:
 
         self.post_fix='png' # default is png
 
-        ret_info=self.ParseFolder(views_path)
         self.is_valid=True
-
-        if ret_info is not None:
-            self.angular_height,self.angular_width,self.img_height,self.img_width,self.path_dict=ret_info
+        if not skip_preprocessing:
+            ret_info=self.ParseFolder(views_path)
+            if ret_info is not None:
+                self.angular_height,self.angular_width,self.img_height,self.img_width,self.path_dict=ret_info
     
     def FromViewIndexToFileIndex(self,input_hw):
         return (input_hw[0]+self.min_height,input_hw[1]+self.min_width)
@@ -150,6 +157,15 @@ class SingleLFIInfo:
             self.is_valid=False
             return None
         all_files=os.listdir(folder_path)
+        if len(all_files)==0:
+            self.is_valid=False
+            return None
+        view_num=0
+        for img_file in all_files:
+            if self.post_fix in img_file:
+                view_num+=1
+        if view_num==0:
+            return None
         max_height=0
         max_width=0
         min_height=10000
@@ -247,10 +263,10 @@ class SingleLFIInfo:
     @PassiveVideo.setter
     def PassiveVideo(self, value):
         self.passive_video=value
-        
+    
     
 class ExpLFIInfo:
-    def __init__(self,lfi_name,ori_path=[],dist_path=[],lfi_type=[],angular_format=AngularFormat.XY):
+    def __init__(self,lfi_name=None,ori_path=[],dist_path=[],lfi_type=[],angular_format=AngularFormat.XY):
         '''
         angular_format: 0: x_y, 1: h_w
         '''
@@ -260,14 +276,18 @@ class ExpLFIInfo:
         self.angular_format=angular_format
 
         self.lfi_names=lfi_name
+        self.all_dist_types={}
+        self.all_dist_levels={}
+
         self.all_LFI_info={}
 
-        self.InitLFIsInfo()
-        self.broken_names=self.LFIsInfoCheck()
-        if len(self.broken_names)>0:
-            self.is_valid=False
-        else:
-            self.is_valid=True
+        if self.lfi_names is not None:
+            self.InitLFIsInfo()
+            self.broken_names=self.LFIsInfoCheck()
+            if len(self.broken_names)>0:
+                self.is_valid=False
+            else:
+                self.is_valid=True
 
     def InitLFIsInfo(self):
         for lfi_name_index in range(len(self.lfi_names)):
@@ -287,10 +307,17 @@ class ExpLFIInfo:
                     views_path=self.ori_paths[lfi_name_index])
 
             all_dist_folders=self.WalkDistFolder(self.dist_paths[lfi_name_index])
+            self.all_dist_types[lfi_name]=all_dist_folders
+            self.all_dist_levels[lfi_name]={}
+
             for dist_folder_name in all_dist_folders:
                 dist_folder=os.path.join(self.dist_paths[lfi_name_index],dist_folder_name)
                 self.all_LFI_info[lfi_name][dist_folder_name]={}
-                for dist_level in range(1,6):
+                self.all_dist_levels[lfi_name][dist_folder_name]=[]
+                all_dist_levels=os.listdir(dist_folder)
+                for dist_level in all_dist_levels:
+                    if not os.path.isdir(os.path.join(dist_folder,dist_level)):
+                        continue
                     self.all_LFI_info[lfi_name][dist_folder_name][dist_level]=SingleLFIInfo(
                         lfi_name=lfi_name,
                         type_name=dist_folder_name,
@@ -298,6 +325,7 @@ class ExpLFIInfo:
                         lfi_type=lfi_type,
                         angular_format=self.angular_format,
                         views_path=os.path.join(dist_folder,str(dist_level)))
+                    self.all_dist_levels[lfi_name][dist_folder_name].append(dist_level)
                     self.all_LFI_info[lfi_name][dist_folder_name][dist_level].dist_level=dist_level
     
     def AddLFIInfo(self,lfi_name,ori_path,dist_path):
@@ -324,6 +352,135 @@ class ExpLFIInfo:
                 dist_folder_name=os.path.basename(dist_folder)
                 self.all_LFI_info[lfi_name][dist_folder_name]=SingleLFIInfo(lfi_name,dist_folder_name,LFITypes.Distorted,self.angular_format,dist_path)
         return True
+
+    def ParseLFFolder(self,in_path):
+        all_dist=os.listdir(in_path)
+        all_dist_types=[]
+        all_dist_levels={}
+        for dist_name in all_dist:
+            if not os.path.isdir(os.path.join(in_path,dist_name)):
+                continue
+            all_dist_types.append(dist_name)
+            all_dist_levels[dist_name]=[]
+
+            dist_path=os.path.join(in_path,dist_name)
+            all_levels=os.listdir(dist_path)
+            for level_name in all_levels:
+                if not os.path.isdir(os.path.join(dist_path,level_name)):
+                    continue
+                all_dist_levels[dist_name].append(level_name)
+        return all_dist_types,all_dist_levels
+    
+    def AddOriginLF(self,lfi_name,in_lfi_type,in_angular_format,spatial_size,angular_size,in_view_path):
+        if lfi_name not in self.all_LFI_info.keys():
+            self.all_LFI_info[lfi_name]={}
+        if in_view_path == "":
+            return
+        self.all_LFI_info[lfi_name]["Origin"]=SingleLFIInfo(
+            lfi_name=lfi_name,
+            type_name="Origin",
+            type=CompTypes.Origin,
+            lfi_type=in_lfi_type,
+            angular_format=in_angular_format,
+            views_path=in_view_path,
+            skip_preprocessing=False
+        )
+        
+    def AddSingleLFIInfo(self,lfi_name,in_lfi_type,in_angular_format,spatial_size,angular_size,dist_type,dist_level,in_view_path,skip_preprocessing=False,cmp_type=ComparisonType.DoubleStimuli):
+        if lfi_name not in self.all_LFI_info.keys():
+            self.all_LFI_info[lfi_name]={}
+        if dist_type not in self.all_LFI_info[lfi_name].keys():
+            self.all_LFI_info[lfi_name][dist_type]={}
+        cur_lf_info=SingleLFIInfo(
+            lfi_name=lfi_name,
+            type_name=dist_type,
+            type=CompTypes.Distorted,
+            lfi_type=in_lfi_type,
+            angular_format=in_angular_format,
+            views_path=in_view_path,skip_preprocessing=skip_preprocessing)
+        
+        in_height,in_width=spatial_size
+        in_angular_height,in_angular_width=angular_size 
+
+        if not skip_preprocessing:
+            if cur_lf_info.img_height!= in_height or cur_lf_info.img_width != in_width or cur_lf_info.angular_height != in_angular_height or cur_lf_info.angular_width != in_angular_width:
+                logger.error("The input data size does not match the size in the Json file! Please Check it carefully!")
+        else:
+            cur_lf_info.img_width=in_width
+            cur_lf_info.img_height=in_height
+            cur_lf_info.angular_height=in_angular_height
+            cur_lf_info.angular_width=in_angular_width
+
+            show_view_path=os.path.join(in_view_path,PathManager.inner_show_views_path)
+            if os.path.exists(show_view_path):
+                cur_lf_info.show_views_path=show_view_path
+            
+            show_refocusing_path=os.path.join(in_view_path,PathManager.inner_show_refocusing_path)
+            if os.path.exists(show_refocusing_path):
+                cur_lf_info.show_refocusing_views_path=show_refocusing_path
+            
+            passive_view_video=os.path.join(show_view_path,PathManager.passive_view_video_name)
+            passive_refocusing_video=os.path.join(show_refocusing_path,PathManager.passive_refocusing_video_name)
+            depth_path=os.path.join(show_view_path,PathManager.inner_depth_map)
+
+            if os.path.exists(passive_view_video):
+                cur_lf_info.passive_video=passive_view_video
+            if os.path.exists(passive_refocusing_video):
+                cur_lf_info.passive_refocusing_video=passive_refocusing_video
+            if os.path.join(depth_path):
+                cur_lf_info.depth_path=depth_path
+
+            cur_lf_info.ParseFolder(show_view_path)
+
+        self.all_LFI_info[lfi_name][dist_type][dist_level]=cur_lf_info
+
+    def AddLFIInfo(self,lfi_name,in_lfi_type,in_angular_format,spatial_size,angular_size,in_path):
+        all_dist_types,all_dist_levels=self.ParseLFFolder(in_path)
+        spatial_height,spatial_width=spatial_size
+        angular_height,angular_width=angular_size
+        
+        for dist_type in all_dist_types:
+            self.all_LFI_info[lfi_name]={}
+            self.all_LFI_info[lfi_name][dist_type]={}
+            for dist_level in all_dist_levels:
+                cur_lf_info=SingleLFIInfo(
+                    lfi_name=lfi_name,
+                    type_name=dist_type,
+                    type=CompTypes.Distorted,
+                    lfi_type=in_lfi_type,
+                    angular_format=in_angular_format,
+                    views_path="")
+                cur_lf_info.angular_height=angular_height
+                cur_lf_info.angular_width=angular_width
+                cur_lf_info.img_height=spatial_height
+                cur_lf_info.img_width=spatial_width
+
+                cur_lf_info.dist_level=dist_level
+
+                show_view_path=os.path.join(in_path,dist_type,dist_level,PathManager.inner_show_views_path)
+                if os.path.exists(show_view_path):
+                    cur_lf_info.show_views_path=show_view_path
+                
+                show_refocusing_path=os.path.join(in_path,dist_type,dist_level,PathManager.inner_show_refocusing_path)
+                if os.path.exists(show_refocusing_path):
+                    cur_lf_info.show_refocusing_views_path=show_refocusing_path
+                
+                passive_view_video=os.path.join(show_view_path,PathManager.passive_view_video_name)
+                passive_refocusing_video=os.path.join(show_refocusing_path,PathManager.passive_refocusing_video_name)
+                depth_path=os.path.join(show_view_path,PathManager.inner_depth_map)
+
+                if os.path.exists(passive_view_video):
+                    cur_lf_info.passive_video=passive_view_video
+                if os.path.exists(passive_refocusing_video):
+                    cur_lf_info.passive_refocusing_video=passive_refocusing_video
+                if os.path.join(depth_path):
+                    cur_lf_info.depth_path=depth_path
+
+                cur_lf_info.view_path=os.path.join(in_path,)
+
+                cur_lf_info.ParseFolder(show_view_path)
+                
+                self.all_LFI_info[lfi_name][dist_type][dist_level]=cur_lf_info
     
     def GetOriginLFIInfo(self,lfi_name):
         return self.all_LFI_info[lfi_name]["Origin"]
@@ -336,8 +493,12 @@ class ExpLFIInfo:
     
     def GetAllDistNames(self,lfi_name):
         tmp=list(self.all_LFI_info[lfi_name].keys())
-        tmp.remove("Origin")
+        if "Origin" in tmp:
+            tmp.remove("Origin")
         return tmp
+    
+    def GetAllDistLevels(self,lfi_name,dist_name):
+        return list(self.all_LFI_info[lfi_name][dist_name].keys())
     
     def GetLFIInfo(self,lfi_name,dist_type,i=0):
         '''
@@ -377,7 +538,7 @@ class ExpLFIInfo:
             if dist_name not in cur_lfi_info.keys():
                 return False
         return True
-
+    
 class ExpSetting:
     def __init__(self,lfi_features=[],comparison_type=ComparisonType.DoubleStimuli,save_format=SaveFormat.CSV,post_processing=PostProcessType.SROCC):
         self.lfi_features=lfi_features
@@ -386,6 +547,7 @@ class ExpSetting:
         self.post_processing=post_processing
 
         self.pair_wise_config=""
+        self.skip_preprocessing=False
         self.has_preprocess=False
 
         self.training_show_list=[]
@@ -403,6 +565,8 @@ def GetShowList(lfi_info:ExpLFIInfo, exp_setting:ExpSetting,mode="trainging"):
     return a list of show list
     '''
     show_list=[]
+    view_post_fix=exp_setting.ViewSaveTypeStr
+    video_post_fix=exp_setting.VideoSaveTypeStr
     if exp_setting.comparison_type == ComparisonType.PairComparison:
         pair_wise_config=exp_setting.pair_wise_config
         with open(pair_wise_config,'r') as f:
@@ -413,15 +577,19 @@ def GetShowList(lfi_info:ExpLFIInfo, exp_setting:ExpSetting,mode="trainging"):
             pair_wise_dict=pair_wise_dict['test']
         for cmp_key in pair_wise_dict.keys():
             cur_info=pair_wise_dict[cmp_key]
-            show_list.append([cur_info["lfi_name"],cur_info["left"],int(cur_info["left_level"]),cur_info["right"],int(cur_info["right_level"])])
+            cur_lfi_info=lfi_info.GetLFIInfo(cur_info['lfi_name'],cur_info['left'],cur_info['left_level'])
+            cur_exp_show_path_manager=PathManager.ExpShowPathManager(cur_lfi_info.view_path,mode,True,video_post_fix=video_post_fix,out_img_post_fix=view_post_fix,pair_comparison_index=cmp_key)
+            show_list.append([cur_info["lfi_name"],cur_info["left"],cur_info["left_level"],cur_info["right"],cur_info["right_level"],cur_exp_show_path_manager])
     else:
         for lfi_name in lfi_info.GetAllLFNames():
             origin_type="Origin"
             for dist_name in lfi_info.GetAllDistNames(lfi_name):
-                for i in range(1,6):
-                    show_list.append([lfi_name,dist_name,i,origin_type,0])
+                all_dist_levels=lfi_info.GetAllDistLevels(lfi_name,dist_name)
+                for dist_level in all_dist_levels:
+                    cur_lfi_info=lfi_info.GetLFIInfo(lfi_name,dist_name, dist_level)
+                    cur_exp_show_path_manager=PathManager.ExpShowPathManager(cur_lfi_info.view_path,mode,use_pair_comparison=False,video_post_fix=video_post_fix,out_img_post_fix=view_post_fix)
+                    show_list.append([lfi_name,dist_name,dist_level,origin_type,0,cur_exp_show_path_manager])
     return show_list
-
 
 class ProjectInfo:
     '''
@@ -442,6 +610,9 @@ class ProjectInfo:
 
         self.software_version=software_version
         self.project_version=software_version
+        self.training_scoring_lfi_info=AllScoringLFI("training")
+        self.test_scoring_lfi_info=AllScoringLFI("test")
+
         if not os.path.exists(self.project_file) or self.project_path is None:
             self.training_LFI_info=None
             self.test_LFI_info=None
@@ -450,11 +621,17 @@ class ProjectInfo:
             self.subject_list=[]
         else:
             self.ReadFromFile()
-    
+        
+    def InitAllScoringLFIInfo(self):
+        if self.exp_setting.has_preprocess:
+            self.training_scoring_lfi_info.GetAllScoringLFI(self.exp_setting,self.training_LFI_info)
+            self.test_scoring_lfi_info.GetAllScoringLFI(self.exp_setting,self.test_LFI_info)
+            
     def SetParameters(self,training_lfi_info,test_lfi_info,exp_setting):
         self.training_LFI_info=training_lfi_info
         self.test_LFI_info=test_lfi_info
         self.exp_setting=exp_setting
+    
 
     def ReadFromFile(self):
         with open(self.project_file,'rb') as fid:
@@ -468,6 +645,8 @@ class ProjectInfo:
             self.test_LFI_info=pickle.load(fid)
             self.exp_setting=pickle.load(fid)
             self.subject_list=pickle.load(fid)
+        
+        self.InitAllScoringLFIInfo()
 
     def SaveToFile(self,save_file=None): 
         if save_file is None:
@@ -521,9 +700,9 @@ class ProjectInfo:
         ret_str+=f"Video save type: {self.exp_setting.VideoSaveTypeStr}\n"
         ret_str+=f"View save type: {self.exp_setting.ViewSaveTypeStr}\n"
         if self.exp_setting.has_preprocess:
-            ret_str+="Has been preprocess: Yes\n"
+            ret_str+="Has been preprocessed: Yes\n"
         else:
-            ret_str+="Has been preprocess: No\n"
+            ret_str+="Has been preprocessed: No\n"
         ret_str+="-----------Subject List-----------\n"
         ret_str+="Num of subjects: %d\n" % len(self.subject_list)
         for idx,subject_name in enumerate(self.subject_list):
@@ -540,14 +719,24 @@ class ProjectInfo:
         dist_names_str='['+' '.join(['%s ' % x for x in all_dist_names])+']'
         ret_str+="All Distortion: " + dist_names_str +"\n"
         ret_str+="All LFI: \n"
-        for idx, lif_name in enumerate(all_lfi_names):
-            origin_path=lfi_info.ori_paths[idx]
-            dist_path=lfi_info.dist_paths[idx]
-            lfi_type=lfi_info.lfi_types[idx]
+        for idx, lfi_name in enumerate(all_lfi_names):
+            if self.exp_setting.skip_preprocessing:
+                origin_path='--no input'
+            if "Origin" in lfi_info.all_LFI_info[lfi_name].keys():
+                origin_path=lfi_info.all_LFI_info[lfi_name]["Origin"].view_path
+            else:
+                origin_path="# no input #"
+            if origin_path == "":
+                origin_path="# no input #"
+            ret_str+="Light field image name: %s\n" % lfi_name
+            ret_str+="SRC path: %s\n" %origin_path
+            
+            all_dist_types=lfi_info.GetAllDistNames(lfi_name)
+            test_all_level=lfi_info.GetAllDistLevels(lfi_name,all_dist_types[0])
+
+            test_lfi_info=lfi_info.GetLFIInfo(lfi_name,all_dist_types[0],test_all_level[0])
+            lfi_type=test_lfi_info.lfi_type
             angular_format=lfi_info.angular_format
-            ret_str+="Light field image name: %s\n" % lif_name
-            ret_str+="Original path: %s\n" %origin_path
-            ret_str+="Distortion path: %s\n" %dist_path
             if lfi_type == LFITypes.Sparse:
                 ret_str+="Light field image type: Sparse\n"
             else:
@@ -556,6 +745,15 @@ class ProjectInfo:
                 ret_str+="Angular format: XY\n"
             else:
                 ret_str+="Angular format: HW\n"
+
+            for dist_type in all_dist_types:
+                all_dist_levels=lfi_info.GetAllDistLevels(lfi_name,dist_type)
+                ret_str+="  Distortion type: %s\n" %dist_type
+                for dist_level in all_dist_levels:
+                    ret_str+=f"    Distortion level: {dist_level}\n"
+                    cur_lfi_info=lfi_info.GetLFIInfo(lfi_name,dist_type,dist_level)
+                    dist_path=cur_lfi_info.view_path
+                    ret_str+=f"    Distortion path: {dist_path}\n"
         return ret_str
 
 def ReadExpConfig(file_path):
@@ -567,3 +765,380 @@ def ReadExpConfig(file_path):
         test_LFI_info=pickle.load(fid)
         exp_setting=pickle.load(fid)
     return training_LFI_info,test_LFI_info,exp_setting
+
+
+class ScoringExpLFIInfo:
+    '''
+    Used for the scoring stage.
+    With this we do not need to parse the folder or calculate the directions.
+    It helps make things easier and is more efficient.
+    '''
+    def __init__(self) -> None:
+        self.img_height=None
+        self.img_width=None
+        self.angular_height=None
+        self.angular_width=None
+        self.angular_format=None
+
+        self.lfi_name=None
+        self.methodology=None
+        # use a exp name to identify the test.
+        # 
+        self.distortion_type=None
+        self.distortion_level=None
+        self.exp_name=None
+
+        self.active_view_path=None
+        self.active_refocusing_path=None
+        
+        self.passive_view_video_path=None
+        self.passive_view_folder=None
+        self.passive_refocusing_video_path=None
+        self.passive_refocusing_folder=None
+
+        self.min_height=None
+        self.max_height=None
+        self.min_width=None
+        self.max_width=None
+
+        self.depth_path=None
+        self.img_post_fix=None
+        self.video_post_fix=None
+        self.cmp_index=None
+
+        self.passive_view_thumbnail=None
+        self.passive_refocusing_thumbnail=None
+
+        self.show_path_manager=None
+
+        self.view_dict={}
+
+
+    def InitFromLFIInfo(self,in_lfi_info:SingleLFIInfo,exp_setting:ExpSetting,exp_name:str,mode="training",cmp_index=0):
+        self.img_height=in_lfi_info.img_height
+        self.img_width=in_lfi_info.img_width
+        self.angular_height=in_lfi_info.angular_height
+        self.angular_width=in_lfi_info.angular_width-1
+
+        self.min_height=in_lfi_info.min_height
+        self.max_height=in_lfi_info.max_height
+        self.min_width=in_lfi_info.min_width
+        self.max_width=in_lfi_info.max_width
+
+        if LFIFeatures.Stereo_horizontal in exp_setting.lfi_features and exp_setting.comparison_type==ComparisonType.DoubleStimuli:
+            self.angular_width-=1
+            self.max_width-=1
+
+        if in_lfi_info.angular_format == "HW":
+            in_lfi_info.angular_format=AngularFormat.HW
+        else:
+            in_lfi_info.angular_format=AngularFormat.XY
+
+        self.angular_format=in_lfi_info.angular_format
+        self.depth_path=in_lfi_info.depth_path
+
+        self.lfi_name=in_lfi_info.lfi_name
+        in_path=in_lfi_info.view_path
+
+        self.distortion_type=in_lfi_info.type_name
+        self.distortion_level=in_lfi_info.dist_level
+
+        use_pair_comparison=ComparisonType.PairComparison == exp_setting.comparison_type
+
+        img_post_fix=exp_setting.ViewSaveTypeStr
+        video_post_fix=exp_setting.VideoSaveTypeStr
+        self.img_post_fix=img_post_fix
+        self.video_post_fix=video_post_fix
+        self.cmp_index=cmp_index
+
+        self.show_path_manager=PathManager.ExpShowPathManager(in_path,mode,use_pair_comparison=use_pair_comparison,video_post_fix=video_post_fix,out_img_post_fix=img_post_fix,pair_comparison_index=cmp_index)
+
+        self.active_view_path=self.show_path_manager.Get_show_view_path()
+        self.active_refocusing_path=self.show_path_manager.Get_show_refocus_path()
+
+        self.passive_view_video_path=self.show_path_manager.Get_passive_view_video_path()
+        self.passive_refocusing_video_path=self.show_path_manager.Get_passive_refocus_video_path()
+
+        if os.path.exists(self.passive_view_video_path):
+            self.passive_view_folder=os.path.dirname(self.passive_view_video_path)
+            self.passive_view_thumbnail=os.path.join(self.passive_view_folder,f"{PathManager.thumbnail_name}.{self.img_post_fix}")
+            if not os.path.exists(self.passive_view_thumbnail):
+                self.GetThumbnail(self.passive_view_video_path,self.passive_view_thumbnail)
+        if os.path.exists(self.passive_refocusing_video_path):
+            self.passive_refocusing_folder=os.path.dirname(self.passive_refocusing_video_path)
+            self.passive_refocusing_thumbnail=os.path.join(self.passive_refocusing_folder,f"{PathManager.thumbnail_name}.{self.img_post_fix}")
+            if not os.path.exists(self.passive_refocusing_thumbnail):
+                self.GetThumbnail(self.passive_refocusing_video_path,self.passive_refocusing_thumbnail)
+
+        all_views=os.listdir(self.active_view_path)
+        view_num=0
+        for file_name in all_views:
+            if img_post_fix in file_name:
+                view_num+=1
+        if view_num>0:
+            self.GetViewDict(all_views,img_post_fix) 
+
+        self.methodology=exp_setting.comparison_type
+        self.exp_name=exp_name
+
+    def GetThumbnail(self,in_video,out_img):
+        ffmpeg_cmd=f"{PathManager.ffmpeg_path} -i {in_video} -ss 00:00:00 -frames:v 1 {out_img}"
+        os.system(ffmpeg_cmd)
+    
+    def GetViewDict(self,all_files,img_post_fix):
+        for file_name in all_files:
+            if img_post_fix in file_name and PathManager.thumbnail_name not in file_name:
+                pure_file_name = file_name.split('.')[0]
+                if self.angular_format ==  AngularFormat.HW:
+                    row,col=pure_file_name.split('_')
+                else:
+                    col,row=pure_file_name.split('_')
+                row=int(row)-self.min_height
+                col=int(col)-self.min_width
+                self.view_dict[(row,col)]=file_name
+    
+    def GetActiveView(self,v_row,v_col):
+        #v_row+=self.min_height
+        #v_col+=self.min_width
+        return os.path.join(self.active_view_path,self.view_dict[(v_row,v_col)])
+    
+    def GetRefocusImg(self,depth_value):
+        return os.path.join(self.active_refocusing_path,f"{depth_value}.{self.img_post_fix}")
+    
+    def GetShowViewsPath(self):
+        return self.active_view_path
+    
+    def GetActiveViewPath(self):
+        return self.active_view_path
+    
+    def GetShowRefocusingPath(self):
+        return self.active_refocusing_path
+    def GetActiveRefocusingPath(self):
+        return self.active_refocusing_path
+    
+    def GetAllPossibleDepthVal(self):
+        depth_map=cv2.imread(self.depth_path,cv2.IMREAD_GRAYSCALE)
+        if depth_map.shape[0]!=self.img_height or depth_map.shape[1]!=self.img_width:
+            depth_map=cv2.resize(depth_map,(self.img_width,self.img_height))
+
+        all_depth_values=unique(depth_map)
+        return all_depth_values
+    
+
+class AllScoringLFI:
+    def __init__(self,in_mode):
+        self.all_exp_lfi_info=[]
+        self.exp_lfi_info_num=0
+        self.mode=in_mode
+    
+    def GetLFINum(self)->int:
+        return self.exp_lfi_info_num
+
+    def GetRandomShowOrder(self):
+        if self.exp_lfi_info_num==0:
+            return []
+        show_order=list(range(self.exp_lfi_info_num))
+        shuffle(show_order)
+        return show_order
+    
+    def GetScoringExpLFIInfo(self,index:int) -> ScoringExpLFIInfo:
+        return self.all_exp_lfi_info[index]
+    
+    def GetAllScoringLFI(self,exp_setting:ExpSetting,all_lfi_info:ExpLFIInfo):
+        if exp_setting.comparison_type == ComparisonType.PairComparison:
+            pair_wise_list_path=exp_setting.pair_wise_config
+            with open(pair_wise_list_path,'r') as fid:
+                pair_wise_list=json.load(fid)
+            config_list=pair_wise_list[self.mode]
+            for cmp_index,config in config_list.items():
+                cur_lfi_name=config["lfi_name"]
+                dist_type=config["left"]
+                dist_level=config["left_level"]
+
+                right_dist_type=config["right"]
+                right_dist_level=config["right_level"]
+                cur_lfi_info=all_lfi_info.GetLFIInfo(cur_lfi_name,dist_type,dist_level)
+                exp_name=f"{cur_lfi_name}_{dist_type}_{dist_level}_VS_{right_dist_type}_{right_dist_level}"
+                self.AddOne(exp_setting,cur_lfi_info,exp_name,cmp_index)
+        else:
+            all_lfi_names=all_lfi_info.GetAllLFNames()
+            for lfi_name in all_lfi_names:
+                all_dist_types=all_lfi_info.GetAllDistNames(lfi_name)
+                for dist_type in all_dist_types:
+                    all_dist_levels=all_lfi_info.GetAllDistLevels(lfi_name,dist_type)
+                    for dist_level in all_dist_levels:
+                        cur_lfi_info=all_lfi_info.GetLFIInfo(lfi_name,dist_type,dist_level)
+                        exp_name=f"{lfi_name}_{dist_type}_{dist_level}"
+                        self.AddOne(exp_setting,cur_lfi_info,exp_name)
+    
+    def AddOne(self,exp_setting:ExpSetting,lfi_info:SingleLFIInfo,exp_name,cmp_index=0):
+        self.exp_lfi_info_num+=1
+        cur_scoring_lfi_info=ScoringExpLFIInfo()
+        cur_scoring_lfi_info.InitFromLFIInfo(lfi_info,exp_setting,exp_name,self.mode,cmp_index)
+        self.all_exp_lfi_info.append(cur_scoring_lfi_info)
+
+
+
+class PorjectPathManager():
+    '''
+        At first it is barely a handy class
+        The project paths include: 
+            - project root path
+            - 
+    '''
+    def __init__(self,project_root,exp_setting:ExpSetting,in_json) -> None:
+        # all features: passive,view_changing,refocusing
+        # all features: active,view_changing,refocusing
+        self.project_root=project_root
+        self.intermediate_data_root=os.path.join(self.project_root,'IntermediateData')
+        self.CheckInnerPath(self.intermediate_data_root)
+
+        self.training_data_root=os.path.join(self.project_root,'TrainingData')
+        self.CheckInnerPath(self.training_data_root)
+
+        self.test_data_root=os.path.join(self.project_root,'TestData')
+        self.CheckInnerPath(self.test_data_root)
+
+        self.exp_setting=exp_setting
+
+        self.all_lf_names=[]
+        self.all_dist={}
+        self.dist_levels={}
+        self.all_paths=[]
+        self.path_to_info={}
+
+    def InitFromExpLFInfo(self,exp_lf_info:ExpLFIInfo,mode="training"):
+        self.all_lf_names=[]
+        self.all_dist={}
+        self.dist_levels={}
+        self.all_paths=[]
+        self.path_to_info={}
+
+        all_lfi_names=exp_lf_info.GetAllLFNames()
+        self.all_lf_names=all_lfi_names
+
+        if mode == "training":
+            target_root=self.training_data_root
+        else:
+            target_root=self.test_data_root
+
+        for lf_name in all_lfi_names:
+            all_dist_types=exp_lf_info.GetAllDistNames(lf_name)
+            self.all_dist[lf_name]=all_dist_types
+            self.dist_levels[lf_name]={}
+
+            target_lf_root=os.path.join(target_root,lf_name)
+            self.CheckInnerPath(target_lf_root)
+
+            for dist_type in all_dist_types:
+                all_dist_levels=exp_lf_info.GetAllDistLevels(lf_name,dist_type)
+                self.dist_levels[lf_name][dist_type]=all_dist_levels
+                target_dist_root=os.path.join(target_lf_root,dist_type)
+                self.CheckInnerPath(target_dist_root)
+
+                for dist_level in all_dist_levels:
+                    cur_single_lfi_info=exp_lf_info.GetLFIInfo(lf_name,dist_type,dist_level)
+
+                    self.CopyFolderToFolder(cur_single_lfi_info.view_path,target_dist_root)
+
+                    target_dist_level_path=os.path.join(target_dist_root,dist_level)
+                    self.all_paths.append(target_dist_level_path)
+                    self.path_to_info[target_dist_level_path]=(lf_name,dist_type,dist_level)
+
+                    if cur_single_lfi_info.show_view_path is not None:
+                        cur_single_lfi_info.show_view_path = os.path.join(target_dist_level_path,PathManager.inner_show_views_path)
+                    if cur_single_lfi_info.show_refocusing_path is not None:
+                        cur_single_lfi_info.show_refocusing_path = os.path.join(target_dist_level_path,PathManager.inner_show_refocusing_path)
+                    if cur_single_lfi_info.passive_view_video is not None:
+                        cur_single_lfi_info.passive_view_video = os.path.join(target_dist_level_path,PathManager.passive_view_video_name)
+                    if cur_single_lfi_info.passive_refocusing_video is not None:
+                        cur_single_lfi_info.passive_refocusing_video = os.path.join(target_dist_level_path,PathManager.passive_refocusing_video_name)
+                    if cur_single_lfi_info.depth_path is not None:
+                        cur_single_lfi_info.depth_path = os.path.join(target_dist_level_path,PathManager.inner_depth_map)
+
+    def CopyFolderToFolder(self,from_folder,to_folder):
+        if from_folder == to_folder:
+            return
+        if not os.path.exists(from_folder):
+            return
+        shutil.copytree(from_folder,to_folder,dirs_exist_ok=True) 
+    
+    def CopyFileToFolder(self,file_path,to_folder):
+        file_base_path=os.path.dirname(file_path)
+        if file_base_path == to_folder:
+            return
+        if not os.path.exists(file_path):
+            return
+        shutil.copy(file_path,to_folder)
+
+    @staticmethod
+    def ParseLFFolder(self,in_path):
+        all_dist=os.listdir(in_path)
+        all_dist_types=[]
+        all_dist_levels={}
+        for dist_name in all_dist:
+            if not os.path.isdir(os.path.join(in_path,dist_name)):
+                continue
+            all_dist_types.append(dist_name)
+            all_dist_levels[dist_name]=[]
+
+            dist_path=os.path.join(in_path,dist_name)
+            all_levels=os.listdir(dist_path)
+            for level_name in all_levels:
+                if not os.path.isdir(os.path.join(dist_path,level_name)):
+                    continue
+                all_dist_levels[dist_name].append(level_name)
+        return all_dist_types,all_dist_levels
+
+    def ParseFolder(self,in_path):
+        all_folders=os.listdir(in_path)
+        for folder_name in all_folders:
+            if not os.path.isdir(os.path.join(in_path,folder_name)):
+                continue
+            self.all_lf_names.append(folder_name)
+            self.all_dist[folder_name]=[]
+            self.dist_levels[folder_name]={}
+
+            lf_path=os.path.join(os.path.folder_name)
+            all_dist=os.listdir(lf_path)
+            for dist_name in all_dist:
+                if not os.path.isdir(os.path.join(lf_path,dist_name)):
+                    continue
+                self.all_dist[folder_name].append(dist_name)
+                self.dist_levels[folder_name][dist_name]=[]
+
+                dist_path=os.path.join(lf_path,dist_name)
+                all_levels=os.listdir(dist_path)
+                for level_name in all_levels:
+                    if not os.path.isdir(os.path.join(dist_path,level_name)):
+                        continue
+                    self.dist_levels[folder_name][dist_name].append(level_name)
+                    self.all_paths.append(os.path.join(dist_path,level_name))
+                    self.path_to_info[os.path.join(dist_path,level_name)]=(folder_name,dist_name,level_name)
+    
+    
+    def CheckFiles(self):
+        for cur_path in self.all_paths:
+            lf_name, dist_name, dist_level =self.path_to_info[cur_path]
+            view_path=os.path.join(cur_path,PathManager.inner_show_views_path)
+            refocusing_path=os.path.join(cur_path,PathManager.inner_show_refocusing_path)
+            if not os.path.exists(view_path):
+                logger.error(f"Does not exist showing view folder for {cur_path}! Please check the data for the {lf_name}, distortion type {dist_name}, level {dist_level}")
+            if not os.path.exists(refocusing_path):
+                logger.error(f"Does not exist showing refocusing folder for {cur_path}! Please check the data for the {lf_name}, distortion type {dist_name}, level {dist_level}")
+            
+            if LFIFeatures.Passive_ViewChanging in self.exp_setting.lfi_features:
+                video_save_type=self.exp_setting.VideoSaveTypeStr
+                output_video=os.path.join(view_path,f"view.{video_save_type}")
+                if not os.path.exists(output_video):
+                    logger.error(f"Does not exist the passive views video for {cur_path}! Please check the data for the {lf_name}, distortion type {dist_name}, level {dist_level}")
+
+            if LFIFeatures.Passive_Refocusing in self.exp_setting.lfi_features:
+                video_save_type=self.exp_setting.VideoSaveTypeStr
+                output_video=os.path.join(refocusing_path,f"refocus.{video_save_type}")
+                if not os.path.exists(output_video):
+                    logger.error(f"Does not exist the passive refocusing video for {cur_path}! Please check the data for the {lf_name}, distortion type {dist_name}, level {dist_level}")
+    
+    def CheckInnerPath(self,path):
+        if not os.path.exists(path):
+            os.makedirs(path)
