@@ -694,9 +694,19 @@ class ProjectInfo:
         if LFIFeatures.None_ViewChanging in self.exp_setting.lfi_features:
             ret_str+="View changing feature: none\n"
 
-        ret_str+=f"Comparison type: {self.exp_setting.comparison_type}\n"
-        ret_str+=f"Save format: {self.exp_setting.save_format}\n"
-        ret_str+=f"Post processing: {self.exp_setting.post_processing}\n"
+        if self.exp_setting.comparison_type == ComparisonType.DoubleStimuli:
+            ret_str+=f"Comparison type: Double Stimuli\n"
+        if self.exp_setting.comparison_type == ComparisonType.SingleStimuli:
+            ret_str+=f"Comparison type: Single Stimuli\n"
+        if self.exp_setting.comparison_type == ComparisonType.PairComparison:
+            ret_str+=f"Comparison type: Pair Comparison\n"
+        if self.exp_setting.save_format == SaveFormat.CSV:
+            ret_str+=f"Save format: CSV\n"
+        else:
+            ret_str+=f"Save format: Excel\n"
+        
+        if self.exp_setting.post_processing == PostProcessType.SROCC:
+            ret_str+=f"Post processing: SROCC\n"
         ret_str+=f"Video save type: {self.exp_setting.VideoSaveTypeStr}\n"
         ret_str+=f"View save type: {self.exp_setting.ViewSaveTypeStr}\n"
         if self.exp_setting.has_preprocess:
