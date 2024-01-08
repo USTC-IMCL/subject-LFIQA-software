@@ -4,7 +4,7 @@ This is IMCL software for subjective light field image quality assessment. It ha
 
 The software can be used for subjective light field image quality assessment (LFIQA) . As proposed in our JPEG proposal [1], the LF images features differs LFIQA from the traditional 2D image evaluation. Thus before your experiment, you need to decide which feature you want to evaluate and how to display them to your subjects.
 
-The features and corresponding setting:
+The features include:
 - Stereo parallax 
 - Moving parallax
 - refocusing
