@@ -179,7 +179,7 @@ Please use the Json file to configure your experiment. An example is shown below
 }
 ```
 
-The configuration file must contain 3 keys: training, test and Exp_Info. The training and test describe your light field images (SRCs and HRCs). You need to denote the distortion type, distortion level and distortion path for each HRC. The distoriton level can be a string or an int number. The distortion path should be the root folder of the HRC, which means all possible views or passive videos should be in this folder (but may be in some subfolder).
+The configuration file must contain 3 keys: training, test and Exp_Info. The training and test describe your light field images (SRCs and HRCs). You need to denote the distortion type, distortion level and distortion path for each HRC. The distoriton level can be a string or an int number. The distortion path should be the root folder of the HRC, which means all possible views or passive videos should be in this folder (may be in a certain subfolder).
 
 If you want a pair comparison, set the comparison to paircomparison. A pair list json example is shown below. It describes 3 pairs for training and 3 pairs for test.
 
