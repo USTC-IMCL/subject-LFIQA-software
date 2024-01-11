@@ -22,7 +22,7 @@ project_intermediate_data="IntermediateData"
 project_training_data="TrainingData"
 project_test_data="TestData"
 thumbnail_name="thumbnail"
-ffmpeg_path="./ffmpeg"
+ffmpeg_path="ffmpeg.exe"
 #ffmpeg_path="D:/ffmpeg/bin/ffmpeg.exe"
 # lambda file will be deprecated
 lambda_file="lambda.txt"

@@ -105,13 +105,6 @@ color: rgb(255, 255, 255);</string>
     <property name="title">
      <string>Setting</string>
     </property>
-    <widget class="QMenu" name="menuSkip">
-     <property name="title">
-      <string>Skip</string>
-     </property>
-     <addaction name="action_skip_all"/>
-    </widget>
-    <addaction name="menuSkip"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">

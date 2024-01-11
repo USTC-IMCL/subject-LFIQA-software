@@ -404,6 +404,7 @@ class ExpLFIInfo:
 
         if not skip_preprocessing:
             if cur_lf_info.img_height!= in_height or cur_lf_info.img_width != in_width or cur_lf_info.angular_height != in_angular_height or cur_lf_info.angular_width != in_angular_width:
+                logger.error(f"Input image height: {in_height}, width: {in_width}, angular height: {in_angular_height}, angular width: {in_angular_width}; Size from folder image height {cur_lf_info.img_height}, width: {cur_lf_info.img_width}, angular height: {cur_lf_info.angular_height}, angular width: {cur_lf_info.angular_width}")
                 logger.error("The input data size does not match the size in the Json file! Please Check it carefully!")
         else:
             cur_lf_info.img_width=in_width

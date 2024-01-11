@@ -210,19 +210,19 @@ def CalDenseRefocusing(lfi_info:SingleLFIInfo,post_fix):
     core_num=os.cpu_count()-1
     if core_num < 1:
         core_num=1
-    refocus_pool=pool.Pool(core_num)
+    #refocus_pool=pool.Pool(core_num)
     for depth_val in all_depth_values:
         output_name=os.path.join(refocusing_folder,f'{depth_val}.{post_fix}')
         if os.path.exists(output_name):
             continue
-        refocus_pool.apply_async(DenseRunAndWrite,(lf_image,device_meta,meta_data,depth_val,output_name))
-        '''
+        #refocus_pool.apply_async(DenseRunAndWrite,(lf_image,device_meta,meta_data,depth_val,output_name))
+
         refocus_img=run_refocus(lf_image,device_meta,meta_data,depth_val,{'InterpMethod':'cubic'})
         output_img=refocus_img[:,:,:3]
         cv2.imwrite(output_name,output_img)
-        '''
-    refocus_pool.close()
-    refocus_pool.join()
+
+    #refocus_pool.close()
+    #refocus_pool.join()
 
 def DenseRunAndWrite(lf_image,device_meta,meta_data,depth_val,output_name):
     refocus_img=run_refocus(lf_image,device_meta,meta_data,depth_val,{'InterpMethod':'cubic'})
