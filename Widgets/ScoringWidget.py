@@ -13,6 +13,24 @@ sys.path.append('../UI')
 sys.path.append('../Widgets/')
 from ScoreTable_ui import Ui_ScoreTable as ScoreTable
 import cv2
+import time
+
+class ImageMask:
+    '''
+    A simple mask class to support the scoring (Only experiment mode, along with the passive mode)
+    The active mode needs image masks to indicate the clicing and dragging position.
+    '''
+    def __init__(self,img_height,img_width) -> None:
+        screen = QApplication.primaryScreen().geometry()
+        self.screen_width=screen.width()
+        self.screen_height=screen.height()
+
+        self.widget_height=img_height
+        self.widget_width=img_width
+
+        self.screen_widget_x=self.screen_width//2-self.widget_width//2
+        self.screen_widget_y=self.screen_height//2-self.widget_height//2
+
 
 class EventMask:
     def __init__(self,img_height=0,img_width=0,lfi_features=None,comparison_type=None) -> None:
@@ -582,64 +600,162 @@ class ImagePage(QtWidgets.QWidget):
             return max_value
         return int(in_value)
 
+class LFIVideoPlayer(QtWidgets.QLabel):
+    one_loop_end=QtCore.Signal()
+
+    def __init__(self,video_path):
+        self.cur_cap=cv2.VideoCapture(video_path)
+        self.video_path=video_path
+        self.is_playing=False
+
+        self.fps=25
+        self.frame_duration=1.0/self.fps
+
+        self.frame_num=self.cur_cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        self.cur_frame_num=0
+
+        self.cur_frame=None
+        ret,self.cur_frame=self.cur_cap.read()
+        
+        if ret:
+            self.video_height=self.cur_frame.shape[0]
+            self.video_width=self.cur_frame.shape[1]
+            self.setGeometry(0,0,self.video_width,self.video_height)
+            self.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(self.cur_frame)))
+        else:
+            self.video_height=0
+            self.video_width=0
+        self.one_loop_end.connect(self.OneLoopEnd)
+    
+    def PlayVideo(self):
+        while self.is_playing and self.cur_frame_num<self.frame_num:
+            ret,self.cur_frame=self.cur_cap.read()
+            self.cur_frame_num+=1
+            self.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(self.cur_frame)))
+            time.sleep(self.frame_duration)
+
+        if self.cur_frame_num==self.frame_num: 
+            self.one_loop_end.emit()
+
+    def OneLoopEnd(self):
+        self.cur_frame_num=0
+        self.cur_cap.set(cv2.CAP_PROP_POS_FRAMES,0)
+
+    def PauseVideo(self):
+        self.is_playing=False
+    
+    def StartVideo(self):
+        self.is_playing=True
+        self.PlayVideo()
+    
+    def LoopPlayVideo(self):
+        self.is_playing=True
+        while self.is_playing:
+            while self.cur_frame_num<self.frame_num:
+                ret,self.cur_frame=self.cur_cap.read()
+                self.cur_frame_num+=1
+                self.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(self.cur_frame)))
+                time.sleep(self.frame_duration) 
+            self.cur_frame_num=0
+            self.cur_cap.set(cv2.CAP_PROP_POS_FRAMES,0)
+
+
 class VideoPage(QtWidgets.QWidget):
     finish_video=QtCore.Signal()
     pair_finished=QtCore.Signal(int)
+    one_loop_end=QtCore.Signal()
 
-    def __init__(self, exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, video_path):
+    def __init__(self, exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, video_path,auto_play=False):
         super().__init__()
         self.setStyleSheet("background-color:gray;")
+
+        self.auto_play=auto_play
+        self.fps=25
+        self.frame_duration=1.0/self.fps
     
-        self.video_height=0
-        self.video_width=0
-        self.player=QMediaPlayer()
-        self.video_widget=QVideoWidget(self)
-        self.player.setVideoOutput(self.video_widget)
-        self.video_widget.hide()
-        self.img_label=QtWidgets.QLabel(self)
+        self.video_player=LFIVideoPlayer(video_path)
+        self.video_height=self.video_player.video_height
+        self.video_width=self.video_player.video_width
+
         self.arrow_key_flag=False
         self.better_one=0
         self.video_path=None
-        self.player.playingChanged.connect(self.EndPlaying)
+        self.cur_cap = None
+        self.cur_frame_num=-1
+        self.all_frames_num=0
+
+        self.one_loop_end.connect(self.VideoToEnd)
+
         self.SetNewLFI(exp_setting,dist_lfi_info,video_path)
         
     def SetNewLFI(self,exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, video_path):
         self.exp_setting=exp_setting
         self.dist_lfi_info=dist_lfi_info
         self.video_path=video_path
+        if self.cur_cap is not None:
+            self.cur_cap.release()
+        self.cur_cap=cv2.VideoCapture(video_path)
         self.base_path=os.path.dirname(video_path)
-        self.img_label=QtWidgets.QLabel(self)
-        if video_path == dist_lfi_info.passive_view_video_path:
-            self.thumbnail_path=dist_lfi_info.passive_view_thumbnail
+
+        video_height=self.cur_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        video_width=self.cur_cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        self.all_frames_num=self.cur_cap.get(cv2.CAP_PROP_FRAME_COUNT)
+
+        if dist_lfi_info is None:
+            self.event_mask=ImageMask(video_height,video_width)
+            self.screen_height,self.screen_width=exp_setting.screen_height,exp_setting.screen_width
+            self.setGeometry(0,0,self.event_mask.screen_width,self.event_mask.screen_height)
+            self.img_label.setGeometry(self.event_mask.screen_widget_x,self.event_mask.screen_widget_y,self.event_mask.widget_width,self.event_mask.widget_height)
+            
         else:
-            self.thumbnail_path=dist_lfi_info.passive_refocusing_thumbnail
+            if video_path == dist_lfi_info.passive_view_video_path:
+                self.thumbnail_path=dist_lfi_info.passive_view_thumbnail
+            else:
+                self.thumbnail_path=dist_lfi_info.passive_refocusing_thumbnail
 
-        img_width=dist_lfi_info.img_width
-        img_height=dist_lfi_info.img_height
-        self.screen_height,self.screen_width=exp_setting.screen_height,exp_setting.screen_width
-        
-        self.event_mask=EventMask(img_height,img_width,exp_setting.lfi_features,exp_setting.comparison_type)
+            img_width=dist_lfi_info.img_width
+            img_height=dist_lfi_info.img_height
+            self.screen_height,self.screen_width=exp_setting.screen_height,exp_setting.screen_width
+            
+            self.event_mask=EventMask(img_height,img_width,exp_setting.lfi_features,exp_setting.comparison_type)
 
-        self.setGeometry(0,0,self.event_mask.screen_width,self.event_mask.screen_height)
-        self.img_label.setGeometry(self.event_mask.screen_widget_x,self.event_mask.screen_widget_y,self.event_mask.widget_width,self.event_mask.widget_height)
+            self.setGeometry(0,0,self.event_mask.screen_width,self.event_mask.screen_height)
+            self.img_label.setGeometry(self.event_mask.screen_widget_x,self.event_mask.screen_widget_y,self.event_mask.widget_width,self.event_mask.widget_height)
 
-        self.img_label.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(self.thumbnail_path)))
+        ret,self.thumbnail_img=self.cur_cap.read()
+        self.cur_frame_num+=1
+        self.thumbnail_img=cv2.cvtColor(self.thumbnail_img,cv2.COLOR_BGR2RGB)
+        self.img_label.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(self.thumbnail_img)))
         self.img_label.show()
-        self.video_widget.hide()
-
-        self.video_height,self.video_width=self.event_mask.widget_height,self.event_mask.widget_width
-        self.SetVideo()
 
         if exp_setting.comparison_type == ComparisonType.PairComparison:
             self.arrow_key_flag=True
     
+    def PlayVideo(self):
+        time.sleep(self.frame_duration)
+
+        while self.cur_frame_num < self.all_frames_num:
+            ret,frame=self.cur_cap.read()
+            self.cur_frame_num+=1
+            if ret:
+                frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+                self.img_label.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(frame)))
+                self.img_label.show()
+                time.sleep(self.frame_duration)
+        self.one_loop_end.emit()
+
+    def LoopPlay(self):
+        self.cur_cap.set(cv2.CAP_PROP_POS_FRAMES,0)
+        self.cur_frame_num=0
+        self.PlayVideo()
+    
+    def VideoToEnd(self):
+        self.cur_cap.set(cv2.CAP_PROP_POS_FRAMES,0)
+        self.cur_frame_num=0
+
     def SetEventMask(self, event_mask:EventMask):
         self.event_mask=event_mask
         
-    def SetVideo(self):
-        self.video_widget.setGeometry(self.event_mask.screen_widget_x,self.event_mask.screen_widget_y,self.video_width,self.video_height)
-        self.player.setSource(QUrl.fromLocalFile(self.video_path))
-
     def mousePressEvent(self, event) -> None:
         if not self.player.isPlaying():
             self.img_label.hide()
@@ -647,11 +763,6 @@ class VideoPage(QtWidgets.QWidget):
             self.player.setPosition(0)
             self.player.play()
         return super().mousePressEvent(event)
-
-    def EndPlaying(self,isPlaying):
-        if not isPlaying:
-            self.video_widget.hide()
-            self.img_label.show()
     
     def handle_key_press(self, event) -> None:
         if not self.arrow_key_flag:

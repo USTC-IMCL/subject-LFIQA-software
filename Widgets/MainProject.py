@@ -245,7 +245,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         if not subject_name and mode != "training":
             tmp=QErrorMessage(self)
             tmp.setWindowTitle('Error')
-            tmp.showMessage('Do not allow empty name, nothing will be recorded.')
+            tmp.showMessage('Name is empty, nothing will be recorded.')
             return
 
         '''

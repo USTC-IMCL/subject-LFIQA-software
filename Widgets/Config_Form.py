@@ -361,6 +361,13 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
 
         return True,None
 
+    def TwoFolderConfiguration(self,all_lfi_config):
+        if not isinstance(all_lfi_config,str):
+            logger.error("For the two folders configuration, the input should be a string!")
+            return None
+        all_lfi_config=ExpLFIInfo()
+
+    
     def GetConfigInfoWithSpecificJson(self,all_lfi_config):
         skip_preprocessing=self.exp_setting.skip_preprocessing
         if len(all_lfi_config) == 0:
@@ -582,7 +589,7 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         self.training_lf_box_num=len(self.training_all_lfi_boxes)
         self.test_lf_box_num=len(self.test_all_lfi_boxes)
         
-        
+
 
 
 if __name__ == "__main__":
