@@ -4,9 +4,7 @@ from typing import Optional
 from PySide6 import QtCore, QtGui, QtWidgets
 import PySide6.QtGui
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import Qt, QUrl
-from PySide6.QtMultimedia import QMediaPlayer
-from PySide6.QtMultimediaWidgets import QVideoWidget
+from PySide6.QtCore import Qt, QUrl, QTimer
 from ExpInfo import *
 import PathManager
 sys.path.append('../UI')
@@ -476,6 +474,21 @@ class ImagePage(QtWidgets.QWidget):
         self.img_label.setMouseTracking(True)
         self.comparison_type=exp_setting.comparison_type
         self.clicking_mask=None
+
+        self.left_btn=QtWidgets.QPushButton(None,"Select Left",self)
+        self.left_btn.setStyleSheet("QPushButton:focus {background-color:yellow;}")
+        self.left_btn.hide()
+        self.left_btn.clicked.connect(lambda: self.pair_finished.emit(0))
+
+        self.right_btn=QtWidgets.QPushButton(None,"Select Right",self)
+        self.right_btn.setStyleSheet("QPushButton:focus {background-color:yellow;}")
+        self.right_btn.hide()
+        self.right_btn.clicked.connect(lambda: self.pair_finished.emit(1))
+
+        self.next_btn  =QtWidgets.QPushButton(None,"Next",self)
+        self.next_btn.clicked(lambda: self.eval_finished.emit())
+        self.next_btn.hide()
+
         self.SetNewLFI(exp_setting,dist_lfi_info,view_path,refocusing_path)
 
     def SetNewLFI(self,exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, view_path, refocusing_path=None):
@@ -512,7 +525,7 @@ class ImagePage(QtWidgets.QWidget):
         self.current_y=center_y
         self.move_x=center_x
         self.move_y=center_y
-        
+
         post_fix=exp_setting.ViewSaveTypeStr
         self.post_fix=post_fix
         if self.view_path is None:
@@ -533,8 +546,23 @@ class ImagePage(QtWidgets.QWidget):
             self.clicking_flag=True
         if LFIFeatures.Active_ViewChanging in exp_setting.lfi_features:
             self.hover_flag=True
+        
+        btn_height=PathManager.btn_height
+        btn_width=PathManager.btn_width
+        btn_pos_y=(self.clicking_mask.screen_height+self.clicking_mask.screen_widget_y)//2-btn_height//2
+
         if exp_setting.comparison_type == ComparisonType.PairComparison:
-            self.arrow_key_flag=True
+            left_btn_pos_x=3*self.clicking_mask.screen_width//8 - btn_width//2
+            right_btn_pos_x=5*self.clicking_mask.screen_width//8 - btn_width//2
+
+            self.left_btn.setGeometry(left_btn_pos_x,btn_pos_y,btn_width,btn_height)
+            self.left_btn.show()
+            self.right_btn.setGeometry(right_btn_pos_x,btn_pos_y,btn_width,btn_height)
+            self.right_btn.show()
+        else:
+            next_btn_pos_x=self.clicking_mask.screen_width//2-btn_width//2
+            self.next_btn.setGeometry(next_btn_pos_x,btn_pos_y,btn_width,btn_height)
+            self.next_btn.show()
          
     def SetImage(self,img_path):
         if img_path is None:
@@ -601,90 +629,157 @@ class ImagePage(QtWidgets.QWidget):
         return int(in_value)
 
 class LFIVideoPlayer(QtWidgets.QLabel):
-    one_loop_end=QtCore.Signal()
+    OnOneLoopEnd=QtCore.Signal()
 
-    def __init__(self,video_path):
+    def __init__(self,video_path,pos_x=0,pos_y=0,fps=25):
+        super().__init__()
+        self.pos_x=pos_x
+        self.pos_y=pos_y
+        self.OnOneLoopEnd.connect(self.OneLoopEnd)
+        self.timer=QTimer()
+        self.timer.timeout.connect(self.ShowNextFrame)
+        self.fps=fps
+        self.is_playing=False
+        self.loop_play_flag=False
+        self.loop_times=-1
+        self.frame_duration=1000//self.fps
+        self.InitTheVideo(video_path)
+    
+    def setVideoPath(self,video_path):
         self.cur_cap=cv2.VideoCapture(video_path)
+    
+    def ShowNextFrame(self):
+        if self.cur_frame_index<self.frame_num:
+            ret,self.cur_frame=self.cur_cap.read()
+            if ret:
+                self.cur_frame=cv2.cvtColor(self.cur_frame,cv2.COLOR_BGR2RGB)
+                self.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(self.cur_frame.data,self.video_width,self.video_height,3*self.video_width,QtGui.QImage.Format_RGB888)))
+            self.cur_frame_index+=1
+        else:
+            self.timer.stop()
+            self.is_playing=False
+            self.OnOneLoopEnd.emit()
+    
+    def toogle_play_pause(self):
+        if self.is_playing:
+            self.timer.stop()
+        else:
+            self.timer.start(self.frame_duration)
+        self.is_playing = not self.is_playing
+    
+    def InitTheVideo(self,video_path):
+        self.cur_cap=cv2.VideoCapture(video_path)
+        self.valid_video_flag=self.cur_cap.isOpened()
+
         self.video_path=video_path
         self.is_playing=False
 
-        self.fps=25
-        self.frame_duration=1.0/self.fps
+        # Self.fps=self.cur_cap.get(cv2.CAP_PROP_FPS)
+        # 25 fps or decided by the users?
 
-        self.frame_num=self.cur_cap.get(cv2.CAP_PROP_FRAME_COUNT)
-        self.cur_frame_num=0
-
+        if self.valid_video_flag:
+            self.frame_num=self.cur_cap.get(cv2.CAP_PROP_FRAME_COUNT)
+            self.video_height=self.cur_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            self.video_width=self.cur_cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+            self.cur_frame_index=-1
+        else:
+            self.frame_num=0
+            self.video_height=0
+            self.video_width=0
+            self.cur_frame_index=0
         self.cur_frame=None
-        ret,self.cur_frame=self.cur_cap.read()
-        
-        if ret:
-            self.video_height=self.cur_frame.shape[0]
-            self.video_width=self.cur_frame.shape[1]
-            self.setGeometry(0,0,self.video_width,self.video_height)
-            self.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(self.cur_frame)))
+
+        if self.frame_num>0:
+            self.setGeometry(self.pos_x,self.pos_y,self.video_width,self.video_height)
+            self.ShowNextFrame()
         else:
             self.video_height=0
             self.video_width=0
-        self.one_loop_end.connect(self.OneLoopEnd)
+    
+    def SetFPS(self,fps):
+        self.fps=fps
+        self.frame_duration=1000//self.fps
     
     def PlayVideo(self):
-        while self.is_playing and self.cur_frame_num<self.frame_num:
-            ret,self.cur_frame=self.cur_cap.read()
-            self.cur_frame_num+=1
-            self.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(self.cur_frame)))
-            time.sleep(self.frame_duration)
-
-        if self.cur_frame_num==self.frame_num: 
-            self.one_loop_end.emit()
-
+        if not self.is_playing:
+            self.toogle_play_pause()
+    
     def OneLoopEnd(self):
-        self.cur_frame_num=0
+        self.cur_frame_index=-1
         self.cur_cap.set(cv2.CAP_PROP_POS_FRAMES,0)
+        if self.loop_play_flag:
+            if self.loop_times!=0:
+                if self.loop_times>0:
+                    self.loop_times-=1
+                self.PlayVideo()
+            else:
+                self.StopPlaying()
 
     def PauseVideo(self):
+        if self.is_playing:
+            self.toogle_play_pause()
+    
+    def StopPlaying(self):
+        self.timer.stop()
         self.is_playing=False
     
-    def StartVideo(self):
-        self.is_playing=True
-        self.PlayVideo()
+    def SetLoop(self,loop_play_flag,loop_times=-1):
+        self.loop_play_flag=loop_play_flag
+        self.loop_times=loop_times
     
-    def LoopPlayVideo(self):
-        self.is_playing=True
-        while self.is_playing:
-            while self.cur_frame_num<self.frame_num:
-                ret,self.cur_frame=self.cur_cap.read()
-                self.cur_frame_num+=1
-                self.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(self.cur_frame)))
-                time.sleep(self.frame_duration) 
-            self.cur_frame_num=0
-            self.cur_cap.set(cv2.CAP_PROP_POS_FRAMES,0)
-
-
 class VideoPage(QtWidgets.QWidget):
     finish_video=QtCore.Signal()
     pair_finished=QtCore.Signal(int)
-    one_loop_end=QtCore.Signal()
 
-    def __init__(self, exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, video_path,auto_play=False):
+    def __init__(self, exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, video_path,auto_play=False,loop_play=False,loop_times=-1,fps=25):
+        '''
+        loop_play: if True, the video will loop
+        loop_times: if loop_play is True, the video will loop loop_times times; if loop_play is False, the video will not loop
+                    if loop_play is True and the loop play times is less than 0, the video will always loop. 
+        loop_time_sec: the video will loop within loop_time_sec seconds. But it will not be used this version. 
+        '''
         super().__init__()
         self.setStyleSheet("background-color:gray;")
-
         self.auto_play=auto_play
-        self.fps=25
-        self.frame_duration=1.0/self.fps
+        self.auto_play_delay_time=500
+
+        self.loop_play=loop_play
+        self.loop_times=loop_times
+
+        self.fps=fps
     
-        self.video_player=LFIVideoPlayer(video_path)
+        self.video_player=LFIVideoPlayer(video_path,fps=self.fps)
+        self.video_player.setParent(self)
+        self.video_player.loop_play_flag=loop_play
+
         self.video_height=self.video_player.video_height
         self.video_width=self.video_player.video_width
 
         self.arrow_key_flag=False
         self.better_one=0
-        self.video_path=None
-        self.cur_cap = None
-        self.cur_frame_num=-1
-        self.all_frames_num=0
 
-        self.one_loop_end.connect(self.VideoToEnd)
+        self.video_path=video_path
+
+        # two buttons for pair comparison and one single button for single/double stimuli/ous
+        self.next_btn=QtWidgets.QPushButton("Next")
+        self.next_btn.setParent(self)
+        self.next_btn.hide()
+        self.next_btn.clicked.connect(lambda: self.finish_video.emit())
+        self.next_btn.setStyleSheet("QPushButton:{background-color: gray;}")
+
+        self.left_btn=QtWidgets.QPushButton("Select Left")
+        self.left_btn.setStyleSheet("QPushButton:focus { background-color: yellow; }")
+        self.left_btn.setParent(self)
+        self.left_btn.hide()
+        self.left_btn.clicked.connect(lambda: self.pair_finished.emit(0))
+
+        self.right_btn=QtWidgets.QPushButton("Select Right")
+        self.right_btn.setParent(self)
+        self.right_btn.setStyleSheet("QPushButton:focus { background-color: yellow; }")
+        self.right_btn.hide()
+        self.right_btn.clicked.connect(lambda: self.pair_finished.emit(1))
+
+        self.selected_one=0
 
         self.SetNewLFI(exp_setting,dist_lfi_info,video_path)
         
@@ -692,79 +787,71 @@ class VideoPage(QtWidgets.QWidget):
         self.exp_setting=exp_setting
         self.dist_lfi_info=dist_lfi_info
         self.video_path=video_path
-        if self.cur_cap is not None:
-            self.cur_cap.release()
-        self.cur_cap=cv2.VideoCapture(video_path)
+
         self.base_path=os.path.dirname(video_path)
 
-        video_height=self.cur_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        video_width=self.cur_cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        self.all_frames_num=self.cur_cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        video_height=self.video_height
+        video_width=self.video_width
 
         if dist_lfi_info is None:
             self.event_mask=ImageMask(video_height,video_width)
             self.screen_height,self.screen_width=exp_setting.screen_height,exp_setting.screen_width
             self.setGeometry(0,0,self.event_mask.screen_width,self.event_mask.screen_height)
-            self.img_label.setGeometry(self.event_mask.screen_widget_x,self.event_mask.screen_widget_y,self.event_mask.widget_width,self.event_mask.widget_height)
-            
+            self.video_player.setGeometry(self.event_mask.screen_widget_x,self.event_mask.screen_widget_y,self.event_mask.widget_width,self.event_mask.widget_height)
         else:
-            if video_path == dist_lfi_info.passive_view_video_path:
-                self.thumbnail_path=dist_lfi_info.passive_view_thumbnail
-            else:
-                self.thumbnail_path=dist_lfi_info.passive_refocusing_thumbnail
-
             img_width=dist_lfi_info.img_width
             img_height=dist_lfi_info.img_height
             self.screen_height,self.screen_width=exp_setting.screen_height,exp_setting.screen_width
-            
             self.event_mask=EventMask(img_height,img_width,exp_setting.lfi_features,exp_setting.comparison_type)
 
             self.setGeometry(0,0,self.event_mask.screen_width,self.event_mask.screen_height)
-            self.img_label.setGeometry(self.event_mask.screen_widget_x,self.event_mask.screen_widget_y,self.event_mask.widget_width,self.event_mask.widget_height)
+            self.video_player.setGeometry(self.event_mask.screen_widget_x,self.event_mask.screen_widget_y,self.event_mask.widget_width,self.event_mask.widget_height)
 
-        ret,self.thumbnail_img=self.cur_cap.read()
-        self.cur_frame_num+=1
-        self.thumbnail_img=cv2.cvtColor(self.thumbnail_img,cv2.COLOR_BGR2RGB)
-        self.img_label.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(self.thumbnail_img)))
-        self.img_label.show()
+        btn_height=50
+        btn_width=226
+        btn_pos_y=(self.event_mask.screen_widget_y+video_height+self.event_mask.screen_height)//2 - btn_height//2
 
         if exp_setting.comparison_type == ComparisonType.PairComparison:
+            left_btn_pos_x=3*self.event_mask.screen_width//8 - btn_width//2
+            right_btn_pos_x=5*self.event_mask.screen_width//8 - btn_width//2
+
+            self.left_btn.setGeometry(left_btn_pos_x,btn_pos_y,btn_width,btn_height)
+            self.left_btn.show()
+            self.right_btn.setGeometry(right_btn_pos_x,btn_pos_y,btn_width,btn_height)
+            self.right_btn.show()
+        else:
+            next_btn_pos_x=self.event_mask.screen_width//2 - btn_width//2
+            self.next_btn.setGeometry(next_btn_pos_x,btn_pos_y,btn_width,btn_height)
+            self.next_btn.show()
+
+        self.video_player.show()
+        if exp_setting.comparison_type == ComparisonType.PairComparison:
             self.arrow_key_flag=True
-    
-    def PlayVideo(self):
-        time.sleep(self.frame_duration)
 
-        while self.cur_frame_num < self.all_frames_num:
-            ret,frame=self.cur_cap.read()
-            self.cur_frame_num+=1
-            if ret:
-                frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
-                self.img_label.setPixmap(QtGui.QPixmap.fromImage(QtGui.QImage(frame)))
-                self.img_label.show()
-                time.sleep(self.frame_duration)
-        self.one_loop_end.emit()
+        if self.auto_play:
+            time.sleep(self.auto_play_delay_time/1000)
+            self.video_player.PlayVideo()
 
-    def LoopPlay(self):
-        self.cur_cap.set(cv2.CAP_PROP_POS_FRAMES,0)
-        self.cur_frame_num=0
-        self.PlayVideo()
-    
-    def VideoToEnd(self):
-        self.cur_cap.set(cv2.CAP_PROP_POS_FRAMES,0)
-        self.cur_frame_num=0
+    def SetFPS(self,fps):
+        self.fps=fps
+        self.video_player.SetFPS(fps)
+
+    def SetLoopPlay(self,loop_play,loop_times=-1):
+        self.loop_play=loop_play
+        self.loop_times=loop_times
+        self.video_player.SetLoop(loop_play,loop_times)
 
     def SetEventMask(self, event_mask:EventMask):
         self.event_mask=event_mask
         
     def mousePressEvent(self, event) -> None:
-        if not self.player.isPlaying():
-            self.img_label.hide()
-            self.video_widget.show()
-            self.player.setPosition(0)
-            self.player.play()
+        self.video_player.toogle_play_pause()
         return super().mousePressEvent(event)
     
     def handle_key_press(self, event) -> None:
+        pass
+
+    '''
         if not self.arrow_key_flag:
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
                 self.finish_video.emit()
@@ -777,6 +864,10 @@ class VideoPage(QtWidgets.QWidget):
                 self.better_one=1
                 self.pair_finished.emit(self.better_one)
             return super().keyPressEvent(event)
+    
+    # Abandon the use of enter now. 
+    # interaction operation has been changed.
+    '''
 
 class ScoringPage(QtWidgets.QWidget):
     HasScored=QtCore.Signal(list)
@@ -790,12 +881,12 @@ class ScoringPage(QtWidgets.QWidget):
         self.current_focus_index=0
         self.all_table=[]
 
-        self.table_1=ScoringTable("Picture Quality")
+        self.table_1=ScoringTable("Picture Quality",8)
         self.table_1.setParent(self)
         self.table_1.setGeometry(screen_width//4-self.table_1.widget_width//2,screen_height//2-self.table_1.widget_height//2,self.table_1.widget_width,self.table_1.widget_height)
 
 
-        self.table_2=ScoringTable("Overall Quality")
+        self.table_2=ScoringTable("Overall Quality",9)
         self.table_2.setParent(self)
         self.table_2.setGeometry(screen_width*3//4-self.table_2.widget_width//2,screen_height//2-self.table_2.widget_height//2,self.table_2.widget_width,self.table_2.widget_height)
 
@@ -806,6 +897,8 @@ class ScoringPage(QtWidgets.QWidget):
         for i in range(len(self.all_table)):
             self.all_table[i].table_index=i
             self.all_table[i].be_clicked.connect(lambda i: self.SetSigleFocusedTable(i))
+        
+        self.next_btn=QtWidgets.QPushButton("Next",self)
 
     def handle_key_press(self, event) -> None:
         last_index=0
@@ -843,42 +936,84 @@ class ScoringPage(QtWidgets.QWidget):
                 self.all_table[index].SetMyFocused(False)
     
 
-class ScoringTable(QtWidgets.QWidget,ScoreTable):
+class ScoringTable(QtWidgets.QWidget):
     be_clicked=QtCore.Signal(int)
 
-    def __init__(self,widget_name) -> None:
+    def __init__(self,widget_name,scoring_levels=5) -> None:
         super().__init__()
+        self.widget_name=widget_name
         self.table_index=0
-        self.setupUi(self)
-        self.scoring_name.setTitle(widget_name)
-        self.widget_width=self.width()
-        self.widget_height=self.height()
+        self.cur_radio_score=0
+        self.all_radio_index=list(range(scoring_levels))
+        self.scoring_levels=scoring_levels
 
-        self.radioButton.clicked.connect(lambda: self.be_clicked.emit(self.table_index))
-        self.radioButton_2.clicked.connect(lambda: self.be_clicked.emit(self.table_index))
-        self.radioButton_3.clicked.connect(lambda: self.be_clicked.emit(self.table_index))
-        self.radioButton_4.clicked.connect(lambda: self.be_clicked.emit(self.table_index))
-        self.radioButton_5.clicked.connect(lambda: self.be_clicked.emit(self.table_index))
-        
-        self.radioButton.setChecked(True)
+        self.scoring_name=QtWidgets.QGroupBox(self)
+        self.scoring_name.setTitle(widget_name)
+        self.vertical_layout_widget=QtWidgets.QWidget(self.scoring_name)
+
+        self.SetTableSize()
+
+        self.vertical_layout_box=QtWidgets.QVBoxLayout(self.vertical_layout_widget)
+        self.vertical_layout_box.setSpacing(PathManager.table_spaceing)
+        self.vertical_layout_box.setContentsMargins(0,0,0,10)
+
+        self.all_radio_btns=[]
+        for i in range(self.scoring_levels):
+            radio_button=QtWidgets.QRadioButton(self.vertical_layout_widget)
+            radio_button.setText("Score: "+str(i+1))
+            radio_button.clicked.connect(lambda: self.RadioBtnClicked(i))
+            self.vertical_layout_box.addWidget(radio_button)
+            self.all_radio_btns.append(radio_button)
+
+        self.all_radio_btns[0].setChecked(True) 
+
+        self.border_label=QtWidgets.QLabel(self)
+        self.border_label.setGeometry(0,0,self.widget_width,self.widget_height)
+        self.setFocusPolicy(Qt.StrongFocus)
         self.border_label.setStyleSheet("border:3px dotted white;")
         self.border_label.hide()
 
+        self.border_label.raise_()
+        self.scoring_name.raise_()
+    
+    def RadioBtnClicked(self,index):
+        self.cur_radio_score=index
+        self.be_clicked.emit(self.table_index)
+    
+    def SetTableSize(self):
+        #calculate the table size here
+        font=PySide6.QtGui.QFont()
+        font.setPointSize(PathManager.scoring_table_point_size)
+        single_radio_btn_height=PathManager.scoring_btn_height
+        single_radio_btn_width=PathManager.scoring_btn_width
+
+        group_box_pos_x=PathManager.table_horizontal_gap
+        group_box_pos_y=PathManager.talbe_vertical_gap
+
+        talbe_spacing=PathManager.table_spaceing
+
+        vertical_layout_widget_height=40+single_radio_btn_height*self.scoring_levels+(self.scoring_levels)*talbe_spacing+2*PathManager.talbe_vertical_gap
+        vertical_layout_widget_width=2+single_radio_btn_width
+
+        group_box_height=2*PathManager.talbe_vertical_gap + vertical_layout_widget_height
+        group_box_width=PathManager.scoring_group_box_width
+
+        self.widget_width=group_box_width+2*PathManager.table_horizontal_gap
+        self.widget_height=group_box_height+2*PathManager.talbe_vertical_gap
+        self.resize(self.widget_width,self.widget_height)
+
+        self.scoring_name.setGeometry(group_box_pos_x,group_box_pos_y,group_box_width,group_box_height)
+        self.scoring_name.setTitle(self.widget_name)
+        self.scoring_name.setFont(font)
+        self.scoring_name.setFocusPolicy(Qt.StrongFocus)
+
+        self.vertical_layout_widget.setGeometry(group_box_pos_x,40,vertical_layout_widget_width,vertical_layout_widget_height)
+
     def GetResult(self):
-        if self.radioButton.isChecked():
-            return 5
-        elif self.radioButton_2.isChecked():
-            return 4
-        elif self.radioButton_3.isChecked():
-            return 3
-        elif self.radioButton_4.isChecked():
-            return 2
-        elif self.radioButton_5.isChecked():
-            return 1
-        else:
-            return -1
+        return self.cur_radio_score+1
     
     def keyPressEvent(self, event) -> None:
+        '''
         if event.key() == Qt.Key_5:
             self.radioButton.setChecked(True)
         elif event.key() == Qt.Key_4:
@@ -889,6 +1024,14 @@ class ScoringTable(QtWidgets.QWidget,ScoreTable):
             self.radioButton_4.setChecked(True)
         elif event.key() == Qt.Key_1:
             self.radioButton_5.setChecked(True)
+        return super().keyPressEvent(event)
+        '''
+        if event.key() == Qt.Key_Up:
+            self.cur_radio_score=self.all_radio_index[self.cur_radio_score-1]
+            self.all_radio_btns[self.cur_radio_score].setChecked(True)
+        if event.key() ==  Qt.Key_Down:
+            self.cur_radio_score=self.all_radio_index[self.cur_radio_score+1-self.scoring_levels]
+            self.all_radio_btns[self.cur_radio_score].setChecked(True)
         return super().keyPressEvent(event)
     
     def mousePressEvent(self, event) -> None:
@@ -902,9 +1045,33 @@ class ScoringTable(QtWidgets.QWidget,ScoreTable):
         else:
             self.border_label.hide()
 
+
+def PrintVideoPage(a):
+    print(a)
+
+def VideoFinishPage():
+    print("Video finished!")
+
 if __name__ == "__main__":
     app = QtWidgets.QApplication()
-    scoring_widget = ScoringPage(1440,2560)
-    scoring_widget.HasScored.connect(lambda x:print(x))
-    scoring_widget.show()
+    #scoring_widget = ScoringPage(1440,2560)
+    #scoring_widget.HasScored.connect(lambda x:print(x))
+    #scoring_widget.show()
+
+    '''
+    exp_setting=ExpSetting()
+    exp_setting.comparison_type=ComparisonType.DoubleStimuli
+
+    video_path='./view.mp4'
+    video_page=VideoPage(exp_setting,None,video_path)
+
+    video_page.pair_finished.connect(PrintVideoPage)
+    video_page.finish_video.connect(VideoFinishPage)
+
+    video_page.show()
+    '''
+
+    score_page=ScoringPage(1440,2560)
+    score_page.show()
+
     sys.exit(app.exec())

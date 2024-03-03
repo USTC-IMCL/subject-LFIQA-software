@@ -23,6 +23,18 @@ project_training_data="TrainingData"
 project_test_data="TestData"
 thumbnail_name="thumbnail"
 ffmpeg_path="ffmpeg.exe"
+btn_height=50
+btn_width=226
+
+scoring_btn_height=40
+scoring_btn_width=229
+table_spaceing=25
+scoring_table_point_size=20
+scoring_talbe_width=290
+scoring_group_box_width=250
+table_horizontal_gap=20
+talbe_vertical_gap=10
+
 #ffmpeg_path="D:/ffmpeg/bin/ffmpeg.exe"
 # lambda file will be deprecated
 lambda_file="lambda.txt"
