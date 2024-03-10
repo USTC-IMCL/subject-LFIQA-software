@@ -872,26 +872,31 @@ class VideoPage(QtWidgets.QWidget):
 class ScoringPage(QtWidgets.QWidget):
     HasScored=QtCore.Signal(list)
 
-    def __init__(self,screen_height,screen_width) -> None:
+    def __init__(self,screen_height,screen_width,table_names=["Picture Quality","Overall Quality"],scoring_levels=[5,5]) -> None:
         super().__init__()
         self.setWindowFlag(Qt.FramelessWindowHint)
         self.setWindowFlag(Qt.WindowStaysOnTopHint)
         self.setGeometry(0,0,screen_width,screen_height)
         self.setStyleSheet("background-color:gray;")
+        self.table_names=table_names
         self.current_focus_index=0
         self.all_table=[]
+        self.all_table_list=list(range(len(self.table_names)))
 
-        self.table_1=ScoringTable("Picture Quality",8)
-        self.table_1.setParent(self)
-        self.table_1.setGeometry(screen_width//4-self.table_1.widget_width//2,screen_height//2-self.table_1.widget_height//2,self.table_1.widget_width,self.table_1.widget_height)
+        table_num=len(table_names)
+        for table_index in range(len(self.table_names)):
+            table_name=self.table_names[table_index]
+            cur_table=ScoringTable(table_name,scoring_levels[table_index])
+            cur_table.setParent(self)
+            table_center_x= (2*table_index+1)*screen_width//(2*table_num)
+            table_center_y=screen_height//2
 
+            table_upper_left_x=table_center_x-cur_table.widget_width//2
+            table_upper_left_y=table_center_y-cur_table.widget_height//2
+            cur_table.setGeometry(table_upper_left_x,table_upper_left_y,cur_table.widget_width,cur_table.widget_height)
+            cur_table.show()
+            self.all_table.append(cur_table)
 
-        self.table_2=ScoringTable("Overall Quality",9)
-        self.table_2.setParent(self)
-        self.table_2.setGeometry(screen_width*3//4-self.table_2.widget_width//2,screen_height//2-self.table_2.widget_height//2,self.table_2.widget_width,self.table_2.widget_height)
-
-        self.all_table.append(self.table_1)
-        self.all_table.append(self.table_2)
         self.all_table[self.current_focus_index].SetMyFocused(True)
 
         for i in range(len(self.all_table)):
@@ -899,32 +904,35 @@ class ScoringPage(QtWidgets.QWidget):
             self.all_table[i].be_clicked.connect(lambda i: self.SetSigleFocusedTable(i))
         
         self.next_btn=QtWidgets.QPushButton("Next",self)
+        btn_height=PathManager.btn_height
+        btn_width=PathManager.btn_width
+        btn_pos_x=(screen_width-btn_width)//2
 
-    def handle_key_press(self, event) -> None:
-        last_index=0
+        if table_num%2==0:
+            left_index=table_num//2
+            left_y=(screen_height + self.all_table[left_index].widget_height)//2
+            btn_pos_y=(left_y+screen_height)//2-btn_height//2
+        else:
+            mid_index=(table_num-1)//2
+            table_bottom_y=(screen_height + self.all_table[mid_index].widget_height)//2
+            btn_pos_y=(table_bottom_y+screen_height)//2-btn_height//2
+        
+        self.next_btn.setGeometry(btn_pos_x,btn_pos_y,btn_width,btn_height)
+        self.next_btn.show()
+
+
+    def GetScores(self):
+        return [self.all_table[i].cur_radio_score for i in self.all_table_list]
+    
+    def ReturnScores(self):
+        self.HasScored.emit(self.GetScores())
+
+    def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
         if event.key() ==  Qt.Key_Right:
-            if self.current_focus_index == len(self.all_table)-1:
-                self.current_focus_index=0
-                last_index=len(self.all_table)-1
-            else:
-                self.current_focus_index+=1
-                last_index=self.current_focus_index-1
+            self.current_focus_index=(self.current_focus_index+1)%len(self.all_table)
         if event.key() == Qt.Key_Left:
-            if self.current_focus_index == 0:
-                self.current_focus_index=len(self.all_table)-1
-                last_index=0
-            else:
-                self.current_focus_index-=1
-                last_index=self.current_focus_index+1
-        self.all_table[last_index].SetMyFocused(False)
-        self.all_table[self.current_focus_index].SetMyFocused(True)
-
-        if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
-            all_scores=[]
-            for table in self.all_table:
-                all_scores.append(table.GetResult())
-            self.HasScored.emit(all_scores)
-
+            self.current_focus_index=(self.current_focus_index-1)%len(self.all_table)
+        self.SetSigleFocusedTable(self.current_focus_index)
         return super().keyPressEvent(event)
     
     def SetSigleFocusedTable(self,focus_i):
@@ -1013,26 +1021,42 @@ class ScoringTable(QtWidgets.QWidget):
         return self.cur_radio_score+1
     
     def keyPressEvent(self, event) -> None:
-        '''
-        if event.key() == Qt.Key_5:
-            self.radioButton.setChecked(True)
-        elif event.key() == Qt.Key_4:
-            self.radioButton_2.setChecked(True)
-        elif event.key() == Qt.Key_3:
-            self.radioButton_3.setChecked(True)
-        elif event.key() == Qt.Key_2:
-            self.radioButton_4.setChecked(True)
-        elif event.key() == Qt.Key_1:
-            self.radioButton_5.setChecked(True)
-        return super().keyPressEvent(event)
-        '''
+        key_num=self.GetKeyNum(event.key())
+        if key_num>0 and key_num<=self.scoring_levels:
+            self.cur_radio_score=key_num
+            self.all_radio_btns[key_num-1].setChecked(True)
+            return super().keyPressEvent(event)
+
         if event.key() == Qt.Key_Up:
             self.cur_radio_score=self.all_radio_index[self.cur_radio_score-1]
             self.all_radio_btns[self.cur_radio_score].setChecked(True)
+            return super().keyPressEvent(event)
         if event.key() ==  Qt.Key_Down:
             self.cur_radio_score=self.all_radio_index[self.cur_radio_score+1-self.scoring_levels]
             self.all_radio_btns[self.cur_radio_score].setChecked(True)
-        return super().keyPressEvent(event)
+            return super().keyPressEvent(event)
+        event.ignore()
+    
+    def GetKeyNum(self,in_key):
+        if in_key == Qt.Key_1:
+            return 1
+        if in_key == Qt.Key_2:
+            return 2
+        if in_key == Qt.Key_3:
+            return 3
+        if in_key == Qt.Key_4:
+            return 4
+        if in_key == Qt.Key_5:
+            return 5
+        if in_key == Qt.Key_6:
+            return 6
+        if in_key == Qt.Key_7:
+            return 7
+        if in_key == Qt.Key_8:
+            return 8
+        if in_key == Qt.Key_9:
+            return 9
+        return -1
     
     def mousePressEvent(self, event) -> None:
         self.be_clicked.emit(self.table_index)
@@ -1051,6 +1075,8 @@ def PrintVideoPage(a):
 
 def VideoFinishPage():
     print("Video finished!")
+
+def PrintScores()
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication()
@@ -1071,7 +1097,7 @@ if __name__ == "__main__":
     video_page.show()
     '''
 
-    score_page=ScoringPage(1440,2560)
+    score_page=ScoringPage(1440,2560,["test 1","test 2"],[6,7])
     score_page.show()
 
     sys.exit(app.exec())
