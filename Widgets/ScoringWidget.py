@@ -186,6 +186,18 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
     
     def SetPageShowing(self,cur_lf_info:ScoringExpLFIInfo,init_flag=False):
         exp_setting=self.exp_setting
+
+        if exp_setting.two_folder_mode:
+            if init_flag:
+                page_showing=VideoPage(exp_setting,None,cur_lf_info.passive_view_video_path,exp_setting.auto_play,exp_setting.loop_play,exp_setting.loop_times,exp_setting.fps)
+                self.addWidget(page_showing)
+                page_showing.pair_finished.connect(lambda x: self.ShowingNext(x,self.all_view_scores,0))
+                self.max_page_num+=1
+                self.show_page_list.append(page_showing)
+            else:
+                self.show_page_list[0].SetNewLFI(exp_setting,None,cur_lf_info.passive_view_video_path)
+            return
+
         if LFIFeatures.Active_Refocusing in exp_setting.lfi_features and LFIFeatures.Active_ViewChanging in exp_setting.lfi_features:
             if init_flag:
                 page_showing=ImagePage(exp_setting,cur_lf_info,cur_lf_info.active_view_path,cur_lf_info.active_refocusing_path)
@@ -284,7 +296,16 @@ class ScoringWidget(QtWidgets.QStackedWidget):
         self.exp_setting=exp_setting
         self.all_show_index=all_show_index
 
+        all_level_names=exp_setting.score_names
+        all_score_levels=exp_setting.score_levels
+
         self.current_lfi_show_index=0
+        
+        self.all_level_names=all_level_names
+        if type(all_score_levels)==int:
+            self.all_score_levels=[all_score_levels]*len(self.all_level_names)
+        else:
+            self.all_score_levels=all_score_levels
 
         self.all_scores=[]
         self.show_page_list=[] # view changing, refocusing
@@ -310,7 +331,7 @@ class ScoringWidget(QtWidgets.QStackedWidget):
 
 
         ############
-        self.page_scoring=ScoringPage(screen.height(),screen.width())
+        self.page_scoring=ScoringPage(screen.height(),screen.width(),self.all_level_names,self.all_score_levels)
         self.page_scoring.setParent(self)
         self.page_scoring.HasScored.connect(self.RecordScore)
         self.addWidget(self.page_scoring)
@@ -345,6 +366,17 @@ class ScoringWidget(QtWidgets.QStackedWidget):
     
     def SetPageShowing(self,cur_lf_info:ScoringExpLFIInfo,init_flag=False):
         exp_setting=self.exp_setting
+        if exp_setting.two_folder_mode:
+            if init_flag:
+                page_showing=VideoPage(exp_setting,None,cur_lf_info.passive_view_video_path,exp_setting.auto_play,exp_setting.loop_play,exp_setting.loop_times,exp_setting.fps)
+                self.addWidget(page_showing)
+                page_showing.finish_video.connect(self.NextPage)
+                self.max_page_num+=1
+                self.show_page_list.append(page_showing)
+            else:
+                self.show_page_list[0].SetNewLFI(exp_setting,None,cur_lf_info.passive_view_video_path)
+            return
+
         if LFIFeatures.Active_Refocusing in exp_setting.lfi_features and LFIFeatures.Active_ViewChanging in exp_setting.lfi_features:
             if init_flag:
                 page_showing=ImagePage(exp_setting,cur_lf_info,cur_lf_info.active_view_path,cur_lf_info.active_refocusing_path)
@@ -642,7 +674,10 @@ class LFIVideoPlayer(QtWidgets.QLabel):
         self.is_playing=False
         self.loop_play_flag=False
         self.loop_times=-1
+        if self.fps==0:
+            self.fps=-1
         self.frame_duration=1000//self.fps
+
         self.InitTheVideo(video_path)
     
     def setVideoPath(self,video_path):
@@ -681,6 +716,8 @@ class LFIVideoPlayer(QtWidgets.QLabel):
             self.frame_num=self.cur_cap.get(cv2.CAP_PROP_FRAME_COUNT)
             self.video_height=self.cur_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
             self.video_width=self.cur_cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+            if self.fps < 0:
+                self.SetFPS(self.cur_cap.get(cv2.CAP_PROP_FPS))
             self.cur_frame_index=-1
         else:
             self.frame_num=0
@@ -749,6 +786,8 @@ class VideoPage(QtWidgets.QWidget):
         self.fps=fps
     
         self.video_player=LFIVideoPlayer(video_path,fps=self.fps)
+        self.fps=self.video_player.fps
+
         self.video_player.setParent(self)
         self.video_player.loop_play_flag=loop_play
 
@@ -918,16 +957,27 @@ class ScoringPage(QtWidgets.QWidget):
             btn_pos_y=(table_bottom_y+screen_height)//2-btn_height//2
         
         self.next_btn.setGeometry(btn_pos_x,btn_pos_y,btn_width,btn_height)
+        self.next_btn.clicked.connect(self.ReturnScores)
         self.next_btn.show()
 
 
     def GetScores(self):
-        return [self.all_table[i].cur_radio_score for i in self.all_table_list]
+        return [self.all_table[i].GetResult() for i in self.all_table_list]
     
     def ReturnScores(self):
         self.HasScored.emit(self.GetScores())
 
+    '''
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
+        if event.key() ==  Qt.Key_Right:
+            self.current_focus_index=(self.current_focus_index+1)%len(self.all_table)
+        if event.key() == Qt.Key_Left:
+            self.current_focus_index=(self.current_focus_index-1)%len(self.all_table)
+        self.SetSigleFocusedTable(self.current_focus_index)
+        return super().keyPressEvent(event)
+    '''
+
+    def handle_key_press(self, event: QtGui.QKeyEvent) -> None:
         if event.key() ==  Qt.Key_Right:
             self.current_focus_index=(self.current_focus_index+1)%len(self.all_table)
         if event.key() == Qt.Key_Left:
@@ -943,6 +993,10 @@ class ScoringPage(QtWidgets.QWidget):
             else:
                 self.all_table[index].SetMyFocused(False)
     
+class ScoringBtn(QtWidgets.QRadioButton):
+    def __init__(self,i=0):
+        super().__init__()
+        self.btn_score=i
 
 class ScoringTable(QtWidgets.QWidget):
     be_clicked=QtCore.Signal(int)
@@ -959,7 +1013,7 @@ class ScoringTable(QtWidgets.QWidget):
         self.scoring_name.setTitle(widget_name)
         self.vertical_layout_widget=QtWidgets.QWidget(self.scoring_name)
 
-        self.SetTableSize()
+        #self.SetTableSize()
 
         self.vertical_layout_box=QtWidgets.QVBoxLayout(self.vertical_layout_widget)
         self.vertical_layout_box.setSpacing(PathManager.table_spaceing)
@@ -967,12 +1021,15 @@ class ScoringTable(QtWidgets.QWidget):
 
         self.all_radio_btns=[]
         for i in range(self.scoring_levels):
-            radio_button=QtWidgets.QRadioButton(self.vertical_layout_widget)
+            radio_button=ScoringBtn(i)
+            radio_button.setParent(self.vertical_layout_widget)
             radio_button.setText("Score: "+str(i+1))
-            radio_button.clicked.connect(lambda: self.RadioBtnClicked(i))
+            radio_button.clicked.connect(lambda: self.RadioBtnClicked())
             self.vertical_layout_box.addWidget(radio_button)
             self.all_radio_btns.append(radio_button)
 
+        self.SetTableSize()
+        
         self.all_radio_btns[0].setChecked(True) 
 
         self.border_label=QtWidgets.QLabel(self)
@@ -984,8 +1041,13 @@ class ScoringTable(QtWidgets.QWidget):
         self.border_label.raise_()
         self.scoring_name.raise_()
     
-    def RadioBtnClicked(self,index):
-        self.cur_radio_score=index
+    def GetClickedRadioBtn(self):
+        for radio_btn in self.all_radio_btns:
+            if radio_btn.isChecked():
+                return radio_btn.btn_score
+
+    def RadioBtnClicked(self):
+        self.cur_radio_score=self.GetClickedRadioBtn()
         self.be_clicked.emit(self.table_index)
     
     def SetTableSize(self):
@@ -1014,6 +1076,9 @@ class ScoringTable(QtWidgets.QWidget):
         self.scoring_name.setTitle(self.widget_name)
         self.scoring_name.setFont(font)
         self.scoring_name.setFocusPolicy(Qt.StrongFocus)
+
+        for r_btn in self.all_radio_btns:
+            r_btn.setFont(font)
 
         self.vertical_layout_widget.setGeometry(group_box_pos_x,40,vertical_layout_widget_width,vertical_layout_widget_height)
 
@@ -1076,7 +1141,9 @@ def PrintVideoPage(a):
 def VideoFinishPage():
     print("Video finished!")
 
-def PrintScores()
+def PrintScores(in_list):
+    print("all the scores: ")
+    print(in_list)
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication()
@@ -1097,7 +1164,9 @@ if __name__ == "__main__":
     video_page.show()
     '''
 
-    score_page=ScoringPage(1440,2560,["test 1","test 2"],[6,7])
-    score_page.show()
+    score_page=ScoringPage(1440,2560,["test 1","test 2","table 3"],[6,7,5])
+
+    score_page.HasScored.connect(PrintScores)
+    score_page.show()#FullScreen()
 
     sys.exit(app.exec())

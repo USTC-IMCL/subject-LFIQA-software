@@ -351,8 +351,14 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
             return False, "Invalid json! For refocusing and view-changing features, at least you need to choose one of them!"
 
         skip_preprocessing=exp_setting_config["Skip_Preprocessing"]
-        training_lfi_info=self.GetConfigInfoWithSpecificJson(training_lfi_config)
-        test_lfi_info=self.GetConfigInfoWithSpecificJson(test_lfi_config)
+
+        if self.exp_setting.two_folder_mode:
+            skip_preprocessing=True
+            training_lfi_info=self.TwoFolderConfiguration(training_lfi_config)
+            test_lfi_info=self.TwoFolderConfiguration(test_lfi_config)
+        else:
+            training_lfi_info=self.GetConfigInfoWithSpecificJson(training_lfi_config)
+            test_lfi_info=self.GetConfigInfoWithSpecificJson(test_lfi_config)
         if skip_preprocessing:
             self.exp_setting.has_preprocess=True
 
@@ -365,8 +371,8 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         if not isinstance(all_lfi_config,str):
             logger.error("For the two folders configuration, the input should be a string!")
             return None
-        all_lfi_config=ExpLFIInfo()
-
+        all_lfi_config=TwoFolderLFIInfo(all_lfi_config,self.exp_setting.VideoSaveTypeStr)
+        return all_lfi_config
     
     def GetConfigInfoWithSpecificJson(self,all_lfi_config):
         skip_preprocessing=self.exp_setting.skip_preprocessing
@@ -441,6 +447,7 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         return all_lfi_info
 
     def GetConfigExpSetting(self,exp_config):
+        exp_keys=list(exp_config.keys())
         disp_type=exp_config["Display_Type"]
         threed_type=exp_config["ThreeD_Type"]
         view_change_type=exp_config["View_Changing"]
@@ -485,8 +492,6 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         if "pair" in cmp_type_str:
             cmp_type=ComparisonType.PairComparison
             
-        pair_wise_path=exp_config["PairWise_Path"]
-
         if LFIFeatures.Active_Refocusing in all_lfi_features or LFIFeatures.Passive_Refocusing in all_lfi_features:
             all_lfi_features.append(LFIFeatures.Refocusing)
         
@@ -497,7 +502,32 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
             save_format=SaveFormat.Excel
 
         exp_setting=ExpSetting(all_lfi_features,cmp_type,save_format)
-        exp_setting.pair_wise_config=pair_wise_path
+        
+        if "Two_Folder_Mode" in exp_keys:
+            exp_setting.two_folder_mode=exp_config["Two_Folder_Mode"]
+        if "Auto_Play" in exp_keys:
+            exp_setting.auto_play=exp_config["Auto_Play"]
+        if "Loop_Play" in exp_keys:
+            exp_setting.loop_play=exp_config["Loop_Play"]
+        if "Loop_Times" in exp_keys:
+            exp_setting.loop_times=exp_config["Loop_Times"]
+        if "FPS" in exp_keys:
+            exp_setting.fps=exp_config["FPS"]
+        
+        if "Score_Names" in exp_keys:
+            exp_setting.score_names=exp_config["Score_Names"]
+        if "Score_Levels" in exp_keys:
+            cur_score_levels=exp_config["Score_Levels"]
+            if type(cur_score_levels) == int:
+                cur_score_levels=[cur_score_levels]*len(exp_setting.score_names)
+            exp_setting.score_levels=cur_score_levels
+        
+        if cmp_type==ComparisonType.PairComparison and (not exp_setting.two_folder_mode):
+            if "PairWise_List" not in exp_keys:
+                logger.error("No PairWise_List in the configuration json file! Please check your file carefully!")
+                return None
+            else:
+                exp_setting.pair_wise_dict=exp_config["PairWise_List"]
         exp_setting.skip_preprocessing=exp_config["Skip_Preprocessing"]
 
         return exp_setting

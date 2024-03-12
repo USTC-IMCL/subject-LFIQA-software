@@ -263,7 +263,7 @@ class SingleLFIInfo:
     @PassiveVideo.setter
     def PassiveVideo(self, value):
         self.passive_video=value
-    
+
     
 class ExpLFIInfo:
     def __init__(self,lfi_name=None,ori_path=[],dist_path=[],lfi_type=[],angular_format=AngularFormat.XY):
@@ -539,15 +539,17 @@ class ExpLFIInfo:
             if dist_name not in cur_lfi_info.keys():
                 return False
         return True
-    
+
+
 class ExpSetting:
-    def __init__(self,lfi_features=[],comparison_type=ComparisonType.DoubleStimuli,save_format=SaveFormat.CSV,post_processing=PostProcessType.SROCC):
+    def __init__(self,lfi_features=[],comparison_type=ComparisonType.DoubleStimuli,save_format=SaveFormat.CSV,post_processing=PostProcessType.SROCC,two_folder_mode=False):
         self.lfi_features=lfi_features
         self.comparison_type=comparison_type
         self.save_format=save_format
         self.post_processing=post_processing
 
         self.pair_wise_config=""
+        self.pair_wise_dict={}
         self.skip_preprocessing=False
         self.has_preprocess=False
 
@@ -560,6 +562,15 @@ class ExpSetting:
         self.ViewSaveType=ViewSaveType.png
         self.ViewSaveTypeStr=ViewSaveTypeDict[self.ViewSaveType]
         self.VideoSaveTypeStr=VideoSaveTypeDict[self.VideoSaveType]
+        self.two_folder_mode=two_folder_mode
+
+        self.auto_play=True
+        self.loop_times=-1 # infinit
+        self.fps=-1  # decided by the input video
+        self.loop_play=True
+
+        self.score_levels=[5,5]
+        self.score_names=['Overall quality','Image quality']
     
 def GetShowList(lfi_info:ExpLFIInfo, exp_setting:ExpSetting,mode="trainging"):
     '''
@@ -569,9 +580,7 @@ def GetShowList(lfi_info:ExpLFIInfo, exp_setting:ExpSetting,mode="trainging"):
     view_post_fix=exp_setting.ViewSaveTypeStr
     video_post_fix=exp_setting.VideoSaveTypeStr
     if exp_setting.comparison_type == ComparisonType.PairComparison:
-        pair_wise_config=exp_setting.pair_wise_config
-        with open(pair_wise_config,'r') as f:
-            pair_wise_dict=json.load(f)
+        pair_wise_dict=exp_setting.pair_wise_dict
         if mode == "training":
             pair_wise_dict=pair_wise_dict['training']
         else:
@@ -624,6 +633,12 @@ class ProjectInfo:
             self.ReadFromFile()
         
     def InitAllScoringLFIInfo(self):
+        if self.exp_setting.two_folder_mode:
+            self.training_scoring_lfi_info=self.training_LFI_info
+            self.test_scoring_lfi_info=self.test_LFI_info
+            self.training_scoring_lfi_info.mode="training"
+            self.test_scoring_lfi_info.mode="test"
+            return
         if self.exp_setting.has_preprocess:
             self.training_scoring_lfi_info.GetAllScoringLFI(self.exp_setting,self.training_LFI_info)
             self.test_scoring_lfi_info.GetAllScoringLFI(self.exp_setting,self.test_LFI_info)
@@ -710,10 +725,32 @@ class ProjectInfo:
             ret_str+=f"Post processing: SROCC\n"
         ret_str+=f"Video save type: {self.exp_setting.VideoSaveTypeStr}\n"
         ret_str+=f"View save type: {self.exp_setting.ViewSaveTypeStr}\n"
+
         if self.exp_setting.has_preprocess:
             ret_str+="Has been preprocessed: Yes\n"
         else:
             ret_str+="Has been preprocessed: No\n"
+
+        if self.exp_setting.auto_play:
+            ret_str+="Auto play the passive mode: Yes\n"
+        else:
+            ret_str+="Auto play the passive mode: No\n"
+
+        if self.exp_setting.loop_play:
+            ret_str+="Loop the passive mode: Yes\n"
+            loop_times=self.exp_setting.loop_times
+            if loop_times<0:
+                loop_times="Inf\n"
+            ret_str+="Loop times: {}\n".format(loop_times)
+        else:
+            ret_str+="Loop the passive mode: No\n"
+            ret_str+="Loop times: does not loop\n"
+        
+        if self.exp_setting.fps<0:
+            ret_str+="The passive mode FPS: following the input video\n" 
+        else:
+            ret_str+="The passive mode FPS: fixed to %d\n" %(self.exp_setting.fps) 
+
         ret_str+="-----------Subject List-----------\n"
         ret_str+="Num of subjects: %d\n" % len(self.subject_list)
         for idx,subject_name in enumerate(self.subject_list):
@@ -722,6 +759,9 @@ class ProjectInfo:
     
     def PrintLFIInfo(self,lfi_info:ExpLFIInfo):
         ret_str=''
+        if self.exp_setting.two_folder_mode:
+            ret_str+="The test folder is %s\n" %(lfi_info.in_folder_path)
+            return ret_str
         all_lfi_names=lfi_info.GetAllLFNames()
         all_name_str='['+' '.join(['%s ' % x for x in all_lfi_names])+']'
         ret_str+="All LFIs: " + all_name_str + "\n"
@@ -944,7 +984,7 @@ class AllScoringLFI:
         self.mode=in_mode
     
     def GetLFINum(self)->int:
-        return self.exp_lfi_info_num
+        return len(self.all_exp_lfi_info)
 
     def GetRandomShowOrder(self):
         if self.exp_lfi_info_num==0:
@@ -958,9 +998,7 @@ class AllScoringLFI:
     
     def GetAllScoringLFI(self,exp_setting:ExpSetting,all_lfi_info:ExpLFIInfo):
         if exp_setting.comparison_type == ComparisonType.PairComparison:
-            pair_wise_list_path=exp_setting.pair_wise_config
-            with open(pair_wise_list_path,'r') as fid:
-                pair_wise_list=json.load(fid)
+            pair_wise_list=exp_setting.pair_wise_dict
             config_list=pair_wise_list[self.mode]
             for cmp_index,config in config_list.items():
                 cur_lfi_name=config["lfi_name"]
@@ -989,6 +1027,23 @@ class AllScoringLFI:
         cur_scoring_lfi_info.InitFromLFIInfo(lfi_info,exp_setting,exp_name,self.mode,cmp_index)
         self.all_exp_lfi_info.append(cur_scoring_lfi_info)
 
+    
+class TwoFolderLFIInfo(AllScoringLFI):
+    def __init__(self, in_folder_path,video_postfix_str,in_mode="None"):
+        super().__init__(in_mode)
+        self.in_folder_path=in_folder_path
+        self.video_post_fix=video_postfix_str
+        self.all_videos=[]
+
+        all_files=os.listdir(in_folder_path)
+        for file_name in all_files:
+            if video_postfix_str in file_name[-4:]:
+                self.all_videos.append(file_name)
+                cur_single_scoring_lfi_info=ScoringExpLFIInfo()
+                cur_single_scoring_lfi_info.passive_view_video_path=os.path.join(in_folder_path,file_name)
+                cur_single_scoring_lfi_info.passive_refocusing_video_path=os.path.join(in_folder_path,file_name)
+                self.all_exp_lfi_info.append(cur_single_scoring_lfi_info)
+        self.exp_lfi_info_num=len(self.all_exp_lfi_info)
 
 
 class PorjectPathManager():

@@ -227,7 +227,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.test_LFI_info=self.cur_project.test_LFI_info
         self.exp_setting=self.cur_project.exp_setting
 
-        if not self.CheckLFIImages(mode):
+        if not self.CheckLFIImages(mode) and (not self.exp_setting.two_folder_mode):
             self.ShowMessage("Something is wrong! Please Check your log carefully.",2)
             logger.error("Something is Wrong! Please check the logs above and fix it.")
             return
@@ -272,7 +272,14 @@ class MainProject(QMainWindow,Ui_MainWindow):
             score_page=ScoringWidget(all_scoring_lfi_info,self.exp_setting,all_show_index)
 
         self.hide()
-        score_page.show()
+
+        score_page.setScreen(app.screens()[0])
+        cur_screen=score_page.screen()
+
+        score_page.move(cur_screen.geometry().topLeft())
+        score_page.showFullScreen()
+
+        #score_page.show()
         if mode == "test":
             score_page.scoring_finished.connect(lambda all_results: self.GetAndSaveResult(all_results,subject_name,all_show_index,all_scoring_lfi_info))
         else:
@@ -285,12 +292,43 @@ class MainProject(QMainWindow,Ui_MainWindow):
         logger.info("The evaluation has been finished. Now saving results to %s ..." % self.output_folder)
         self.cur_project.subject_list.append(subject_name)
         if self.exp_setting.save_format == ExpInfo.SaveFormat.CSV:
-            self.SaveCSV(all_results,subject_name,all_show_index,show_list)
+            if self.exp_setting.two_folder_mode:
+                self.SaveCSV_TwoFolderMode(all_results,subject_name,all_show_index,show_list)
+            else:
+                self.SaveCSV(all_results,subject_name,all_show_index,show_list)
         else:
-            self.SaveExcel(all_results,subject_name,all_show_index,show_list)
+            if self.exp_setting.two_folder_mode:
+                self.SaveExcel_TwoFolderMode(all_results,subject_name,all_show_index,show_list)
+            else:
+                self.SaveExcel(all_results,subject_name,all_show_index,show_list)
         self.show()
         self.cur_project.SaveToFile()
         self.ShowProjectSetting()
+    
+    def SaveExcel_TwoFolderMode(self,all_results,subject_name,all_show_index,show_list:ExpInfo.AllScoringLFI):
+        save_file=os.path.join(self.output_folder,subject_name+'.xlsx')
+        workbook=xlsxwriter.Workbook(save_file)
+        worksheet=workbook.add_worksheet(subject_name)
+        worksheet.write(0,0,'Image Index') 
+        worksheet.write(0,1,'Image Path')
+        all_score_names=self.exp_setting.score_names
+        if self.exp_setting.comparison_type != ExpInfo.ComparisonType.PairComparison:
+            for i,score_name in enumerate(all_score_names):
+                worksheet.write(0,i+2,score_name)
+            for i, scoring_index in enumerate(all_show_index):
+                cur_scoring_lfi_info=show_list.GetScoringExpLFIInfo(scoring_index)
+                worksheet.write(i+1,0,scoring_index)
+                worksheet.write(i+1,1,cur_scoring_lfi_info.passive_view_video_path)
+                for k in range(all_score_names):
+                    worksheet.write(i+1,k+2,all_results[i][k])
+        else:
+            worksheet.write(0,2,"Pair Comparison")
+            for i, scoring_index in enumerate(all_show_index):
+                cur_scoring_lfi_info=show_list.GetScoringExpLFIInfo(scoring_index)
+                worksheet.write(i+1,0,scoring_index)
+                worksheet.write(i+1,1,cur_scoring_lfi_info.passive_view_video_path)
+                worksheet.write(i+1,2,all_results[0][i])
+        workbook.close()
     
     def SaveExcel(self,all_results,subject_name,all_show_index,show_list:ExpInfo.AllScoringLFI):
         save_file=os.path.join(self.output_folder,subject_name+'.xlsx')
@@ -298,11 +336,11 @@ class MainProject(QMainWindow,Ui_MainWindow):
         worksheet=workbook.add_worksheet(subject_name)
         worksheet.write(0,0,'Image Index') 
         worksheet.write(0,1,'Image Name')
-
+        all_score_names=self.exp_setting.score_names
         if self.exp_setting.comparison_type != ExpInfo.ComparisonType.PairComparison:
             worksheet.write(0,2,'distortion')
-            worksheet.write(0,3,'Image Quality')
-            worksheet.write(0,4,'Overall Score')
+            for i,score_name in enumerate(all_score_names):
+                worksheet.write(0,i+3,score_name)
             for i,scoring_index in enumerate(all_show_index):
                 cur_scoring_lfi_info=show_list.GetScoringExpLFIInfo(scoring_index)
                 cur_img_name=cur_scoring_lfi_info.lfi_name
@@ -310,8 +348,8 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 worksheet.write(i+1,0,scoring_index)
                 worksheet.write(i+1,1,cur_img_name)
                 worksheet.write(i+1,2,distortion)
-                worksheet.write(i+1,3,all_results[i][0])
-                worksheet.write(i+1,4,all_results[i][1])
+                for k in range(all_score_names):
+                    worksheet.write(i+1,k+3,all_results[i][k])
         else:
             view_changing_score=all_results[0]
             refocusing_score=all_results[1]
@@ -351,17 +389,46 @@ class MainProject(QMainWindow,Ui_MainWindow):
                         current_col+=1
         workbook.close()
     
+    def SaveCSV_TwoFolderMode(self,all_results,subject_name,all_show_index,show_list:ExpInfo.AllScoringLFI):
+        save_file=os.path.join(self.output_folder,subject_name+'.csv')
+        with open(save_file,'w') as fid:
+            fid.write("Image Index, Image Path")
+            all_score_names=self.exp_setting.score_names
+            if self.exp_setting.comparison_type != ExpInfo.ComparisonType.PairComparison:
+                for i,score_name in enumerate(all_score_names):
+                    fid.write(",%s" %score_name)
+                fid.write('\n')
+                for i, scoring_index in enumerate(all_show_index):
+                    cur_scoring_lfi_info=show_list.GetScoringExpLFIInfo(scoring_index)
+                    fid.write("{},{}".format(scoring_index,cur_scoring_lfi_info.passive_view_video_path))
+                    for k in range(all_score_names):
+                        fid.write(",%d" %all_results[i][k])
+                    fid.write('\n')
+            else:
+                fid.write(",Pair Comparison\n")
+                for i, scoring_index in enumerate(all_show_index):
+                    cur_scoring_lfi_info=show_list.GetScoringExpLFIInfo(scoring_index)
+                    fid.write("{},{},{}\n".format(scoring_index,cur_scoring_lfi_info.passive_view_video_path,all_results[0][i]))
+        
+    
     def SaveCSV(self,all_results,subject_name,all_show_index,show_list:ExpInfo.AllScoringLFI):
         save_file=os.path.join(self.output_folder,subject_name+'.csv')
         with open(save_file,'w') as fid:
             fid.write('Image Index,Image Name')
+            all_score_names=self.exp_setting.score_names
             if self.exp_setting.comparison_type != ExpInfo.ComparisonType.PairComparison:
-                fid.write(',distortion,Image Quality Score, Overall Score\n')
-                for i,scoring_index in enumerate(all_show_index):
+                fid.write(',distortion')
+                for i,score_name in enumerate(all_score_names):
+                    fid.write(",%s" %score_name)
+                fid.write('\n')
+                for i, scoring_index in enumerate(all_show_index):
                     cur_scoring_lfi_info=show_list.GetScoringExpLFIInfo(scoring_index)
                     cur_img_name=cur_scoring_lfi_info.lfi_name
                     distortion=cur_scoring_lfi_info.exp_name
-                    fid.write(f'{scoring_index},{cur_img_name},{distortion},{all_results[i][0]},{all_results[i][1]}\n')
+                    fid.write("{},{},{}".format(scoring_index,cur_img_name,distortion))
+                    for k in range(all_score_names):
+                        fid.write(",%d" %all_results[i][k])
+                    fid.write('\n')
             else:
                 view_changing_score=all_results[0]
                 refocusing_score=all_results[1]
