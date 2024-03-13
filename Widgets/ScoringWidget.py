@@ -713,9 +713,9 @@ class LFIVideoPlayer(QtWidgets.QLabel):
         # 25 fps or decided by the users?
 
         if self.valid_video_flag:
-            self.frame_num=self.cur_cap.get(cv2.CAP_PROP_FRAME_COUNT)
-            self.video_height=self.cur_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-            self.video_width=self.cur_cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+            self.frame_num=int(self.cur_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            self.video_height=int(self.cur_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            self.video_width=int(self.cur_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             if self.fps < 0:
                 self.SetFPS(self.cur_cap.get(cv2.CAP_PROP_FPS))
             self.cur_frame_index=-1
@@ -1151,7 +1151,6 @@ if __name__ == "__main__":
     #scoring_widget.HasScored.connect(lambda x:print(x))
     #scoring_widget.show()
 
-    '''
     exp_setting=ExpSetting()
     exp_setting.comparison_type=ComparisonType.DoubleStimuli
 
@@ -1164,9 +1163,10 @@ if __name__ == "__main__":
     video_page.show()
     '''
 
-    score_page=ScoringPage(1440,2560,["test 1","test 2","table 3"],[6,7,5])
+    score_page=ScoringPage(1080,1920,["test 1","test 2","table 3"],[6,7,5])
 
     score_page.HasScored.connect(PrintScores)
     score_page.show()#FullScreen()
+    '''
 
     sys.exit(app.exec())

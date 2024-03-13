@@ -401,7 +401,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 for i, scoring_index in enumerate(all_show_index):
                     cur_scoring_lfi_info=show_list.GetScoringExpLFIInfo(scoring_index)
                     fid.write("{},{}".format(scoring_index,cur_scoring_lfi_info.passive_view_video_path))
-                    for k in range(all_score_names):
+                    for k in range(len(all_score_names)):
                         fid.write(",%d" %all_results[i][k])
                     fid.write('\n')
             else:
