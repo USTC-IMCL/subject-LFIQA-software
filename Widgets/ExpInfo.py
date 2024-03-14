@@ -567,7 +567,6 @@ class ExpSetting:
         self.auto_play=True
         self.loop_times=-1 # infinit
         self.fps=-1  # decided by the input video
-        self.loop_play=True
 
         self.score_levels=[5,5]
         self.score_names=['Overall quality','Image quality']
@@ -736,7 +735,7 @@ class ProjectInfo:
         else:
             ret_str+="Auto play the passive mode: No\n"
 
-        if self.exp_setting.loop_play:
+        if self.exp_setting.loop_times !=0 and self.exp_setting.loop_times != 1:
             ret_str+="Loop the passive mode: Yes\n"
             loop_times=self.exp_setting.loop_times
             if loop_times<0:

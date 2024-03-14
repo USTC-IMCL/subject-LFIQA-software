@@ -507,8 +507,6 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
             exp_setting.two_folder_mode=exp_config["Two_Folder_Mode"]
         if "Auto_Play" in exp_keys:
             exp_setting.auto_play=exp_config["Auto_Play"]
-        if "Loop_Play" in exp_keys:
-            exp_setting.loop_play=exp_config["Loop_Play"]
         if "Loop_Times" in exp_keys:
             exp_setting.loop_times=exp_config["Loop_Times"]
         if "FPS" in exp_keys:

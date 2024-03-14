@@ -189,7 +189,7 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
 
         if exp_setting.two_folder_mode:
             if init_flag:
-                page_showing=VideoPage(exp_setting,None,cur_lf_info.passive_view_video_path,exp_setting.auto_play,exp_setting.loop_play,exp_setting.loop_times,exp_setting.fps)
+                page_showing=VideoPage(exp_setting,None,cur_lf_info.passive_view_video_path,exp_setting.auto_play,exp_setting.loop_times,exp_setting.fps)
                 self.addWidget(page_showing)
                 page_showing.pair_finished.connect(lambda x: self.ShowingNext(x,self.all_view_scores,0))
                 self.max_page_num+=1
@@ -368,7 +368,7 @@ class ScoringWidget(QtWidgets.QStackedWidget):
         exp_setting=self.exp_setting
         if exp_setting.two_folder_mode:
             if init_flag:
-                page_showing=VideoPage(exp_setting,None,cur_lf_info.passive_view_video_path,exp_setting.auto_play,exp_setting.loop_play,exp_setting.loop_times,exp_setting.fps)
+                page_showing=VideoPage(exp_setting,None,cur_lf_info.passive_view_video_path,exp_setting.auto_play,exp_setting.loop_times,exp_setting.fps)
                 self.addWidget(page_showing)
                 page_showing.finish_video.connect(self.NextPage)
                 self.max_page_num+=1
@@ -663,7 +663,7 @@ class ImagePage(QtWidgets.QWidget):
 class LFIVideoPlayer(QtWidgets.QLabel):
     OnOneLoopEnd=QtCore.Signal()
 
-    def __init__(self,video_path,pos_x=0,pos_y=0,fps=25):
+    def __init__(self,video_path,pos_x=0,pos_y=0,fps=25,loop_times=-1):
         super().__init__()
         self.pos_x=pos_x
         self.pos_y=pos_y
@@ -672,8 +672,8 @@ class LFIVideoPlayer(QtWidgets.QLabel):
         self.timer.timeout.connect(self.ShowNextFrame)
         self.fps=fps
         self.is_playing=False
-        self.loop_play_flag=False
-        self.loop_times=-1
+        self.loop_times_record=loop_times
+
         if self.fps==0:
             self.fps=-1
         self.frame_duration=1000//self.fps
@@ -681,7 +681,8 @@ class LFIVideoPlayer(QtWidgets.QLabel):
         self.InitTheVideo(video_path)
     
     def setVideoPath(self,video_path):
-        self.cur_cap=cv2.VideoCapture(video_path)
+        self.StopPlaying()
+        self.InitTheVideo(video_path)
     
     def ShowNextFrame(self):
         if self.cur_frame_index<self.frame_num:
@@ -708,6 +709,7 @@ class LFIVideoPlayer(QtWidgets.QLabel):
 
         self.video_path=video_path
         self.is_playing=False
+        self.loop_times=self.loop_times_record
 
         # Self.fps=self.cur_cap.get(cv2.CAP_PROP_FPS)
         # 25 fps or decided by the users?
@@ -742,15 +744,14 @@ class LFIVideoPlayer(QtWidgets.QLabel):
             self.toogle_play_pause()
     
     def OneLoopEnd(self):
+        if self.loop_times>0:
+            self.loop_times-=1
         self.cur_frame_index=-1
         self.cur_cap.set(cv2.CAP_PROP_POS_FRAMES,0)
-        if self.loop_play_flag:
-            if self.loop_times!=0:
-                if self.loop_times>0:
-                    self.loop_times-=1
-                self.PlayVideo()
-            else:
-                self.StopPlaying()
+        if self.loop_times!=0:
+            self.PlayVideo()
+        else:
+            self.StopPlaying()
 
     def PauseVideo(self):
         if self.is_playing:
@@ -760,19 +761,17 @@ class LFIVideoPlayer(QtWidgets.QLabel):
         self.timer.stop()
         self.is_playing=False
     
-    def SetLoop(self,loop_play_flag,loop_times=-1):
-        self.loop_play_flag=loop_play_flag
+    def SetLoop(self,loop_times=-1):
         self.loop_times=loop_times
     
 class VideoPage(QtWidgets.QWidget):
     finish_video=QtCore.Signal()
     pair_finished=QtCore.Signal(int)
 
-    def __init__(self, exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, video_path,auto_play=False,loop_play=False,loop_times=-1,fps=25):
+    def __init__(self, exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, video_path,auto_play=False,loop_times=-1,fps=25):
         '''
-        loop_play: if True, the video will loop
-        loop_times: if loop_play is True, the video will loop loop_times times; if loop_play is False, the video will not loop
-                    if loop_play is True and the loop play times is less than 0, the video will always loop. 
+        loop_times: the loop times of the video. We do not need a loop play flag to indicate whether the video will loop. The loop_times =1 means just playing once.
+
         loop_time_sec: the video will loop within loop_time_sec seconds. But it will not be used this version. 
         '''
         super().__init__()
@@ -780,16 +779,14 @@ class VideoPage(QtWidgets.QWidget):
         self.auto_play=auto_play
         self.auto_play_delay_time=500
 
-        self.loop_play=loop_play
         self.loop_times=loop_times
 
         self.fps=fps
     
-        self.video_player=LFIVideoPlayer(video_path,fps=self.fps)
+        self.video_player=LFIVideoPlayer(video_path,fps=self.fps,loop_times=self.loop_times)
         self.fps=self.video_player.fps
 
         self.video_player.setParent(self)
-        self.video_player.loop_play_flag=loop_play
 
         self.video_height=self.video_player.video_height
         self.video_width=self.video_player.video_width
@@ -831,6 +828,9 @@ class VideoPage(QtWidgets.QWidget):
 
         video_height=self.video_height
         video_width=self.video_width
+
+        self.video_player.SetFPS(self.fps)
+        self.video_player.setVideoPath(video_path)
 
         if dist_lfi_info is None:
             self.event_mask=ImageMask(video_height,video_width)
@@ -875,10 +875,9 @@ class VideoPage(QtWidgets.QWidget):
         self.fps=fps
         self.video_player.SetFPS(fps)
 
-    def SetLoopPlay(self,loop_play,loop_times=-1):
-        self.loop_play=loop_play
+    def SetLoopPlay(self,loop_times=-1):
         self.loop_times=loop_times
-        self.video_player.SetLoop(loop_play,loop_times)
+        self.video_player.SetLoop(loop_times)
 
     def SetEventMask(self, event_mask:EventMask):
         self.event_mask=event_mask
