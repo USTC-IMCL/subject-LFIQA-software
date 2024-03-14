@@ -273,6 +273,9 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
         self.hide()
 
+        app=QApplication.instance()
+        if app is None:
+            app = QApplication([])
         score_page.setScreen(app.screens()[0])
         cur_screen=score_page.screen()
 
@@ -319,7 +322,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 cur_scoring_lfi_info=show_list.GetScoringExpLFIInfo(scoring_index)
                 worksheet.write(i+1,0,scoring_index)
                 worksheet.write(i+1,1,cur_scoring_lfi_info.passive_view_video_path)
-                for k in range(all_score_names):
+                for k in range(len(all_score_names)):
                     worksheet.write(i+1,k+2,all_results[i][k])
         else:
             worksheet.write(0,2,"Pair Comparison")
@@ -348,7 +351,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 worksheet.write(i+1,0,scoring_index)
                 worksheet.write(i+1,1,cur_img_name)
                 worksheet.write(i+1,2,distortion)
-                for k in range(all_score_names):
+                for k in range(len(all_score_names)):
                     worksheet.write(i+1,k+3,all_results[i][k])
         else:
             view_changing_score=all_results[0]
