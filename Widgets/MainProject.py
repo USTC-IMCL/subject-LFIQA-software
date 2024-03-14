@@ -426,7 +426,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
                     cur_img_name=cur_scoring_lfi_info.lfi_name
                     distortion=cur_scoring_lfi_info.exp_name
                     fid.write("{},{},{}".format(scoring_index,cur_img_name,distortion))
-                    for k in range(all_score_names):
+                    for k in range(len(all_score_names)):
                         fid.write(",%d" %all_results[i][k])
                     fid.write('\n')
             else:
