@@ -306,6 +306,8 @@ class ScoringWidget(QtWidgets.QStackedWidget):
             self.all_score_levels=[all_score_levels]*len(self.all_level_names)
         else:
             self.all_score_levels=all_score_levels
+        
+        self.all_score_definitions=exp_setting.score_definition
 
         self.all_scores=[]
         self.show_page_list=[] # view changing, refocusing
@@ -331,7 +333,7 @@ class ScoringWidget(QtWidgets.QStackedWidget):
 
 
         ############
-        self.page_scoring=ScoringPage(screen.height(),screen.width(),self.all_level_names,self.all_score_levels)
+        self.page_scoring=ScoringPage(screen.height(),screen.width(),self.all_level_names,self.all_score_levels,self.all_score_definitions)
         self.page_scoring.setParent(self)
         self.page_scoring.HasScored.connect(self.RecordScore)
         self.addWidget(self.page_scoring)
@@ -910,7 +912,7 @@ class VideoPage(QtWidgets.QWidget):
 class ScoringPage(QtWidgets.QWidget):
     HasScored=QtCore.Signal(list)
 
-    def __init__(self,screen_height,screen_width,table_names=["Picture Quality","Overall Quality"],scoring_levels=[5,5]) -> None:
+    def __init__(self,screen_height,screen_width,table_names=["Picture Quality","Overall Quality"],scoring_levels=[5,5],scoring_definition=None) -> None:
         super().__init__()
         self.setWindowFlag(Qt.FramelessWindowHint)
         self.setWindowFlag(Qt.WindowStaysOnTopHint)
@@ -924,7 +926,10 @@ class ScoringPage(QtWidgets.QWidget):
         table_num=len(table_names)
         for table_index in range(len(self.table_names)):
             table_name=self.table_names[table_index]
-            cur_table=ScoringTable(table_name,scoring_levels[table_index])
+            if scoring_definition is not None:
+                cur_table=ScoringTable(table_name,scoring_levels[table_index],scoring_definition[table_index])
+            else:
+                cur_table=ScoringTable(table_name,scoring_levels[table_index])
             cur_table.setParent(self)
             table_center_x= (2*table_index+1)*screen_width//(2*table_num)
             table_center_y=screen_height//2
@@ -1000,7 +1005,7 @@ class ScoringBtn(QtWidgets.QRadioButton):
 class ScoringTable(QtWidgets.QWidget):
     be_clicked=QtCore.Signal(int)
 
-    def __init__(self,widget_name,scoring_levels=5) -> None:
+    def __init__(self,widget_name,scoring_levels=5,scoring_definition=None) -> None:
         super().__init__()
         self.widget_name=widget_name
         self.table_index=0
@@ -1022,7 +1027,10 @@ class ScoringTable(QtWidgets.QWidget):
         for i in range(self.scoring_levels):
             radio_button=ScoringBtn(i)
             radio_button.setParent(self.vertical_layout_widget)
-            radio_button.setText("Score: "+str(i+1))
+            if scoring_definition is not None:
+                radio_button.setText(scoring_definition[i])
+            else:
+                radio_button.setText("Score: "+str(i+1))
             radio_button.clicked.connect(lambda: self.RadioBtnClicked())
             self.vertical_layout_box.addWidget(radio_button)
             self.all_radio_btns.append(radio_button)
