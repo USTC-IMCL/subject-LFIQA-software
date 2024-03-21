@@ -189,7 +189,7 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
 
         if exp_setting.two_folder_mode:
             if init_flag:
-                page_showing=VideoPage(exp_setting,None,cur_lf_info.passive_view_video_path,exp_setting.auto_play,exp_setting.loop_times,exp_setting.fps)
+                page_showing=VideoPage(exp_setting,None,cur_lf_info.passive_view_video_path)
                 self.addWidget(page_showing)
                 page_showing.pair_finished.connect(lambda x: self.ShowingNext(x,self.all_view_scores,0))
                 self.max_page_num+=1
@@ -370,7 +370,7 @@ class ScoringWidget(QtWidgets.QStackedWidget):
         exp_setting=self.exp_setting
         if exp_setting.two_folder_mode:
             if init_flag:
-                page_showing=VideoPage(exp_setting,None,cur_lf_info.passive_view_video_path,exp_setting.auto_play,exp_setting.loop_times,exp_setting.fps)
+                page_showing=VideoPage(exp_setting,None,cur_lf_info.passive_view_video_path)
                 self.addWidget(page_showing)
                 page_showing.finish_video.connect(self.NextPage)
                 self.max_page_num+=1
@@ -473,7 +473,8 @@ class FinishPage(QtWidgets.QWidget):
         self.show_label.setFont(QtGui.QFont("Roman times",20,QtGui.QFont.Bold))
     
     def handle_key_press(self, event) -> None:
-        if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Escape or event.key() == Qt.Key_Return:
+        #if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Escape or event.key() == Qt.Key_Return:
+        if event.key() == Qt.Key_Escape:
             self.key_pressed.emit()
         return super().keyPressEvent(event)
 
@@ -500,7 +501,6 @@ class ImagePage(QtWidgets.QWidget):
         self.drag_flag=False
         self.clicking_flag=False
         self.arrow_key_flag=False
-        self.better_one=0
 
         self.setMouseTracking(True)
         
@@ -509,23 +509,27 @@ class ImagePage(QtWidgets.QWidget):
         self.comparison_type=exp_setting.comparison_type
         self.clicking_mask=None
 
-        self.left_btn=QtWidgets.QPushButton(None,"Select Left",self)
-        self.left_btn.setStyleSheet("QPushButton:focus {background-color:yellow;}")
+        self.left_btn=QtWidgets.QPushButton("Select Left",)
+        self.left_btn.setParent(self)
+        self.left_btn.setStyleSheet("QPushButton:focus {border: 2px solid white;}")
         self.left_btn.hide()
         self.left_btn.clicked.connect(lambda: self.pair_finished.emit(0))
 
-        self.right_btn=QtWidgets.QPushButton(None,"Select Right",self)
-        self.right_btn.setStyleSheet("QPushButton:focus {background-color:yellow;}")
+        self.right_btn=QtWidgets.QPushButton("Select Right")
+        self.right_btn.setParent(self)
+        self.right_btn.setStyleSheet("QPushButton:focus {border: 2px solid white;}")
         self.right_btn.hide()
         self.right_btn.clicked.connect(lambda: self.pair_finished.emit(1))
 
-        self.next_btn  =QtWidgets.QPushButton(None,"Next",self)
-        self.next_btn.clicked(lambda: self.eval_finished.emit())
+        self.next_btn  =QtWidgets.QPushButton("Next")
+        self.next_btn.setParent(self)
+        self.next_btn.clicked.connect(lambda: self.eval_finished.emit())
         self.next_btn.hide()
 
         self.SetNewLFI(exp_setting,dist_lfi_info,view_path,refocusing_path)
 
     def SetNewLFI(self,exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, view_path, refocusing_path=None):
+        self.exp_setting=exp_setting
         self.lfi_info=dist_lfi_info
         self.view_path=view_path
         self.refocusing_path=refocusing_path
@@ -583,7 +587,7 @@ class ImagePage(QtWidgets.QWidget):
         
         btn_height=PathManager.btn_height
         btn_width=PathManager.btn_width
-        btn_pos_y=(self.clicking_mask.screen_height+self.clicking_mask.screen_widget_y)//2-btn_height//2
+        btn_pos_y=(self.clicking_mask.screen_height+self.clicking_mask.widget_height+self.clicking_mask.screen_widget_y)//2-btn_height//2
 
         if exp_setting.comparison_type == ComparisonType.PairComparison:
             left_btn_pos_x=3*self.clicking_mask.screen_width//8 - btn_width//2
@@ -636,18 +640,16 @@ class ImagePage(QtWidgets.QWidget):
         return super().mouseMoveEvent(event)
 
     def handle_key_press(self, event) -> None:
-        if not self.arrow_key_flag:
+        if self.exp_setting.comparison_type ==  ComparisonType.PairComparison:
+            if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
+                if self.left_btn.hasFocus():
+                    self.pair_finished.emit(0)
+                else:
+                    self.pair_finished.emit(1)
+        else:
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
                 self.eval_finished.emit()
-            return super().keyPressEvent(event)
-        else:
-            if event.key() == Qt.Key_Left:
-                self.better_one=0
-                self.pair_finished.emit(self.better_one)
-            if event.key() == Qt.Key_Right:
-                self.better_one=1
-                self.pair_finished.emit(self.better_one)
-            return super().keyPressEvent(event)
+        return super().keyPressEvent(event)
 
     def MakeViewPath(self,angular_x,angular_y):
         view_path=self.lfi_info.GetActiveView(angular_y,angular_x)
@@ -770,7 +772,7 @@ class VideoPage(QtWidgets.QWidget):
     finish_video=QtCore.Signal()
     pair_finished=QtCore.Signal(int)
 
-    def __init__(self, exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, video_path,auto_play=False,loop_times=-1,fps=25):
+    def __init__(self, exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, video_path):
         '''
         loop_times: the loop times of the video. We do not need a loop play flag to indicate whether the video will loop. The loop_times =1 means just playing once.
 
@@ -778,6 +780,10 @@ class VideoPage(QtWidgets.QWidget):
         '''
         super().__init__()
         self.setStyleSheet("background-color:gray;")
+        auto_play=exp_setting.auto_play
+        loop_times=exp_setting.loop_times
+        fps=exp_setting.fps
+
         self.auto_play=auto_play
         self.auto_play_delay_time=500
 
@@ -794,7 +800,6 @@ class VideoPage(QtWidgets.QWidget):
         self.video_width=self.video_player.video_width
 
         self.arrow_key_flag=False
-        self.better_one=0
 
         self.video_path=video_path
 
@@ -806,14 +811,15 @@ class VideoPage(QtWidgets.QWidget):
         self.next_btn.setStyleSheet("QPushButton:{background-color: gray;}")
 
         self.left_btn=QtWidgets.QPushButton("Select Left")
-        self.left_btn.setStyleSheet("QPushButton:focus { background-color: yellow; }")
+        #self.left_btn.setStyleSheet("QPushButton:focus { background-color: yellow; }")
+        self.left_btn.setStyleSheet("QPushButton:focus {border: 2px solid white;}")
         self.left_btn.setParent(self)
         self.left_btn.hide()
         self.left_btn.clicked.connect(lambda: self.pair_finished.emit(0))
 
         self.right_btn=QtWidgets.QPushButton("Select Right")
         self.right_btn.setParent(self)
-        self.right_btn.setStyleSheet("QPushButton:focus { background-color: yellow; }")
+        self.right_btn.setStyleSheet("QPushButton:focus {border: 2px solid white;}")
         self.right_btn.hide()
         self.right_btn.clicked.connect(lambda: self.pair_finished.emit(1))
 
@@ -860,6 +866,7 @@ class VideoPage(QtWidgets.QWidget):
             self.left_btn.show()
             self.right_btn.setGeometry(right_btn_pos_x,btn_pos_y,btn_width,btn_height)
             self.right_btn.show()
+            self.left_btn.setFocus()
         else:
             next_btn_pos_x=self.event_mask.screen_width//2 - btn_width//2
             self.next_btn.setGeometry(next_btn_pos_x,btn_pos_y,btn_width,btn_height)
@@ -889,8 +896,16 @@ class VideoPage(QtWidgets.QWidget):
         return super().mousePressEvent(event)
     
     def handle_key_press(self, event) -> None:
-        pass
-
+        if self.exp_setting.comparison_type == ComparisonType.PairComparison:
+            if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
+                if self.left_btn.hasFocus():
+                    self.pair_finished.emit(0)
+                else:
+                    self.pair_finished.emit(1)
+        else:
+            if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
+                self.finish_video.emit()
+        return super().keyPressEvent(event)
     '''
         if not self.arrow_key_flag:
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
@@ -984,9 +999,12 @@ class ScoringPage(QtWidgets.QWidget):
     def handle_key_press(self, event: QtGui.QKeyEvent) -> None:
         if event.key() ==  Qt.Key_Right:
             self.current_focus_index=(self.current_focus_index+1)%len(self.all_table)
+            self.SetSigleFocusedTable(self.current_focus_index)
         if event.key() == Qt.Key_Left:
             self.current_focus_index=(self.current_focus_index-1)%len(self.all_table)
-        self.SetSigleFocusedTable(self.current_focus_index)
+            self.SetSigleFocusedTable(self.current_focus_index)
+        if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
+            self.ReturnScores()
         return super().keyPressEvent(event)
     
     def SetSigleFocusedTable(self,focus_i):
@@ -1073,7 +1091,7 @@ class ScoringTable(QtWidgets.QWidget):
         vertical_layout_widget_width=2+single_radio_btn_width
 
         group_box_height=2*PathManager.talbe_vertical_gap + vertical_layout_widget_height
-        group_box_width=PathManager.scoring_group_box_width
+        group_box_width=PathManager.scoring_group_box_width + 2* PathManager.table_horizontal_gap
 
         self.widget_width=group_box_width+2*PathManager.table_horizontal_gap
         self.widget_height=group_box_height+2*PathManager.talbe_vertical_gap
