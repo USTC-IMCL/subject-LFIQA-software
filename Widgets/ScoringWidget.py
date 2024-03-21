@@ -666,6 +666,7 @@ class ImagePage(QtWidgets.QWidget):
 
 class LFIVideoPlayer(QtWidgets.QLabel):
     OnOneLoopEnd=QtCore.Signal()
+    OnVideoPlayerFinished=QtCore.Signal()
 
     def __init__(self,video_path,pos_x=0,pos_y=0,fps=25,loop_times=-1):
         super().__init__()
@@ -756,6 +757,7 @@ class LFIVideoPlayer(QtWidgets.QLabel):
             self.PlayVideo()
         else:
             self.StopPlaying()
+            self.OnVideoPlayerFinished.emit()
 
     def PauseVideo(self):
         if self.is_playing:
@@ -817,11 +819,15 @@ class VideoPage(QtWidgets.QWidget):
         self.left_btn.hide()
         self.left_btn.clicked.connect(lambda: self.pair_finished.emit(0))
 
+
         self.right_btn=QtWidgets.QPushButton("Select Right")
         self.right_btn.setParent(self)
         self.right_btn.setStyleSheet("QPushButton:focus {border: 2px solid white;}")
         self.right_btn.hide()
         self.right_btn.clicked.connect(lambda: self.pair_finished.emit(1))
+
+        if exp_setting.auto_transition:
+            self.video_player.OnVideoPlayerFinished.connect(lambda: self.finish_video.emit())
 
         self.selected_one=0
 
@@ -870,7 +876,10 @@ class VideoPage(QtWidgets.QWidget):
         else:
             next_btn_pos_x=self.event_mask.screen_width//2 - btn_width//2
             self.next_btn.setGeometry(next_btn_pos_x,btn_pos_y,btn_width,btn_height)
-            self.next_btn.show()
+            if not self.exp_setting.auto_transition:
+                self.next_btn.show()
+            else:
+                self.next_btn.hide()
 
         self.video_player.show()
         if exp_setting.comparison_type == ComparisonType.PairComparison:

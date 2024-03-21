@@ -569,7 +569,9 @@ class ExpSetting:
         self.fps=-1  # decided by the input video
 
         self.score_levels=[5,5]
+        self.score_definition=None
         self.score_names=['Overall quality','Image quality']
+        self.auto_transition=False
     
 def GetShowList(lfi_info:ExpLFIInfo, exp_setting:ExpSetting,mode="trainging"):
     '''

@@ -520,6 +520,17 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
                 cur_score_levels=[cur_score_levels]*len(exp_setting.score_names)
             exp_setting.score_levels=cur_score_levels
         
+        if "Score_Definition" in exp_keys:
+            score_definition=exp_config["Score_Definition"]
+            if type(score_definition[0]) == str:
+                score_definition=[score_definition]*len(exp_setting.score_names)
+            exp_setting.score_definition=score_definition
+            for i in range(len(exp_setting.score_names)):
+                if len(exp_setting.score_definition[i]) != exp_setting.score_levels[i]:
+                    logger.error("The length of score definition for {} is not equal to the score levels! The default score definition will be used.".format(exp_setting.score_names[i]))
+                    exp_setting.score_definition=None
+                    break
+        
         if cmp_type==ComparisonType.PairComparison and (not exp_setting.two_folder_mode):
             if "PairWise_List" not in exp_keys:
                 logger.error("No PairWise_List in the configuration json file! Please check your file carefully!")
@@ -527,6 +538,9 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
             else:
                 exp_setting.pair_wise_dict=exp_config["PairWise_List"]
         exp_setting.skip_preprocessing=exp_config["Skip_Preprocessing"]
+
+        if "Auto_Transition" in exp_keys:
+            exp_setting.auto_transition=exp_config["Auto_Transition"]
 
         return exp_setting
 
