@@ -116,18 +116,31 @@ class EventMask:
         return x+self.screen_widget_x,y+self.screen_widget_y
 
 class BlankScoringWidget(QtWidgets.QWidget):
-    def __init__(self) -> None:
+    next_btn_clicked=QtCore.Signal()
+    def __init__(self,screen_height,screen_width) -> None:
+        # just a gray background
         super().__init__()
 
         self.setStyleSheet('background-color:gray;')
 
         screen = QApplication.primaryScreen().geometry()
-        self.setGeometry(0,0,screen.width(), screen.height())
+        self.setGeometry(0,0,screen_width, screen_height)
 
         self.setWindowFlag(Qt.FramelessWindowHint)
         self.setWindowFlag(Qt.WindowStaysOnTopHint)
         #self.setAttribute(Qt.WA_TranslucentBackground)
 
+        self.next_btn  =QtWidgets.QPushButton("Next")
+        self.next_btn.setParent(self)
+        self.next_btn.clicked.connect(lambda: self.next_btn_clicked.emit())
+
+        btn_height=PathManager.btn_height
+        btn_width=PathManager.btn_width
+
+        btn_pos_x=screen_width//2-btn_width//2
+        btn_pos_y=screen_height//5*4-btn_height//2
+        self.next_btn.setGeometry(btn_pos_x,btn_pos_y,btn_width,btn_height)
+        self.next_btn.show()
 
 class PairWiseScoringWidget(QtWidgets.QStackedWidget):
     scoring_finished=QtCore.Signal(list)
@@ -166,6 +179,10 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
                 page.setParent(self)
 
         ############ 
+        self.blank_page=BlankScoringWidget()
+        self.blank_page.next_btn_clicked.connect(lambda: self.BlankPageNext())
+        self.addWidget(self.blank_page)
+
         self.finish_page=FinishPage(screen.width(),screen.height())
         self.finish_page.key_pressed.connect(lambda: self.FinishAll())
         self.finish_page.setParent(self)
@@ -178,7 +195,7 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
         return self.all_lfi_info.GetScoringExpLFIInfo(cur_index)
     
     def ShowingNext(self,ret_score,score_list,i=0):
-        if i+1>=self.max_page_num:
+        if i+2>=self.max_page_num:
             self.RecordScore(ret_score,score_list)
         else:
             score_list.append(ret_score)
@@ -187,6 +204,9 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
     def RecordScore(self,ret_score,score_list):
         # get score, then set new lfi image
         score_list.append(ret_score)
+        self.NextPage()
+    
+    def BlankPageNext(self):
         self.current_lfi_show_index+=1
         if self.current_lfi_show_index >= self.all_lfi_info.GetLFINum():
             self.current_page_index+=1
