@@ -115,6 +115,20 @@ class EventMask:
         x,y=self.GetRectCenter(i)
         return x+self.screen_widget_x,y+self.screen_widget_y
 
+class BlankScoringWidget(QtWidgets.QWidget):
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.setStyleSheet('background-color:gray;')
+
+        screen = QApplication.primaryScreen().geometry()
+        self.setGeometry(0,0,screen.width(), screen.height())
+
+        self.setWindowFlag(Qt.FramelessWindowHint)
+        self.setWindowFlag(Qt.WindowStaysOnTopHint)
+        #self.setAttribute(Qt.WA_TranslucentBackground)
+
+
 class PairWiseScoringWidget(QtWidgets.QStackedWidget):
     scoring_finished=QtCore.Signal(list)
     
