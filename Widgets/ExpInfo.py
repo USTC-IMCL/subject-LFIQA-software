@@ -572,6 +572,7 @@ class ExpSetting:
         self.score_definition=None
         self.score_names=['Overall quality','Image quality']
         self.auto_transition=False
+        self.pause_allowed=False
     
 def GetShowList(lfi_info:ExpLFIInfo, exp_setting:ExpSetting,mode="trainging"):
     '''

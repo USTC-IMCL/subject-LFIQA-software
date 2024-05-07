@@ -541,6 +541,9 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
 
         if "Auto_Transition" in exp_keys:
             exp_setting.auto_transition=exp_config["Auto_Transition"]
+        
+        if "Pause_Allowed" in exp_keys:
+            exp_setting.pause_allowed=exp_config["Pause_Allowed"]
 
         return exp_setting
 

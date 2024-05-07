@@ -179,7 +179,7 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
                 page.setParent(self)
 
         ############ 
-        self.blank_page=BlankScoringWidget()
+        self.blank_page=BlankScoringWidget(screen_height=screen.height(),screen_width=screen.width())
         self.blank_page.next_btn_clicked.connect(lambda: self.BlankPageNext())
         self.addWidget(self.blank_page)
 
@@ -820,6 +820,8 @@ class VideoPage(QtWidgets.QWidget):
         loop_times=exp_setting.loop_times
         fps=exp_setting.fps
 
+        self.pause_allowed=exp_setting.pause_allowed
+
         self.auto_play=auto_play
         self.auto_play_delay_time=500
 
@@ -935,7 +937,8 @@ class VideoPage(QtWidgets.QWidget):
         self.event_mask=event_mask
         
     def mousePressEvent(self, event) -> None:
-        self.video_player.toogle_play_pause()
+        if self.pause_allowed:
+            self.video_player.toogle_play_pause()
         return super().mousePressEvent(event)
     
     def handle_key_press(self, event) -> None:
@@ -1002,7 +1005,7 @@ class ScoringPage(QtWidgets.QWidget):
 
         for i in range(len(self.all_table)):
             self.all_table[i].table_index=i
-            self.all_table[i].be_clicked.connect(lambda i: self.SetSigleFocusedTable(i))
+            self.all_table[i].be_clicked.connect(lambda i: self.SetSingleFocusedTable(i))
         
         self.next_btn=QtWidgets.QPushButton("Next",self)
         btn_height=PathManager.btn_height
@@ -1022,6 +1025,13 @@ class ScoringPage(QtWidgets.QWidget):
         self.next_btn.clicked.connect(self.ReturnScores)
         self.next_btn.show()
 
+    def RefreshAllTables(self):
+        '''
+        used to remove scoring bias during sequential evaluation 
+        '''
+        for scoring_table in self.all_table:
+            scoring_table.RefreshTable()
+        self.SetSingleFocusedTable(0)
 
     def GetScores(self):
         return [self.all_table[i].GetResult() for i in self.all_table_list]
@@ -1042,15 +1052,15 @@ class ScoringPage(QtWidgets.QWidget):
     def handle_key_press(self, event: QtGui.QKeyEvent) -> None:
         if event.key() ==  Qt.Key_Right:
             self.current_focus_index=(self.current_focus_index+1)%len(self.all_table)
-            self.SetSigleFocusedTable(self.current_focus_index)
+            self.SetSingleFocusedTable(self.current_focus_index)
         if event.key() == Qt.Key_Left:
             self.current_focus_index=(self.current_focus_index-1)%len(self.all_table)
-            self.SetSigleFocusedTable(self.current_focus_index)
+            self.SetSingleFocusedTable(self.current_focus_index)
         if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
             self.ReturnScores()
         return super().keyPressEvent(event)
     
-    def SetSigleFocusedTable(self,focus_i):
+    def SetSingleFocusedTable(self,focus_i):
         for index in range(len(self.all_table)):
             if index == focus_i:
                 self.all_table[index].SetMyFocused(True)
@@ -1078,6 +1088,8 @@ class ScoringTable(QtWidgets.QWidget):
         self.scoring_name.setTitle(widget_name)
         self.vertical_layout_widget=QtWidgets.QWidget(self.scoring_name)
 
+        self.table_title=QtWidgets.QLabel(self)
+
         #self.SetTableSize()
 
         self.vertical_layout_box=QtWidgets.QVBoxLayout(self.vertical_layout_widget)
@@ -1096,12 +1108,16 @@ class ScoringTable(QtWidgets.QWidget):
             self.vertical_layout_box.addWidget(radio_button)
             self.all_radio_btns.append(radio_button)
 
+        self.select_box_width=0
+        self.select_box_height=0
+        self.select_box_pos_x=0
+        self.select_box_pos_y=0
         self.SetTableSize()
         
         self.all_radio_btns[0].setChecked(True) 
 
         self.border_label=QtWidgets.QLabel(self)
-        self.border_label.setGeometry(0,0,self.widget_width,self.widget_height)
+        self.border_label.setGeometry(self.select_box_pos_x,self.select_box_pos_y,self.select_box_width,self.select_box_height)
         self.setFocusPolicy(Qt.StrongFocus)
         self.border_label.setStyleSheet("border:3px dotted white;")
         self.border_label.hide()
@@ -1122,11 +1138,17 @@ class ScoringTable(QtWidgets.QWidget):
         #calculate the table size here
         font=PySide6.QtGui.QFont()
         font.setPointSize(PathManager.scoring_table_point_size)
-        single_radio_btn_height=PathManager.scoring_btn_height
-        single_radio_btn_width=PathManager.scoring_btn_width
+        single_radio_btn_width=0
+        for r_btn in self.all_radio_btns:
+            r_btn.setFont(font)
+            r_btn.adjustSize()
+            if r_btn.width()>single_radio_btn_width:
+                single_radio_btn_width=r_btn.width()
 
+        single_radio_btn_height=PathManager.scoring_btn_height
+
+        #single_radio_btn_width=Pathanager.scoring_btn_width
         group_box_pos_x=PathManager.table_horizontal_gap
-        group_box_pos_y=PathManager.talbe_vertical_gap
 
         talbe_spacing=PathManager.table_spaceing
 
@@ -1134,21 +1156,48 @@ class ScoringTable(QtWidgets.QWidget):
         vertical_layout_widget_width=2+single_radio_btn_width
 
         group_box_height=2*PathManager.talbe_vertical_gap + vertical_layout_widget_height
-        group_box_width=PathManager.scoring_group_box_width + 2* PathManager.table_horizontal_gap
+        group_box_width= 2* PathManager.table_horizontal_gap + vertical_layout_widget_width
+
+        self.select_box_width = group_box_width + 2* PathManager.table_horizontal_gap
+        self.select_box_height=group_box_height+2*PathManager.talbe_vertical_gap 
+        self.select_box_pos_x = 0
 
         self.widget_width=group_box_width+2*PathManager.table_horizontal_gap
-        self.widget_height=group_box_height+2*PathManager.talbe_vertical_gap
+
+        title_width = self.widget_width
+        title_width = max(title_width,PathManager.scoring_table_width+2*PathManager.table_horizontal_gap)
+
+        if self.widget_width<title_width:
+            delta=(title_width-self.widget_width)//2
+            self.widget_width=title_width
+            group_box_pos_x+=delta
+            self.select_box_pos_x+=delta
+
+        title_pos_y=0 #PathManager.talbe_vertical_gap
+        title_pos_x=0
+        self.table_title.setWordWrap(True)
+        self.table_title.setText(self.widget_name)
+        self.table_title.setFont(font)
+        self.table_title.setFixedWidth(title_width)
+        self.table_title.setAlignment(Qt.AlignCenter)
+        self.table_title.adjustSize()
+        title_height= self.table_title.height()
+        title_width = self.table_title.width()
+        self.table_title.setGeometry(title_pos_x,title_pos_y,title_width,title_height)
+
+        group_box_pos_y=PathManager.talbe_vertical_gap *2 + title_height
+        self.select_box_pos_y = PathManager.talbe_vertical_gap  +title_height
+
+
+        self.widget_height=group_box_height+2*PathManager.talbe_vertical_gap + title_height +PathManager.talbe_vertical_gap
         self.resize(self.widget_width,self.widget_height)
 
         self.scoring_name.setGeometry(group_box_pos_x,group_box_pos_y,group_box_width,group_box_height)
-        self.scoring_name.setTitle(self.widget_name)
+        self.scoring_name.setTitle('')
         self.scoring_name.setFont(font)
         self.scoring_name.setFocusPolicy(Qt.StrongFocus)
 
-        for r_btn in self.all_radio_btns:
-            r_btn.setFont(font)
-
-        self.vertical_layout_widget.setGeometry(group_box_pos_x,40,vertical_layout_widget_width,vertical_layout_widget_height)
+        self.vertical_layout_widget.setGeometry(PathManager.table_horizontal_gap,PathManager.talbe_vertical_gap,vertical_layout_widget_width,vertical_layout_widget_height)
 
     def GetResult(self):
         return self.cur_radio_score+1
@@ -1201,6 +1250,11 @@ class ScoringTable(QtWidgets.QWidget):
             self.border_label.show()
         else:
             self.border_label.hide()
+    
+    def RefreshTable(self):
+        for i in range(self.scoring_levels):
+            self.all_radio_btns[i].setChecked(False)
+        self.all_radio_btns[0].setChecked(True)
 
 
 def PrintVideoPage(a):
@@ -1218,7 +1272,14 @@ if __name__ == "__main__":
     #scoring_widget = ScoringPage(1440,2560)
     #scoring_widget.HasScored.connect(lambda x:print(x))
     #scoring_widget.show()
+    screen = QtWidgets.QApplication.primaryScreen()
+    scoring_definition=[['lasdjf;lajsdl;fkjaskl;dfja;l','Score: 2','Score: 3','Score: 4','Score: 5'],['Score: 1','Score: 2','Score: 3','Score: 4','Score: 5']]
+    score_page=ScoringPage(screen.size().height(),screen.size().width(),table_names=['Image Quality','It is a very very long long long name'],scoring_definition=scoring_definition)
 
+    score_page.HasScored.connect(PrintScores)
+    score_page.show()
+
+    '''
     exp_setting=ExpSetting()
     exp_setting.comparison_type=ComparisonType.DoubleStimuli
 
@@ -1229,7 +1290,6 @@ if __name__ == "__main__":
     video_page.finish_video.connect(VideoFinishPage)
 
     video_page.show()
-    '''
 
     score_page=ScoringPage(1080,1920,["test 1","test 2","table 3"],[6,7,5])
 
