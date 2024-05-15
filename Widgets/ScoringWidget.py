@@ -137,6 +137,9 @@ class BlankScoringWidget(QtWidgets.QWidget):
     def b_timeout(self):
         self.b_timer.stop()
         self.blank_timeout.emit()
+    
+    def handle_key_press(self, key):
+        pass
 
 class PairWiseScoringWidget(QtWidgets.QStackedWidget):
     scoring_finished=QtCore.Signal(list)
@@ -1034,10 +1037,14 @@ class VideoPage(QtWidgets.QWidget):
         self.loop_times=loop_times
 
         self.fps=fps
+
+        self.auto_transition=exp_setting.auto_transition  # dirty code !
+        if exp_setting.comparison_type == ComparisonType.PairComparison:
+            self.auto_transition=False
     
         #self.video_player=LFIVideoPlayer(video_path,fps=self.fps,loop_times=self.loop_times)
         if exp_setting.passive_control_backend.upper()=='MPV':
-            self.video_player=MPVVideoPlayer(video_path,fps=self.fps,loop_times=self.loop_times,auto_transition=exp_setting.auto_transition)
+            self.video_player=MPVVideoPlayer(video_path,fps=self.fps,loop_times=self.loop_times,auto_transition=self.auto_transition)
             logger.info('passive control backend: MPV')
         elif exp_setting.passive_control_backend.upper()=='QT': # not fully tested. 
             self.video_player=MPVFramePlayer(video_path,fps=self.fps,loop_times=self.loop_times)
@@ -1080,7 +1087,7 @@ class VideoPage(QtWidgets.QWidget):
         self.left_btn.setFocusPolicy(Qt.NoFocus)
         self.right_btn.setFocusPolicy(Qt.NoFocus)
 
-        if exp_setting.auto_transition:
+        if self.auto_transition:
             self.video_player.OnVideoPlayerFinished.connect(lambda: self.finish_video.emit())
 
         self.selected_one=0
@@ -1130,7 +1137,7 @@ class VideoPage(QtWidgets.QWidget):
         else:
             next_btn_pos_x=self.event_mask.screen_width//2 - btn_width//2
             self.next_btn.setGeometry(next_btn_pos_x,btn_pos_y,btn_width,btn_height)
-            if not self.exp_setting.auto_transition:
+            if not self.auto_transition:
                 self.next_btn.show()
             else:
                 self.next_btn.hide()
