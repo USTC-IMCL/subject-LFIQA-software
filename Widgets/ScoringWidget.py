@@ -12,6 +12,11 @@ sys.path.append('../Widgets/')
 from ScoreTable_ui import Ui_ScoreTable as ScoreTable
 import cv2
 import time
+os.environ['PATH']+=';./'
+import mpv
+
+import locale
+locale.setlocale(locale.LC_NUMERIC, 'C')
 
 class ImageMask:
     '''
@@ -116,31 +121,22 @@ class EventMask:
         return x+self.screen_widget_x,y+self.screen_widget_y
 
 class BlankScoringWidget(QtWidgets.QWidget):
-    next_btn_clicked=QtCore.Signal()
+    blank_timeout=QtCore.Signal()
     def __init__(self,screen_height,screen_width) -> None:
         # just a gray background
         super().__init__()
-
-        self.setStyleSheet('background-color:gray;')
-
-        screen = QApplication.primaryScreen().geometry()
         self.setGeometry(0,0,screen_width, screen_height)
-
-        self.setWindowFlag(Qt.FramelessWindowHint)
-        self.setWindowFlag(Qt.WindowStaysOnTopHint)
-        #self.setAttribute(Qt.WA_TranslucentBackground)
-
-        self.next_btn  =QtWidgets.QPushButton("Next")
-        self.next_btn.setParent(self)
-        self.next_btn.clicked.connect(lambda: self.next_btn_clicked.emit())
-
-        btn_height=PathManager.btn_height
-        btn_width=PathManager.btn_width
-
-        btn_pos_x=screen_width//2-btn_width//2
-        btn_pos_y=screen_height//5*4-btn_height//2
-        self.next_btn.setGeometry(btn_pos_x,btn_pos_y,btn_width,btn_height)
-        self.next_btn.show()
+        self.b_timer=QTimer(self)
+        self.b_timer.setInterval(15000)
+        self.b_timer.timeout.connect(self.b_timeout)
+      
+    def wait_until_timeout(self,wait_time=1.5):
+        self.b_timer.setInterval(int(wait_time*1000))
+        self.b_timer.start()
+    
+    def b_timeout(self):
+        self.b_timer.stop()
+        self.blank_timeout.emit()
 
 class PairWiseScoringWidget(QtWidgets.QStackedWidget):
     scoring_finished=QtCore.Signal(list)
@@ -180,7 +176,8 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
 
         ############ 
         self.blank_page=BlankScoringWidget(screen_height=screen.height(),screen_width=screen.width())
-        self.blank_page.next_btn_clicked.connect(lambda: self.BlankPageNext())
+        self.blank_page.blank_timeout.connect(lambda: self.BlankPageNext())
+        self.blank_page.setParent(self)
         self.addWidget(self.blank_page)
 
         self.finish_page=FinishPage(screen.width(),screen.height())
@@ -188,14 +185,14 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
         self.finish_page.setParent(self)
         self.addWidget(self.finish_page)
 
-        self.all_page_num=self.max_page_num+1
+        self.all_page_num=self.max_page_num+2
 
     def GetSingleLFIInfo(self,show_index)->ScoringExpLFIInfo:
         cur_index=self.all_show_index[show_index]
         return self.all_lfi_info.GetScoringExpLFIInfo(cur_index)
     
     def ShowingNext(self,ret_score,score_list,i=0):
-        if i+2>=self.max_page_num:
+        if i+1>=self.max_page_num:
             self.RecordScore(ret_score,score_list)
         else:
             score_list.append(ret_score)
@@ -300,6 +297,8 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
         if self.current_page_index >= self.all_page_num:
             self.current_page_index=0
         self.setCurrentIndex(self.current_page_index)
+        if self.currentWidget() == self.blank_page:
+            self.blank_page.wait_until_timeout(1.5)
     
     def PrePage(self):
         self.current_page_index-=1
@@ -312,8 +311,9 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
             self.all_view_scores=None
         if len(self.all_refocusing_scores)==0:
             self.all_refocusing_scores=None
+        self.hide()
         self.scoring_finished.emit([self.all_view_scores,self.all_refocusing_scores])
-        self.deleteLater()
+        #self.deleteLater()
         
     def keyPressEvent(self, event) -> None:
         cur_page=self.currentWidget()
@@ -388,6 +388,7 @@ class ScoringWidget(QtWidgets.QStackedWidget):
     
     def RecordScore(self,ret_scores):
         # get score, then set new lfi image
+        self.page_scoring.RefreshAllTables()
         self.all_scores.append(ret_scores)
         self.current_lfi_show_index+=1
         if self.current_lfi_show_index >= self.all_lfi_info.GetLFINum():
@@ -488,7 +489,8 @@ class ScoringWidget(QtWidgets.QStackedWidget):
 
     def FinishAll(self):
         self.scoring_finished.emit(self.all_scores)
-        self.deleteLater()
+        self.hide()
+        #self.deleteLater()
     
     def keyPressEvent(self, event) -> None:
         cur_page=self.currentWidget()
@@ -803,6 +805,210 @@ class LFIVideoPlayer(QtWidgets.QLabel):
     
     def SetLoop(self,loop_times=-1):
         self.loop_times=loop_times
+        self.loop_times_record =  self.loop_times
+
+class MPVFramePlayer(QtWidgets.QWidget):
+    '''
+    a player based on the libmpv, frame by frame;
+    keep the same API as LFIVideoPlayer
+    '''
+    OnOneLoopEnd=QtCore.Signal()
+    OnVideoPlayerFinished=QtCore.Signal()
+    def __init__(self,video_path,pos_x=0,pos_y=0,fps=0,loop_times=-1):
+        super().__init__()
+        self.pos_x=pos_x
+        self.pos_y=pos_y
+        self.OnOneLoopEnd.connect(self.OneLoopEnd)
+        self.timer=QTimer()
+        self.timer.timeout.connect(self.ShowNextFrame)
+        self.fps=fps
+        self.is_playing=False
+        self.loop_times_record=loop_times
+
+        if self.fps==0:
+            self.fps=-1
+        self.frame_duration=1000//self.fps
+
+        self.player_container=QtWidgets.QWidget(self)
+        self.player_container.setAttribute(Qt.WA_DontCreateNativeAncestors)
+        self.player_container.setAttribute(Qt.WA_NativeWindow)
+
+        self.InitTheVideo(video_path)
+    
+    def setVideoPath(self,video_path):
+        self.StopPlaying()
+        self.InitTheVideo(video_path)
+
+    def toogle_play_pause(self):
+        if self.is_playing:
+            self.timer.stop()
+        else:
+            self.timer.start(self.frame_duration)
+        self.is_playing =  not self.is_playing
+
+    def InitTheVideo(self,video_path):
+        '''
+        here we use the mpv as a video capture.
+        it shows the video frame by frame.
+        '''
+        self.cur_cap=mpv.MPV(wid=str(int(self.player_container.winId())))
+        self.video_path=video_path
+        self.is_playing=False
+        self.loop_times=self.loop_times_record
+        self.cur_frame_index=0 # different from LFVideoPlayer, as we do not start from a blank beginning point
+
+        self.cur_cap._loop = True
+        self.cur_cap.play(self.video_path)
+        self.cur_cap.pause=True
+
+        video_capture=cv2.VideoCapture(self.video_path)
+        if video_capture.isOpened():
+            self.frame_num=int(video_capture.get(cv2.CAP_PROP_FRAME_COUNT))
+            self.video_height=int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            self.video_width=int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+            if self.fps < 0:
+                self.SetFPS(video_capture.get(cv2.CAP_PROP_FPS))
+            self.cur_frame_index=-1
+        else:
+            self.frame_num=0
+            self.video_height=0
+            self.video_width=0
+            self.cur_frame_index=0
+
+        if self.frame_num>0:
+            self.setGeometry(self.pos_x,self.pos_y,self.video_width,self.video_height)
+        else:
+            self.video_height=0
+            self.video_width=0
+
+    def SetFPS(self,fps):
+        self.fps=fps
+        self.frame_duration=1000//self.fps
+    
+    def PlayVideo(self):
+        if not self.is_playing:
+            self.toogle_play_pause()
+    
+    def OneLoopEnd(self):
+        if self.loop_times>0:
+            self.loop_times-=1
+        self.cur_cap.command('seek',0,'absolute')
+        if self.loop_times!=0:
+            self.PlayVideo()
+        else:
+            self.StopPlaying()
+            self.OnVideoPlayerFinished.emit()
+
+    def PauseVideo(self):
+        if self.is_playing:
+            self.toogle_play_pause()
+
+    def StopPlaying(self):
+        self.timer.stop()
+        self.is_playing=False
+    
+    def SetLoop(self,loop_times=-1):
+        self.loop_times=loop_times
+
+class MPVVideoPlayer(QtWidgets.QWidget):
+
+    '''
+    this plays the video with mpv.
+    can not control the fps.
+    '''
+    OnVideoPlayerFinished=QtCore.Signal()
+    def __init__(self,video_path,pos_x=0,pos_y=0,fps=None,loop_times=-1,auto_transition=False):
+        super().__init__()
+        self.pos_x=pos_x
+        self.pos_y=pos_y
+
+        self.loop_times_record=loop_times
+
+        self.fps=None # not used at all
+        self.player_container=QtWidgets.QWidget(self)
+        self.player_container.setAttribute(Qt.WA_DontCreateNativeAncestors)
+        self.player_container.setAttribute(Qt.WA_NativeWindow)
+
+        self.auto_transition=auto_transition
+
+        self.InitTheVideo(video_path)
+
+    def setVideoPath(self,video_path):
+        if self.cur_cap is not None:
+            self.StopPlaying()
+        self.InitTheVideo(video_path)
+
+    def SetFPS(self,fps):
+        pass
+
+    def InitTheVideo(self,video_path):
+        self.cur_cap=mpv.MPV(wid=str(int(self.player_container.winId())))
+        self.video_path=video_path
+        self.is_playing=False
+        self.loop_times=self.loop_times_record
+
+        self.cur_cap.play(self.video_path)
+        self.cur_cap.wait_for_property('seekable')
+        self.cur_cap.command('seek',0,'absolute')
+
+        if self.loop_times ==  0:
+            self.loop_times+=1
+        if self.loop_times>0:
+            self.cur_cap._set_property('loop-file',int(self.loop_times-1))
+        else:
+            self.cur_cap._set_property('loop-file','inf')
+        
+
+        video_capture=cv2.VideoCapture(self.video_path)
+        if video_capture.isOpened():
+            self.frame_num=int(video_capture.get(cv2.CAP_PROP_FRAME_COUNT))
+            self.video_height=int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            self.video_width=int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+        else:
+            self.frame_num=0
+            self.video_height=0
+        
+        if self.frame_num > 0:
+            self.resize(self.video_width,self.video_height)
+            self.player_container.setGeometry(self.pos_x,self.pos_y,self.video_width,self.video_height)
+        else:
+            self.video_height=0
+            self.video_width=0
+        
+        if self.auto_transition:
+            self.cur_cap.register_event_callback(self._loop_end)
+        else:
+            self.cur_cap._set_property('keep-open','yes')
+
+        
+    def _loop_end(self,event):
+        if event.event_id.value == mpv.MpvEventID.END_FILE:
+            self.cur_cap.stop()
+            self.is_playing=False
+            self.OnVideoPlayerFinished.emit()
+    
+    def toogle_play_pause(self):
+        self.cur_cap.pause = not self.cur_cap.pause
+        self.is_playing = not self.is_playing
+
+    # not safe now
+    def PlayVideo(self):
+        self.cur_cap.pause = True
+        self.cur_cap.command('seek',0,'absolute')
+        self.cur_cap.pause = False
+        self.is_playing = True
+
+    def PauseVideo(self):
+        if not self.cur_cap.pause:
+            self.cur_cap.pause = not self.cur_cap.pause
+
+    def StopPlaying(self):
+        if self.auto_transition and self.cur_cap is not None:
+            self.cur_cap.unregister_event_callback(self._loop_end)
+        self.cur_cap.terminate()
+        self.cur_cap=None
+        self.hide()
+        self.is_playing=False
     
 class VideoPage(QtWidgets.QWidget):
     finish_video=QtCore.Signal()
@@ -829,7 +1035,16 @@ class VideoPage(QtWidgets.QWidget):
 
         self.fps=fps
     
-        self.video_player=LFIVideoPlayer(video_path,fps=self.fps,loop_times=self.loop_times)
+        #self.video_player=LFIVideoPlayer(video_path,fps=self.fps,loop_times=self.loop_times)
+        if exp_setting.passive_control_backend.upper()=='MPV':
+            self.video_player=MPVVideoPlayer(video_path,fps=self.fps,loop_times=self.loop_times,auto_transition=exp_setting.auto_transition)
+            logger.info('passive control backend: MPV')
+        elif exp_setting.passive_control_backend.upper()=='QT': # not fully tested. 
+            self.video_player=MPVFramePlayer(video_path,fps=self.fps,loop_times=self.loop_times)
+            logger.info('passive control backend: Qt')
+        else:
+            self.video_player=LFIVideoPlayer(video_path,fps=self.fps,loop_times=self.loop_times)
+            logger.info('passive control backend: OpenCV')
         self.fps=self.video_player.fps
 
         self.video_player.setParent(self)
@@ -861,6 +1076,9 @@ class VideoPage(QtWidgets.QWidget):
         self.right_btn.setStyleSheet("QPushButton:focus {border: 2px solid white;}")
         self.right_btn.hide()
         self.right_btn.clicked.connect(lambda: self.pair_finished.emit(1))
+
+        self.left_btn.setFocusPolicy(Qt.NoFocus)
+        self.right_btn.setFocusPolicy(Qt.NoFocus)
 
         if exp_setting.auto_transition:
             self.video_player.OnVideoPlayerFinished.connect(lambda: self.finish_video.emit())
@@ -908,7 +1126,7 @@ class VideoPage(QtWidgets.QWidget):
             self.left_btn.show()
             self.right_btn.setGeometry(right_btn_pos_x,btn_pos_y,btn_width,btn_height)
             self.right_btn.show()
-            self.left_btn.setFocus()
+            #self.left_btn.setFocus()
         else:
             next_btn_pos_x=self.event_mask.screen_width//2 - btn_width//2
             self.next_btn.setGeometry(next_btn_pos_x,btn_pos_y,btn_width,btn_height)
@@ -943,15 +1161,31 @@ class VideoPage(QtWidgets.QWidget):
     
     def handle_key_press(self, event) -> None:
         if self.exp_setting.comparison_type == ComparisonType.PairComparison:
+            '''
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
                 if self.left_btn.hasFocus():
                     self.pair_finished.emit(0)
+                    return
                 else:
                     self.pair_finished.emit(1)
+                    return
+            '''
+            if event.key() == Qt.Key_Left:
+                self.pair_finished.emit(0)
+                return
+            if event.key() == Qt.Key_Right:
+                self.pair_finished.emit(1)
+                return
+            if event.key() == Qt.Key_Down:
+                self.pair_finished.emit(2)
+                return
         else:
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
                 self.finish_video.emit()
         return super().keyPressEvent(event)
+    
+    def CloseVideoPlayer(self):
+        self.video_player.deleteLater()
     '''
         if not self.arrow_key_flag:
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
@@ -1272,6 +1506,18 @@ if __name__ == "__main__":
     #scoring_widget = ScoringPage(1440,2560)
     #scoring_widget.HasScored.connect(lambda x:print(x))
     #scoring_widget.show()
+
+    screen = QtWidgets.QApplication.primaryScreen()
+    finish_widget=FinishPage(screen.size().width(),screen.size().height())
+
+    finish_widget.show()
+
+    '''
+    screen = QtWidgets.QApplication.primaryScreen()
+    blank_widget=BlankScoringWidget(screen_height=screen.size().height(),screen_width=screen.size().width())
+
+    blank_widget.show()
+
     screen = QtWidgets.QApplication.primaryScreen()
     scoring_definition=[['lasdjf;lajsdl;fkjaskl;dfja;l','Score: 2','Score: 3','Score: 4','Score: 5'],['Score: 1','Score: 2','Score: 3','Score: 4','Score: 5']]
     score_page=ScoringPage(screen.size().height(),screen.size().width(),table_names=['Image Quality','It is a very very long long long name'],scoring_definition=scoring_definition)
@@ -1280,18 +1526,30 @@ if __name__ == "__main__":
     score_page.show()
 
     '''
+
+    '''
     exp_setting=ExpSetting()
     exp_setting.comparison_type=ComparisonType.DoubleStimuli
+    exp_setting.passive_control_backend="MPV"
+    exp_setting.fps=30
+    exp_setting.pause_allowed=True
+    exp_setting.loop_times=1
+    exp_setting.auto_transition=True
+    exp_setting.auto_play=True
 
-    video_path='./view.mp4'
+    video_path='./1.mp4'
     video_page=VideoPage(exp_setting,None,video_path)
 
     video_page.pair_finished.connect(PrintVideoPage)
-    video_page.finish_video.connect(VideoFinishPage)
+    video_page.finish_video.connect(lambda : video_page.CloseVideoPlayer())
 
     video_page.show()
+    '''
 
-    score_page=ScoringPage(1080,1920,["test 1","test 2","table 3"],[6,7,5])
+    '''
+    scoring_definition=[['lasdjf;lajsdl;fkjaskl;dfja;l','Score: 2','Score: 3','Score: 4','Score: 5'],['Score: 1','Score: 2','Score: 3','Score: 4','Score: 5']]
+    screen = QtWidgets.QApplication.primaryScreen()
+    score_page=ScoringPage(screen.size().height(),screen.size().width(),table_names=['Image Quality','It is a very very long long long name'],scoring_definition=scoring_definition)
 
     score_page.HasScored.connect(PrintScores)
     score_page.show()#FullScreen()

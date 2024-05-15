@@ -287,6 +287,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
             score_page.scoring_finished.connect(lambda all_results: self.GetAndSaveResult(all_results,subject_name,all_show_index,all_scoring_lfi_info))
         else:
             score_page.scoring_finished.connect(lambda all_results: self.show())
+        #del score_page
     
     def GetAndSaveResult(self,all_results,subject_name,all_show_index,show_list:ExpInfo.AllScoringLFI):
         self.output_folder=os.path.join(self.cur_project.project_path,PathManager.subject_results_folder)

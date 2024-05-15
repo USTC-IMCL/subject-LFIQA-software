@@ -544,6 +544,9 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         
         if "Pause_Allowed" in exp_keys:
             exp_setting.pause_allowed=exp_config["Pause_Allowed"]
+        
+        if "Passive_Control_Backend" in exp_keys:
+            exp_setting.passive_control_backend=exp_config["Passive_Control_Backend"]
 
         return exp_setting
 
