@@ -139,6 +139,7 @@ class BlankScoringWidget(QtWidgets.QWidget):
         self.blank_timeout.emit()
     
     def handle_key_press(self, key):
+        #print('key press is ignored')
         pass
 
 class PairWiseScoringWidget(QtWidgets.QStackedWidget):
@@ -316,7 +317,11 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
             self.all_refocusing_scores=None
         self.hide()
         self.scoring_finished.emit([self.all_view_scores,self.all_refocusing_scores])
-        #self.deleteLater()
+        for page in self.show_page_list:
+            if page is not None:
+                if isinstance(page,VideoPage):
+                    page.CloseVideoPlayer()
+        self.deleteLater()
         
     def keyPressEvent(self, event) -> None:
         cur_page=self.currentWidget()
@@ -493,7 +498,11 @@ class ScoringWidget(QtWidgets.QStackedWidget):
     def FinishAll(self):
         self.scoring_finished.emit(self.all_scores)
         self.hide()
-        #self.deleteLater()
+        for page in self.show_page_list:
+            if page is not None:
+                if isinstance(page,VideoPage):
+                    page.CloseVideoPlayer()
+        self.deleteLater()
     
     def keyPressEvent(self, event) -> None:
         cur_page=self.currentWidget()
@@ -1031,6 +1040,7 @@ class MPVVideoPlayer(QtWidgets.QWidget):
         self.cur_cap.pause = True
         self.cur_cap.command('seek',0,'absolute')
         self.cur_cap.pause = False
+        self.cur_cap.wait_until_playing()
         self.is_playing = True
         self.cur_cap.register_event_callback(self._loop_times_recoding)
 
@@ -1040,6 +1050,7 @@ class MPVVideoPlayer(QtWidgets.QWidget):
 
     def StopPlaying(self):
         self.cur_cap.terminate()
+        self.cur_cap.wait_for_shutdown()
         self.cur_cap=None
         self.hide()
         self.is_playing=False
@@ -1245,7 +1256,7 @@ class VideoPage(QtWidgets.QWidget):
         return super().keyPressEvent(event)
     
     def CloseVideoPlayer(self):
-        self.video_player.deleteLater()
+        self.video_player.StopPlaying()
     '''
         if not self.arrow_key_flag:
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
