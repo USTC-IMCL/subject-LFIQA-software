@@ -1,4 +1,7 @@
-# subject-LFIQA-software Version 2.2
+# subject-LFIQA-software Version 2.3
+
+## New feature
+MPV is used as backend for passive mode.
 
 This is IMCL software for subjective light field image quality assessment. It has been remade with Qt (PySide6).
 
