@@ -3,7 +3,7 @@ import os
 sys.path.append('./Widgets')
 sys.path.append('./UI')
 sys.path.append('./Utils')
-#os.environ['PATH']+=';Widgets'
+os.environ['PATH']+=';./'
 from PySide6 import QtWidgets
 import MainProject
 
