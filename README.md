@@ -1,8 +1,5 @@
 # subject-LFIQA-software Version 2.3
 
-## New feature
-MPV is used as backend for passive mode.
-
 This is IMCL software for subjective light field image quality assessment. It has been remade with Qt (PySide6).
 
 The software can be used for subjective light field image quality assessment (LFIQA) . As proposed in our JPEG proposal [1], the LF images features differs LFIQA from the traditional 2D image evaluation. Thus before your experiment, you need to decide which feature you want to evaluate and how to display them to your subjects.
@@ -13,6 +10,9 @@ The features include:
 - refocusing
 
 The display type, 2D or 3D, decides the stereo parallax feature. The moving parallax and refocusing features can be explored with mouse moving and clicking and we call it the active mode. A pseudo sequence generated with views or refocusing images can also be used and that's called a passive mode.
+
+## New feature
+MPV is used as backend for passive mode.
 
 ## How to Run
 As the project is implemented with Python, you may run it from the scripts. But I recommend to use the compiled binary file that we released.  
