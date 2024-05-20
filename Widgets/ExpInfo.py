@@ -573,9 +573,9 @@ class ExpSetting:
         self.score_names=['Overall quality','Image quality']
         self.auto_transition=False
         self.pause_allowed=False
-        self.passive_control_backend='OpenCV'
+        self.passive_control_backend='MPV' # depreted now
     
-def GetShowList(lfi_info:ExpLFIInfo, exp_setting:ExpSetting,mode="trainging"):
+def GetShowList(lfi_info:ExpLFIInfo, exp_setting:ExpSetting, mode="trainging"):
     '''
     return a list of show list
     '''

@@ -172,7 +172,7 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
         cur_scoring_lfi_info=self.all_lfi_info.GetScoringExpLFIInfo(self.all_show_index[self.current_lfi_show_index])
 
         self.SetPageShowing(cur_scoring_lfi_info,init_flag=True)
-        self.SetPageShowing(cur_scoring_lfi_info)
+        #self.SetPageShowing(cur_scoring_lfi_info)
         for page in self.show_page_list:
             if page is not None:
                 page.setParent(self)
@@ -363,7 +363,7 @@ class ScoringWidget(QtWidgets.QStackedWidget):
         cur_lfi_scoring_info=self.GetSingleLFIInfo(self.current_lfi_show_index)
 
         self.SetPageShowing(cur_lfi_scoring_info,init_flag=True)
-        self.SetPageShowing(cur_lfi_scoring_info)
+        #self.SetPageShowing(cur_lfi_scoring_info)
         for show_page in self.show_page_list:
             if show_page is not None:
                 show_page.setParent(self)
@@ -914,12 +914,13 @@ class MPVFramePlayer(QtWidgets.QWidget):
         self.loop_times=loop_times
 
 class MPVVideoPlayer(QtWidgets.QWidget):
-
     '''
     this plays the video with mpv.
     can not control the fps.
     '''
     OnVideoPlayerFinished=QtCore.Signal()
+    OnFirstLoopFinished=QtCore.Signal()
+
     def __init__(self,video_path,pos_x=0,pos_y=0,fps=None,loop_times=-1,auto_transition=False):
         super().__init__()
         self.pos_x=pos_x
@@ -933,6 +934,10 @@ class MPVVideoPlayer(QtWidgets.QWidget):
         self.player_container.setAttribute(Qt.WA_NativeWindow)
 
         self.auto_transition=auto_transition
+
+        self.first_loop_finished=False
+
+        self.has_finished=False
 
         self.InitTheVideo(video_path)
 
@@ -956,8 +961,9 @@ class MPVVideoPlayer(QtWidgets.QWidget):
 
         if self.loop_times ==  0:
             self.loop_times+=1
-        if self.loop_times>0:
-            self.cur_cap._set_property('loop-file',int(self.loop_times-1))
+        
+        if self.loop_times > 0:
+            self.cur_cap._set_property('loop-file',int(self.loop_times))
         else:
             self.cur_cap._set_property('loop-file','inf')
         
@@ -978,11 +984,35 @@ class MPVVideoPlayer(QtWidgets.QWidget):
             self.video_height=0
             self.video_width=0
         
+        self.cur_cap._set_property('keep-open','yes')
+        '''
         if self.auto_transition:
             self.cur_cap.register_event_callback(self._loop_end)
         else:
             self.cur_cap._set_property('keep-open','yes')
+        '''
+        
+        self.play_times=0
 
+    def _loop_times_recoding(self,event):
+        if event.event_id.value == mpv.MpvEventID.SEEK:
+            self.play_times+=1
+            print(f'has already played {self.play_times} times')
+            if self.play_times == 1:
+                self.OnFirstLoopFinished.emit()
+            if self.play_times >= self.loop_times and self.loop_times>0:
+                self.cur_cap.pause=True
+                self.has_finished=True
+                if self.auto_transition:
+                    self.OnVideoPlayerFinished.emit()
+
+            '''
+            print(f'has already played {self.play_times+1} times')
+            if self.first_loop_finished:
+                return
+            self.first_loop_finished=True
+            self.OnFirstLoopFinished.emit()
+            '''
         
     def _loop_end(self,event):
         if event.event_id.value == mpv.MpvEventID.END_FILE:
@@ -991,6 +1021,8 @@ class MPVVideoPlayer(QtWidgets.QWidget):
             self.OnVideoPlayerFinished.emit()
     
     def toogle_play_pause(self):
+        if self.has_finished:
+            return
         self.cur_cap.pause = not self.cur_cap.pause
         self.is_playing = not self.is_playing
 
@@ -1000,18 +1032,18 @@ class MPVVideoPlayer(QtWidgets.QWidget):
         self.cur_cap.command('seek',0,'absolute')
         self.cur_cap.pause = False
         self.is_playing = True
+        self.cur_cap.register_event_callback(self._loop_times_recoding)
 
     def PauseVideo(self):
         if not self.cur_cap.pause:
             self.cur_cap.pause = not self.cur_cap.pause
 
     def StopPlaying(self):
-        if self.auto_transition and self.cur_cap is not None:
-            self.cur_cap.unregister_event_callback(self._loop_end)
         self.cur_cap.terminate()
         self.cur_cap=None
         self.hide()
         self.is_playing=False
+        self.first_loop_finished=False
     
 class VideoPage(QtWidgets.QWidget):
     finish_video=QtCore.Signal()
@@ -1039,12 +1071,15 @@ class VideoPage(QtWidgets.QWidget):
         self.fps=fps
 
         self.auto_transition=exp_setting.auto_transition  # dirty code !
+        self.evaluate_enable=True
         if exp_setting.comparison_type == ComparisonType.PairComparison:
             self.auto_transition=False
+            self.evaluate_enable=False
     
         #self.video_player=LFIVideoPlayer(video_path,fps=self.fps,loop_times=self.loop_times)
         if exp_setting.passive_control_backend.upper()=='MPV':
             self.video_player=MPVVideoPlayer(video_path,fps=self.fps,loop_times=self.loop_times,auto_transition=self.auto_transition)
+            self.video_player.OnFirstLoopFinished.connect(self.enableAllButtons)
             logger.info('passive control backend: MPV')
         elif exp_setting.passive_control_backend.upper()=='QT': # not fully tested. 
             self.video_player=MPVFramePlayer(video_path,fps=self.fps,loop_times=self.loop_times)
@@ -1098,6 +1133,7 @@ class VideoPage(QtWidgets.QWidget):
         self.exp_setting=exp_setting
         self.dist_lfi_info=dist_lfi_info
         self.video_path=video_path
+        self.disableAllButtons()
 
         self.base_path=os.path.dirname(video_path)
 
@@ -1145,7 +1181,7 @@ class VideoPage(QtWidgets.QWidget):
         self.video_player.show()
         if exp_setting.comparison_type == ComparisonType.PairComparison:
             self.arrow_key_flag=True
-
+        
         if self.auto_play:
             time.sleep(self.auto_play_delay_time/1000)
             self.video_player.PlayVideo()
@@ -1165,8 +1201,21 @@ class VideoPage(QtWidgets.QWidget):
         if self.pause_allowed:
             self.video_player.toogle_play_pause()
         return super().mousePressEvent(event)
+
+    def disableAllButtons(self):
+        self.left_btn.setEnabled(False)
+        self.right_btn.setEnabled(False)
+        self.next_btn.setEnabled(False)
+        self.evaluate_enable=False
+    
+    def enableAllButtons(self):
+        self.left_btn.setEnabled(True)
+        self.right_btn.setEnabled(True)
+        self.next_btn.setEnabled(True)
+        self.evaluate_enable=True
     
     def handle_key_press(self, event) -> None:
+    #def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
         if self.exp_setting.comparison_type == ComparisonType.PairComparison:
             '''
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
@@ -1177,6 +1226,8 @@ class VideoPage(QtWidgets.QWidget):
                     self.pair_finished.emit(1)
                     return
             '''
+            if not self.evaluate_enable:
+                return 
             if event.key() == Qt.Key_Left:
                 self.pair_finished.emit(0)
                 return
@@ -1187,6 +1238,8 @@ class VideoPage(QtWidgets.QWidget):
                 self.pair_finished.emit(2)
                 return
         else:
+            if not self.evaluate_enable:
+                return
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
                 self.finish_video.emit()
         return super().keyPressEvent(event)
@@ -1514,11 +1567,13 @@ if __name__ == "__main__":
     #scoring_widget.HasScored.connect(lambda x:print(x))
     #scoring_widget.show()
 
+    '''
     screen = QtWidgets.QApplication.primaryScreen()
     finish_widget=FinishPage(screen.size().width(),screen.size().height())
 
     finish_widget.show()
 
+    '''
     '''
     screen = QtWidgets.QApplication.primaryScreen()
     blank_widget=BlankScoringWidget(screen_height=screen.size().height(),screen_width=screen.size().width())
@@ -1534,13 +1589,12 @@ if __name__ == "__main__":
 
     '''
 
-    '''
     exp_setting=ExpSetting()
     exp_setting.comparison_type=ComparisonType.DoubleStimuli
     exp_setting.passive_control_backend="MPV"
     exp_setting.fps=30
     exp_setting.pause_allowed=True
-    exp_setting.loop_times=1
+    exp_setting.loop_times=3
     exp_setting.auto_transition=True
     exp_setting.auto_play=True
 
@@ -1548,10 +1602,9 @@ if __name__ == "__main__":
     video_page=VideoPage(exp_setting,None,video_path)
 
     video_page.pair_finished.connect(PrintVideoPage)
-    video_page.finish_video.connect(lambda : video_page.CloseVideoPlayer())
+    video_page.finish_video.connect(VideoFinishPage)
 
     video_page.show()
-    '''
 
     '''
     scoring_definition=[['lasdjf;lajsdl;fkjaskl;dfja;l','Score: 2','Score: 3','Score: 4','Score: 5'],['Score: 1','Score: 2','Score: 3','Score: 4','Score: 5']]
