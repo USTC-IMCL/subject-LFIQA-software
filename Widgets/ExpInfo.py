@@ -68,10 +68,26 @@ ViewSaveTypeDict={
 class VideoSaveType(IntEnum):
     avi=0
     mp4=1
+    mov=2
+    wmv=3
+    webm=4
+    mkv=5
+    mpg=6
+    flv=7
+    swf=8
+    ogg=9
     
 VideoSaveTypeDict={
     VideoSaveType.avi:"avi",
-    VideoSaveType.mp4:"mp4"
+    VideoSaveType.mp4:"mp4",
+    VideoSaveType.mov:"mov",
+    VideoSaveType.wmv:"wmv",
+    VideoSaveType.webm:"webm",
+    VideoSaveType.mkv:"mkv",
+    VideoSaveType.mpg:"mpg",
+    VideoSaveType.flv:"flv",
+    VideoSaveType.swf:"swf",
+    VideoSaveType.ogg:"ogg"
 }
 
 def MakeAJsonTemplate(output_path_file):
@@ -558,10 +574,16 @@ class ExpSetting:
 
         screen=QApplication.primaryScreen().geometry()
         self.screen_width,self.screen_height=screen.width(),screen.height()
-        self.VideoSaveType=VideoSaveType.mp4
         self.ViewSaveType=ViewSaveType.png
+        self.VideoSaveType=VideoSaveType.mp4
         self.ViewSaveTypeStr=ViewSaveTypeDict[self.ViewSaveType]
         self.VideoSaveTypeStr=VideoSaveTypeDict[self.VideoSaveType]
+
+        # self.VideoSaveTypeStr=VideoSaveTypeDict[self.VideoSaveType]
+        # May exist more than one possible video types
+        self.input_video_type=[]
+        self.input_video_type_str=[]        
+
         self.two_folder_mode=two_folder_mode
 
         self.auto_play=True
@@ -574,6 +596,17 @@ class ExpSetting:
         self.auto_transition=False
         self.pause_allowed=False
         self.passive_control_backend='MPV' # depreted now
+    
+    def AddInputVideoType(self,video_type):
+        if isinstance(video_type,VideoSaveType):
+            self.input_video_type.append(video_type)
+            self.input_video_type_str.append(VideoSaveTypeDict[video_type])
+        if isinstance(video_type,str):
+            for key in VideoSaveTypeDict.keys():
+                if VideoSaveTypeDict[key].lower() == video_type.lower():
+                    self.input_video_type.append(VideoSaveTypeDict[key])
+                    self.input_video_type_str.append(video_type)
+                    break
     
 def GetShowList(lfi_info:ExpLFIInfo, exp_setting:ExpSetting, mode="trainging"):
     '''
@@ -1040,7 +1073,8 @@ class TwoFolderLFIInfo(AllScoringLFI):
 
         all_files=os.listdir(in_folder_path)
         for file_name in all_files:
-            if video_postfix_str in file_name[-4:]:
+            name_postfix=file_name.split('.')[-1]
+            if name_postfix in video_postfix_str:
                 self.all_videos.append(file_name)
                 cur_single_scoring_lfi_info=ScoringExpLFIInfo()
                 cur_single_scoring_lfi_info.passive_view_video_path=os.path.join(in_folder_path,file_name)

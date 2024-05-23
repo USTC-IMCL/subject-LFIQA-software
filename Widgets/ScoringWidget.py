@@ -1042,6 +1042,7 @@ class MPVVideoPlayer(QtWidgets.QWidget):
         self.cur_cap.pause = False
         self.cur_cap.wait_until_playing()
         self.is_playing = True
+        self.has_finished=False
         self.cur_cap.register_event_callback(self._loop_times_recoding)
 
     def PauseVideo(self):
@@ -1172,22 +1173,23 @@ class VideoPage(QtWidgets.QWidget):
         btn_width=226
         btn_pos_y=(self.event_mask.screen_widget_y+video_height+self.event_mask.screen_height)//2 - btn_height//2
 
-        if exp_setting.comparison_type == ComparisonType.PairComparison:
-            left_btn_pos_x=3*self.event_mask.screen_width//8 - btn_width//2
-            right_btn_pos_x=5*self.event_mask.screen_width//8 - btn_width//2
+        if not exp_setting.two_folder_mode:
+            if exp_setting.comparison_type == ComparisonType.PairComparison:
+                left_btn_pos_x=3*self.event_mask.screen_width//8 - btn_width//2
+                right_btn_pos_x=5*self.event_mask.screen_width//8 - btn_width//2
 
-            self.left_btn.setGeometry(left_btn_pos_x,btn_pos_y,btn_width,btn_height)
-            self.left_btn.show()
-            self.right_btn.setGeometry(right_btn_pos_x,btn_pos_y,btn_width,btn_height)
-            self.right_btn.show()
-            #self.left_btn.setFocus()
-        else:
-            next_btn_pos_x=self.event_mask.screen_width//2 - btn_width//2
-            self.next_btn.setGeometry(next_btn_pos_x,btn_pos_y,btn_width,btn_height)
-            if not self.auto_transition:
-                self.next_btn.show()
+                self.left_btn.setGeometry(left_btn_pos_x,btn_pos_y,btn_width,btn_height)
+                self.left_btn.show()
+                self.right_btn.setGeometry(right_btn_pos_x,btn_pos_y,btn_width,btn_height)
+                self.right_btn.show()
+                #self.left_btn.setFocus()
             else:
-                self.next_btn.hide()
+                next_btn_pos_x=self.event_mask.screen_width//2 - btn_width//2
+                self.next_btn.setGeometry(next_btn_pos_x,btn_pos_y,btn_width,btn_height)
+                if not self.auto_transition:
+                    self.next_btn.show()
+                else:
+                    self.next_btn.hide()
 
         self.video_player.show()
         if exp_setting.comparison_type == ComparisonType.PairComparison:
@@ -1306,8 +1308,6 @@ class ScoringPage(QtWidgets.QWidget):
             cur_table.show()
             self.all_table.append(cur_table)
 
-        self.all_table[self.current_focus_index].SetMyFocused(True)
-
         for i in range(len(self.all_table)):
             self.all_table[i].table_index=i
             self.all_table[i].be_clicked.connect(lambda i: self.SetSingleFocusedTable(i))
@@ -1329,6 +1329,8 @@ class ScoringPage(QtWidgets.QWidget):
         self.next_btn.setGeometry(btn_pos_x,btn_pos_y,btn_width,btn_height)
         self.next_btn.clicked.connect(self.ReturnScores)
         self.next_btn.show()
+
+        self.all_table[self.current_focus_index].SetMyFocused(True)
 
     def RefreshAllTables(self):
         '''

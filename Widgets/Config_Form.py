@@ -371,7 +371,7 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         if not isinstance(all_lfi_config,str):
             logger.error("For the two folders configuration, the input should be a string!")
             return None
-        all_lfi_config=TwoFolderLFIInfo(all_lfi_config,self.exp_setting.VideoSaveTypeStr)
+        all_lfi_config=TwoFolderLFIInfo(all_lfi_config,self.exp_setting.input_video_type_str)
         return all_lfi_config
     
     def GetConfigInfoWithSpecificJson(self,all_lfi_config):
@@ -512,6 +512,15 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         if "FPS" in exp_keys:
             exp_setting.fps=exp_config["FPS"]
         
+        if "Input_Type" in exp_keys:
+            input_types=exp_config["Input_Type"]
+            input_types=input_types.split(";")
+            for v_type in input_types:
+                exp_setting.AddInputVideoType(v_type)
+        else:
+            for v_type in VideoSaveTypeDict.keys():
+                exp_setting.AddInputVideoType(v_type)
+        
         if "Score_Names" in exp_keys:
             exp_setting.score_names=exp_config["Score_Names"]
         if "Score_Levels" in exp_keys:
@@ -547,6 +556,8 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         
         if "Passive_Control_Backend" in exp_keys:
             exp_setting.passive_control_backend=exp_config["Passive_Control_Backend"]
+        
+
 
         return exp_setting
 
