@@ -12,7 +12,7 @@ sys.path.append('../Widgets/')
 from ScoreTable_ui import Ui_ScoreTable as ScoreTable
 import cv2
 import time
-os.environ['PATH']+=';./'
+#os.environ['PATH']+=';./'
 import mpv
 
 import locale
