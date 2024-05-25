@@ -21,6 +21,9 @@ class AboutForm(QtWidgets.QWidget,AboutForm):
         super().__init__(*args, **kwargs)
         self.setupUi(self)
 
+        self.label_6.setText(u"<a href=\"https://faculty.ustc.edu.cn/chenzhibo\"><span style=\" text-decoration: underline; color:#0000ff;\">Zhibo Chen's Homepage</span></a>")
+        self.label_6.setOpenExternalLinks(True)
+
 class PreProcessThread(QtCore.QThread):
     def __init__(self,training_LFI_info,test_LFI_info,exp_setting):
         super().__init__()

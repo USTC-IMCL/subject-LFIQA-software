@@ -528,6 +528,16 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
             if type(cur_score_levels) == int:
                 cur_score_levels=[cur_score_levels]*len(exp_setting.score_names)
             exp_setting.score_levels=cur_score_levels
+        if "Score_Values" in exp_keys:
+            cur_score_values=exp_config["Score_Values"]
+            if isinstance(cur_score_values[0],int):
+                cur_score_values=[cur_score_values]*len(exp_setting.score_names)
+            exp_setting.score_values=cur_score_values
+        else:
+            cur_score_values=[]
+            for score_level in exp_setting.score_levels:
+                cur_score_values.append([score_level-i for i in range(score_level)])
+            exp_setting.score_values=cur_score_values
         
         if "Score_Definition" in exp_keys:
             score_definition=exp_config["Score_Definition"]
@@ -556,7 +566,9 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         
         if "Passive_Control_Backend" in exp_keys:
             exp_setting.passive_control_backend=exp_config["Passive_Control_Backend"]
-        
+
+        if "First_Loop_Skip_Allowed" in exp_keys:
+            exp_setting.first_loop_skip=exp_config["First_Loop_Skip_Allowed"]
 
 
         return exp_setting

@@ -42,16 +42,16 @@ color: rgb(255, 255, 255);</string>
     <property name="geometry">
      <rect>
       <x>320</x>
-      <y>130</y>
+      <y>100</y>
       <width>151</width>
-      <height>151</height>
+      <height>181</height>
      </rect>
     </property>
     <property name="text">
      <string/>
     </property>
     <property name="pixmap">
-     <pixmap resource="UI_res.qrc">:/logo/imcl_logo</pixmap>
+     <pixmap resource="UI_res.qrc">:/logo/res/jpegpleno-logo.png</pixmap>
     </property>
     <property name="scaledContents">
      <bool>true</bool>

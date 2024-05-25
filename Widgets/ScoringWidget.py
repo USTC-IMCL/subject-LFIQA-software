@@ -12,7 +12,7 @@ sys.path.append('../Widgets/')
 from ScoreTable_ui import Ui_ScoreTable as ScoreTable
 import cv2
 import time
-#os.environ['PATH']+=';./'
+os.environ['PATH']+=';./'
 import mpv
 
 import locale
@@ -140,6 +140,7 @@ class BlankScoringWidget(QtWidgets.QWidget):
     
     def handle_key_press(self, key):
         #print('key press is ignored')
+        key.ignore()
         pass
 
 class PairWiseScoringWidget(QtWidgets.QStackedWidget):
@@ -375,8 +376,9 @@ class ScoringWidget(QtWidgets.QStackedWidget):
 
 
         ############
-        self.page_scoring=ScoringPage(screen.height(),screen.width(),self.all_level_names,self.all_score_levels,self.all_score_definitions)
+        self.page_scoring=ScoringPage(screen.height(),screen.width(),self.all_level_names,self.all_score_levels,self.all_score_definitions,self.exp_setting.score_values)
         self.page_scoring.setParent(self)
+        self.page_scoring.RefreshAllTables()
         self.page_scoring.HasScored.connect(self.RecordScore)
         self.addWidget(self.page_scoring)
 
@@ -521,10 +523,11 @@ class FinishPage(QtWidgets.QWidget):
         self.show_label.setFont(QtGui.QFont("Roman times",20,QtGui.QFont.Bold))
     
     def handle_key_press(self, event) -> None:
+        event.ignore()
         #if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Escape or event.key() == Qt.Key_Return:
         if event.key() == Qt.Key_Escape:
             self.key_pressed.emit()
-        return super().keyPressEvent(event)
+        #return super().keyPressEvent(event)
 
 class ImagePage(QtWidgets.QWidget):
     eval_finished=QtCore.Signal()
@@ -688,6 +691,7 @@ class ImagePage(QtWidgets.QWidget):
         return super().mouseMoveEvent(event)
 
     def handle_key_press(self, event) -> None:
+        event.ignore()
         if self.exp_setting.comparison_type ==  ComparisonType.PairComparison:
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
                 if self.left_btn.hasFocus():
@@ -697,7 +701,7 @@ class ImagePage(QtWidgets.QWidget):
         else:
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
                 self.eval_finished.emit()
-        return super().keyPressEvent(event)
+        #return super().keyPressEvent(event)
 
     def MakeViewPath(self,angular_x,angular_y):
         view_path=self.lfi_info.GetActiveView(angular_y,angular_x)
@@ -1083,10 +1087,12 @@ class VideoPage(QtWidgets.QWidget):
         self.fps=fps
 
         self.auto_transition=exp_setting.auto_transition  # dirty code !
-        self.evaluate_enable=True
+        if exp_setting.first_loop_skip:
+            self.evaluate_enable=True
+        else:
+            self.evaluate_enable=False
         if exp_setting.comparison_type == ComparisonType.PairComparison:
             self.auto_transition=False
-            self.evaluate_enable=False
     
         #self.video_player=LFIVideoPlayer(video_path,fps=self.fps,loop_times=self.loop_times)
         if exp_setting.passive_control_backend.upper()=='MPV':
@@ -1145,15 +1151,18 @@ class VideoPage(QtWidgets.QWidget):
         self.exp_setting=exp_setting
         self.dist_lfi_info=dist_lfi_info
         self.video_path=video_path
-        self.disableAllButtons()
+        if not exp_setting.first_loop_skip:
+            self.disableAllButtons()
 
         self.base_path=os.path.dirname(video_path)
 
-        video_height=self.video_height
-        video_width=self.video_width
-
         self.video_player.SetFPS(self.fps)
         self.video_player.setVideoPath(video_path)
+        self.video_height=self.video_player.video_height
+        self.video_width=self.video_player.video_width
+
+        video_height=self.video_height
+        video_width=self.video_width
 
         if dist_lfi_info is None:
             self.event_mask=ImageMask(video_height,video_width)
@@ -1229,6 +1238,7 @@ class VideoPage(QtWidgets.QWidget):
     
     def handle_key_press(self, event) -> None:
     #def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
+        event.ignore()
         if self.exp_setting.comparison_type == ComparisonType.PairComparison:
             '''
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
@@ -1255,7 +1265,7 @@ class VideoPage(QtWidgets.QWidget):
                 return
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
                 self.finish_video.emit()
-        return super().keyPressEvent(event)
+        #return super().keyPressEvent(event)
     
     def CloseVideoPlayer(self):
         self.video_player.StopPlaying()
@@ -1280,7 +1290,7 @@ class VideoPage(QtWidgets.QWidget):
 class ScoringPage(QtWidgets.QWidget):
     HasScored=QtCore.Signal(list)
 
-    def __init__(self,screen_height,screen_width,table_names=["Picture Quality","Overall Quality"],scoring_levels=[5,5],scoring_definition=None) -> None:
+    def __init__(self,screen_height,screen_width,table_names=["Picture Quality","Overall Quality"],scoring_levels=[5,5],scoring_definition=None,score_values=None) -> None:
         super().__init__()
         self.setWindowFlag(Qt.FramelessWindowHint)
         self.setWindowFlag(Qt.WindowStaysOnTopHint)
@@ -1295,9 +1305,15 @@ class ScoringPage(QtWidgets.QWidget):
         for table_index in range(len(self.table_names)):
             table_name=self.table_names[table_index]
             if scoring_definition is not None:
-                cur_table=ScoringTable(table_name,scoring_levels[table_index],scoring_definition[table_index])
+                cur_table_definition=scoring_definition[table_index]
             else:
-                cur_table=ScoringTable(table_name,scoring_levels[table_index])
+                cur_table_definition=None
+            if score_values is not None:
+                cur_score_values=score_values[table_index]
+            else:
+                cur_score_values=None
+            cur_table=ScoringTable(table_name,scoring_levels[table_index],scoring_definition=cur_table_definition,score_values=cur_score_values)
+
             cur_table.setParent(self)
             table_center_x= (2*table_index+1)*screen_width//(2*table_num)
             table_center_y=screen_height//2
@@ -1330,8 +1346,6 @@ class ScoringPage(QtWidgets.QWidget):
         self.next_btn.clicked.connect(self.ReturnScores)
         self.next_btn.show()
 
-        self.all_table[self.current_focus_index].SetMyFocused(True)
-
     def RefreshAllTables(self):
         '''
         used to remove scoring bias during sequential evaluation 
@@ -1357,6 +1371,7 @@ class ScoringPage(QtWidgets.QWidget):
     '''
 
     def handle_key_press(self, event: QtGui.QKeyEvent) -> None:
+        event.ignore()
         if event.key() ==  Qt.Key_Right:
             self.current_focus_index=(self.current_focus_index+1)%len(self.all_table)
             self.SetSingleFocusedTable(self.current_focus_index)
@@ -1365,7 +1380,7 @@ class ScoringPage(QtWidgets.QWidget):
             self.SetSingleFocusedTable(self.current_focus_index)
         if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
             self.ReturnScores()
-        return super().keyPressEvent(event)
+        #return super().keyPressEvent(event)
     
     def SetSingleFocusedTable(self,focus_i):
         for index in range(len(self.all_table)):
@@ -1376,23 +1391,39 @@ class ScoringPage(QtWidgets.QWidget):
                 self.all_table[index].SetMyFocused(False)
     
 class ScoringBtn(QtWidgets.QRadioButton):
-    def __init__(self,i=0):
+    def __init__(self,btn_score=0,btn_index=0):
         super().__init__()
-        self.btn_score=i
+        '''
+        Index and score may not be the same. 
+        '''
+        self.btn_index=btn_index
+        self.btn_score=btn_score
+    
+    def GetIndex(self):
+        return self.btn_index
+    def GetScore(self):
+        return self.btn_score
 
 class ScoringTable(QtWidgets.QWidget):
     be_clicked=QtCore.Signal(int)
 
-    def __init__(self,widget_name,scoring_levels=5,scoring_definition=None) -> None:
+    def __init__(self,widget_name,scoring_levels=5,scoring_definition=None,score_values=None) -> None:
         super().__init__()
         self.widget_name=widget_name
         self.table_index=0
-        self.cur_radio_score=0
-        self.all_radio_index=list(range(scoring_levels))
         self.scoring_levels=scoring_levels
+        self.input_score_values=score_values
+
+        self.cur_radio_score=0
+        self.cur_radio_index=0
+        self.all_radio_index=list(range(scoring_levels))
+        self.all_radio_score=[]
+        self.radio_score_dict={}
+
+        self.score_definition=scoring_definition
 
         self.scoring_name=QtWidgets.QGroupBox(self)
-        self.scoring_name.setTitle(widget_name)
+        #self.scoring_name.setTitle(widget_name)
         self.vertical_layout_widget=QtWidgets.QWidget(self.scoring_name)
 
         self.table_title=QtWidgets.QLabel(self)
@@ -1404,17 +1435,25 @@ class ScoringTable(QtWidgets.QWidget):
         self.vertical_layout_box.setContentsMargins(0,0,0,10)
 
         self.all_radio_btns=[]
+        '''
+        TODO: Allow a custom score definition
+        '''
         for i in range(self.scoring_levels):
-            radio_button=ScoringBtn(i)
+            radio_index=i
+            radio_score=self.GetBtnScore(i)
+            radio_button=ScoringBtn(btn_index=radio_index,btn_score=radio_score)
+            self.all_radio_score.append(radio_button.btn_score)
+            self.radio_score_dict[radio_score]=radio_button
             radio_button.setParent(self.vertical_layout_widget)
             if scoring_definition is not None:
                 radio_button.setText(scoring_definition[i])
             else:
-                radio_button.setText("Score: "+str(i+1))
+                radio_button.setText("Score: "+str(radio_score))
             radio_button.clicked.connect(lambda: self.RadioBtnClicked())
             self.vertical_layout_box.addWidget(radio_button)
             self.all_radio_btns.append(radio_button)
-
+        
+        self.cur_radio_score=self.all_radio_btns[self.cur_radio_index].btn_score
         self.select_box_width=0
         self.select_box_height=0
         self.select_box_pos_x=0
@@ -1432,9 +1471,20 @@ class ScoringTable(QtWidgets.QWidget):
         self.border_label.raise_()
         self.scoring_name.raise_()
     
+    def GetBtnScore(self,i):
+        '''
+        TODO: use input from configuration file
+        '''
+        if self.input_score_values is not None:
+            return self.input_score_values[i]
+        else:
+            return self.scoring_levels-i
+
+    
     def GetClickedRadioBtn(self):
         for radio_btn in self.all_radio_btns:
             if radio_btn.isChecked():
+                self.cur_radio_index=radio_btn.btn_index
                 return radio_btn.btn_score
 
     def RadioBtnClicked(self):
@@ -1460,7 +1510,7 @@ class ScoringTable(QtWidgets.QWidget):
         talbe_spacing=PathManager.table_spaceing
 
         vertical_layout_widget_height=40+single_radio_btn_height*self.scoring_levels+(self.scoring_levels)*talbe_spacing+2*PathManager.talbe_vertical_gap
-        vertical_layout_widget_width=2+single_radio_btn_width
+        vertical_layout_widget_width=10+single_radio_btn_width
 
         group_box_height=2*PathManager.talbe_vertical_gap + vertical_layout_widget_height
         group_box_width= 2* PathManager.table_horizontal_gap + vertical_layout_widget_width
@@ -1469,7 +1519,7 @@ class ScoringTable(QtWidgets.QWidget):
         self.select_box_height=group_box_height+2*PathManager.talbe_vertical_gap 
         self.select_box_pos_x = 0
 
-        self.widget_width=group_box_width+2*PathManager.table_horizontal_gap
+        self.widget_width=group_box_width+2*PathManager.table_horizontal_gap +10 
 
         title_width = self.widget_width
         title_width = max(title_width,PathManager.scoring_table_width+2*PathManager.table_horizontal_gap)
@@ -1507,24 +1557,27 @@ class ScoringTable(QtWidgets.QWidget):
         self.vertical_layout_widget.setGeometry(PathManager.table_horizontal_gap,PathManager.talbe_vertical_gap,vertical_layout_widget_width,vertical_layout_widget_height)
 
     def GetResult(self):
-        return self.cur_radio_score+1
+        return self.cur_radio_score
     
     def keyPressEvent(self, event) -> None:
-        key_num=self.GetKeyNum(event.key())
-        if key_num>0 and key_num<=self.scoring_levels:
-            self.cur_radio_score=key_num
-            self.all_radio_btns[key_num-1].setChecked(True)
-            return super().keyPressEvent(event)
-
+        event.ignore()
         if event.key() == Qt.Key_Up:
-            self.cur_radio_score=self.all_radio_index[self.cur_radio_score-1]
-            self.all_radio_btns[self.cur_radio_score].setChecked(True)
+            self.cur_radio_index=self.all_radio_index[self.cur_radio_index-1]
+            self.cur_radio_score=self.all_radio_btns[self.cur_radio_index].btn_score
+            self.all_radio_btns[self.cur_radio_index].setChecked(True)
             return super().keyPressEvent(event)
         if event.key() ==  Qt.Key_Down:
-            self.cur_radio_score=self.all_radio_index[self.cur_radio_score+1-self.scoring_levels]
-            self.all_radio_btns[self.cur_radio_score].setChecked(True)
+            self.cur_radio_index=self.all_radio_index[self.cur_radio_index+1-self.scoring_levels]
+            self.cur_radio_score=self.all_radio_btns[self.cur_radio_index].btn_score
+            self.all_radio_btns[self.cur_radio_index].setChecked(True)
             return super().keyPressEvent(event)
-        event.ignore()
+
+        key_num=self.GetKeyNum(event.key())
+        if key_num in self.all_radio_score:
+            self.cur_radio_score=key_num
+            self.radio_score_dict[key_num].setChecked(True)
+            self.cur_radio_index=self.radio_score_dict[key_num].btn_index
+            return super().keyPressEvent(event)
     
     def GetKeyNum(self,in_key):
         if in_key == Qt.Key_1:
@@ -1545,7 +1598,7 @@ class ScoringTable(QtWidgets.QWidget):
             return 8
         if in_key == Qt.Key_9:
             return 9
-        return -1
+        return None
     
     def mousePressEvent(self, event) -> None:
         self.be_clicked.emit(self.table_index)
@@ -1602,6 +1655,8 @@ if __name__ == "__main__":
 
     '''
 
+    '''
+
     exp_setting=ExpSetting()
     exp_setting.comparison_type=ComparisonType.DoubleStimuli
     exp_setting.passive_control_backend="MPV"
@@ -1618,14 +1673,14 @@ if __name__ == "__main__":
     video_page.finish_video.connect(VideoFinishPage)
 
     video_page.show()
-
     '''
-    scoring_definition=[['lasdjf;lajsdl;fkjaskl;dfja;l','Score: 2','Score: 3','Score: 4','Score: 5'],['Score: 1','Score: 2','Score: 3','Score: 4','Score: 5']]
+
+    scoring_definition=[['Score: -3 ','Score: -2','Score: -1','Score: 0','Score: 1','Score: 2','Score: 3'],['Score: 5','Score: 4','Score: 3','Score: 2','Score: 1']]
     screen = QtWidgets.QApplication.primaryScreen()
-    score_page=ScoringPage(screen.size().height(),screen.size().width(),table_names=['Image Quality','It is a very very long long long name'],scoring_definition=scoring_definition)
+    score_values=[[-3,-2,-1,0,1,2,3],[5,4,3,2,1]]
+    score_page=ScoringPage(screen.size().height(),screen.size().width(),scoring_levels=[7,5], table_names=['Image Quality','It is a very very long long long name'],scoring_definition=scoring_definition,score_values=score_values)
 
     score_page.HasScored.connect(PrintScores)
     score_page.show()#FullScreen()
-    '''
 
     sys.exit(app.exec())

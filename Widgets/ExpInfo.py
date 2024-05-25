@@ -591,11 +591,14 @@ class ExpSetting:
         self.fps=-1  # decided by the input video
 
         self.score_levels=[5,5]
+        self.score_values=[]
         self.score_definition=None
         self.score_names=['Overall quality','Image quality']
         self.auto_transition=False
         self.pause_allowed=False
         self.passive_control_backend='MPV' # depreted now
+        self.first_loop_skip=False
+
     
     def AddInputVideoType(self,video_type):
         if isinstance(video_type,VideoSaveType):
