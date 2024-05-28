@@ -1054,9 +1054,10 @@ class MPVVideoPlayer(QtWidgets.QWidget):
             self.cur_cap.pause = not self.cur_cap.pause
 
     def StopPlaying(self):
-        self.cur_cap.terminate()
-        self.cur_cap.wait_for_shutdown()
-        self.cur_cap=None
+        if self.cur_cap is not None:
+            self.cur_cap.terminate()
+            self.cur_cap.wait_for_shutdown()
+            self.cur_cap=None
         self.hide()
         self.is_playing=False
         self.first_loop_finished=False
@@ -1252,18 +1253,22 @@ class VideoPage(QtWidgets.QWidget):
             if not self.evaluate_enable:
                 return 
             if event.key() == Qt.Key_Left:
+                self.video_player.StopPlaying()
                 self.pair_finished.emit(0)
                 return
             if event.key() == Qt.Key_Right:
+                self.video_player.StopPlaying()
                 self.pair_finished.emit(1)
                 return
             if event.key() == Qt.Key_Down:
+                self.video_player.StopPlaying()
                 self.pair_finished.emit(2)
                 return
         else:
             if not self.evaluate_enable:
                 return
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
+                self.video_player.StopPlaying()
                 self.finish_video.emit()
         #return super().keyPressEvent(event)
     
@@ -1615,7 +1620,8 @@ class ScoringTable(QtWidgets.QWidget):
         for i in range(self.scoring_levels):
             self.all_radio_btns[i].setChecked(False)
         self.all_radio_btns[0].setChecked(True)
-
+        self.cur_radio_index=0
+        self.cur_radio_score=self.all_radio_btns[0].btn_score
 
 def PrintVideoPage(a):
     print(a)
