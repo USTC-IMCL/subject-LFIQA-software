@@ -1,4 +1,4 @@
-# subject-LFIQA-software Version 2.3
+# subject-LFIQA-software Version 2.3.2
 
 This is IMCL software for subjective light field image quality assessment. It has been remade with Qt (PySide6).
 

@@ -14,6 +14,10 @@ import cv2
 import time
 #os.environ['PATH']+=';./'
 import mpv
+import logging
+from concurrent.futures import InvalidStateError
+
+logger=logging.getLogger("LogWindow")
 
 import locale
 locale.setlocale(locale.LC_NUMERIC, 'C')
@@ -127,7 +131,7 @@ class BlankScoringWidget(QtWidgets.QWidget):
         super().__init__()
         self.setGeometry(0,0,screen_width, screen_height)
         self.b_timer=QTimer(self)
-        self.b_timer.setInterval(15000)
+        self.b_timer.setInterval(1500)
         self.b_timer.timeout.connect(self.b_timeout)
       
     def wait_until_timeout(self,wait_time=1.5):
@@ -942,6 +946,10 @@ class MPVVideoPlayer(QtWidgets.QWidget):
         self.loop_times_record=loop_times
 
         self.fps=None # not used at all
+        self.video_height=0
+        self.video_width=0
+        self.video_path=video_path
+
         self.player_container=QtWidgets.QWidget(self)
         self.player_container.setAttribute(Qt.WA_DontCreateNativeAncestors)
         self.player_container.setAttribute(Qt.WA_NativeWindow)
@@ -952,35 +960,34 @@ class MPVVideoPlayer(QtWidgets.QWidget):
 
         self.has_finished=False
 
-        self.InitTheVideo(video_path)
+        '''
+        self.player_guard=QTimer()
+        self.b_player_crashed=False
+        self.player_guard.setInterval(100)
+        self.player_guard.timeout.connect(self.check_cur_cap)
+        #self.player_guard.start()
+        '''
+
+        self.cur_cap=None
+        self.GetVideoPara(video_path)
+        #self.setVideoPath(video_path)
 
     def setVideoPath(self,video_path):
         if self.cur_cap is not None:
             self.StopPlaying()
-        self.InitTheVideo(video_path)
+        self.GetVideoPara(video_path)
+        retry_count=0
+        while not self.InitTheVideo(video_path):
+            logger.warning(f'MPV player init failed, retrying {retry_count} times...')
+            retry_count+=1
+            if retry_count>10:
+                logger.error(f'Failed to init the video, please check the path {self.video_path}')
+                exit(-1)
 
     def SetFPS(self,fps):
         pass
 
-    def InitTheVideo(self,video_path):
-        self.cur_cap=mpv.MPV(wid=str(int(self.player_container.winId())))
-        self.video_path=video_path
-        self.is_playing=False
-        self.loop_times=self.loop_times_record
-
-        self.cur_cap.play(self.video_path)
-        self.cur_cap.wait_for_property('seekable')
-        self.cur_cap.command('seek',0,'absolute')
-
-        if self.loop_times ==  0:
-            self.loop_times+=1
-        
-        if self.loop_times > 0:
-            self.cur_cap._set_property('loop-file',int(self.loop_times))
-        else:
-            self.cur_cap._set_property('loop-file','inf')
-        
-
+    def GetVideoPara(self,video_path):
         video_capture=cv2.VideoCapture(self.video_path)
         if video_capture.isOpened():
             self.frame_num=int(video_capture.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -996,6 +1003,29 @@ class MPVVideoPlayer(QtWidgets.QWidget):
         else:
             self.video_height=0
             self.video_width=0
+
+    def InitTheVideo(self,video_path,raise_crash=True):
+        self.cur_cap=mpv.MPV(wid=str(int(self.player_container.winId())))
+        self.video_path=video_path
+        self.is_playing=False
+        self.loop_times=self.loop_times_record
+        self.has_finished=False
+
+        self.cur_cap.play(self.video_path)
+        try:
+            self.cur_cap.wait_for_property('seekable')
+        except:
+            self.StopPlaying()
+            return False
+        self.cur_cap.command('seek',0,'absolute')
+
+        if self.loop_times ==  0:
+            self.loop_times+=1
+        
+        if self.loop_times > 0:
+            self.cur_cap._set_property('loop-file',int(self.loop_times))
+        else:
+            self.cur_cap._set_property('loop-file','inf')
         
         self.cur_cap._set_property('keep-open','yes')
         '''
@@ -1004,8 +1034,27 @@ class MPVVideoPlayer(QtWidgets.QWidget):
         else:
             self.cur_cap._set_property('keep-open','yes')
         '''
+        #self.cur_cap.register_event_callback(self.shut_down_handler)
         
         self.play_times=0
+        return True
+    
+    def isReady(self):
+        return self.width is not None
+
+    def check_cur_cap(self):
+        if self.b_player_crashed:
+            self.b_player_crashed=False
+            self.StopPlaying()
+            self.setVideoPath(self.video_path,raise_crash=False)
+
+    def shut_down_handler(self,event):
+        if event.event_id.value == mpv.MpvEventID.SHUTDOWN:
+            if not self.has_finished:
+                print('mpv shuts down unexpectedly, restart it now...')
+                self.b_player_crashed=True
+            else:
+                logger.info(f'{self.video_path} has finished playing, preparing next video now...')
 
     def _loop_times_recoding(self,event):
         if event.event_id.value == mpv.MpvEventID.SEEK:
@@ -1054,13 +1103,14 @@ class MPVVideoPlayer(QtWidgets.QWidget):
             self.cur_cap.pause = not self.cur_cap.pause
 
     def StopPlaying(self):
+        self.has_finished=True
+        self.is_playing=False
+        self.first_loop_finished=False
         if self.cur_cap is not None:
             self.cur_cap.terminate()
             self.cur_cap.wait_for_shutdown()
             self.cur_cap=None
         self.hide()
-        self.is_playing=False
-        self.first_loop_finished=False
     
 class VideoPage(QtWidgets.QWidget):
     finish_video=QtCore.Signal()
