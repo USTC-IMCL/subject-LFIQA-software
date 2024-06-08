@@ -1711,8 +1711,8 @@ if __name__ == "__main__":
 
     '''
 
-    '''
 
+    locale.setlocale(locale.LC_NUMERIC, 'C')
     exp_setting=ExpSetting()
     exp_setting.comparison_type=ComparisonType.DoubleStimuli
     exp_setting.passive_control_backend="MPV"
@@ -1720,17 +1720,17 @@ if __name__ == "__main__":
     exp_setting.pause_allowed=True
     exp_setting.loop_times=3
     exp_setting.auto_transition=True
-    exp_setting.auto_play=True
+    exp_setting.auto_play=False
 
-    video_path='./1.mp4'
+    video_path='./1.mov'
     video_page=VideoPage(exp_setting,None,video_path)
 
     video_page.pair_finished.connect(PrintVideoPage)
     video_page.finish_video.connect(VideoFinishPage)
 
     video_page.show()
-    '''
 
+    '''
     scoring_definition=[['Score: -3 ','Score: -2','Score: -1','Score: 0','Score: 1','Score: 2','Score: 3'],['Score: 5','Score: 4','Score: 3','Score: 2','Score: 1']]
     screen = QtWidgets.QApplication.primaryScreen()
     score_values=[[-3,-2,-1,0,1,2,3],[5,4,3,2,1]]
@@ -1738,5 +1738,6 @@ if __name__ == "__main__":
 
     score_page.HasScored.connect(PrintScores)
     score_page.show()#FullScreen()
+    '''
 
     sys.exit(app.exec())
