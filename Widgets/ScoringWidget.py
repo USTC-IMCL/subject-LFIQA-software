@@ -1196,7 +1196,31 @@ class VideoPage(QtWidgets.QWidget):
 
         self.selected_one=0
 
+        self.SetSkipHintText(exp_setting.screen_width,exp_setting.skip_hint_text)
+
         self.SetNewLFI(exp_setting,dist_lfi_info,video_path)
+    
+    def SetSkipHintText(self,screen_width,skip_hint_text):
+        self.skip_hint_text=skip_hint_text
+        self.hint_label_window=QtWidgets.QWidget()
+        self.hint_label_window.setAttribute(Qt.WA_TranslucentBackground)
+        self.hint_label_window.setWindowFlag(Qt.FramelessWindowHint)
+        self.hint_label_window.setWindowFlag(Qt.WindowStaysOnTopHint)
+
+        self.skip_hint_label=QtWidgets.QLabel(self.skip_hint_text)
+        font=QtGui.QFont()
+        font.setPointSize(80)
+        self.skip_hint_label.setFont(font)
+        self.skip_hint_label.setParent(self.hint_label_window)
+        self.skip_hint_label.adjustSize()
+        pos_x=(screen_width-self.skip_hint_label.width())//2
+        pos_y=50
+
+        self.hint_label_window.setGeometry(pos_x,pos_y,self.skip_hint_label.width(),self.skip_hint_label.height())
+        self.skip_hint_label.setGeometry(0,0,self.skip_hint_label.width(),self.skip_hint_label.height())
+
+        self.hint_label_window.hide()
+
         
     def SetNewLFI(self,exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, video_path):
         self.exp_setting=exp_setting
@@ -1280,12 +1304,16 @@ class VideoPage(QtWidgets.QWidget):
         self.right_btn.setEnabled(False)
         self.next_btn.setEnabled(False)
         self.evaluate_enable=False
+        self.hint_label_window.hide()
     
     def enableAllButtons(self):
+        print('now you can skip')
+        print(f'self.skip_hint_label geometry: {self.skip_hint_label.geometry()}')
         self.left_btn.setEnabled(True)
         self.right_btn.setEnabled(True)
         self.next_btn.setEnabled(True)
         self.evaluate_enable=True
+        self.hint_label_window.show()
     
     def handle_key_press(self, event) -> None:
     #def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
@@ -1462,12 +1490,13 @@ class ScoringBtn(QtWidgets.QRadioButton):
 class ScoringTable(QtWidgets.QWidget):
     be_clicked=QtCore.Signal(int)
 
-    def __init__(self,widget_name,scoring_levels=5,scoring_definition=None,score_values=None) -> None:
+    def __init__(self,widget_name,scoring_levels=5,scoring_definition=None,score_values=None,font_size=PathManager.scoring_table_point_size) -> None:
         super().__init__()
         self.widget_name=widget_name
         self.table_index=0
         self.scoring_levels=scoring_levels
         self.input_score_values=score_values
+        self.font_size=font_size
 
         self.cur_radio_score=0
         self.cur_radio_index=0
@@ -1549,7 +1578,7 @@ class ScoringTable(QtWidgets.QWidget):
     def SetTableSize(self):
         #calculate the table size here
         font=PySide6.QtGui.QFont()
-        font.setPointSize(PathManager.scoring_table_point_size)
+        font.setPointSize(self.font_size)
         single_radio_btn_width=0
         for r_btn in self.all_radio_btns:
             r_btn.setFont(font)
@@ -1720,9 +1749,10 @@ if __name__ == "__main__":
     exp_setting.pause_allowed=True
     exp_setting.loop_times=3
     exp_setting.auto_transition=True
-    exp_setting.auto_play=False
+    exp_setting.auto_play=True
+    exp_setting.skip_hint_text="You can skip the video by pressing Enter now."
 
-    video_path='./1.mov'
+    video_path='/home/heathcliff/Documents/1.mov'
     video_page=VideoPage(exp_setting,None,video_path)
 
     video_page.pair_finished.connect(PrintVideoPage)

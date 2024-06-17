@@ -598,7 +598,8 @@ class ExpSetting:
         self.pause_allowed=False
         self.passive_control_backend='MPV' # depreted now
         self.first_loop_skip=False
-
+        self.skip_hint_text=""
+        self.table_font_size=PathManager.scoring_table_point_size
     
     def AddInputVideoType(self,video_type):
         if isinstance(video_type,VideoSaveType):

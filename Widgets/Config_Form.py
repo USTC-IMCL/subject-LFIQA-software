@@ -569,7 +569,12 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
 
         if "First_Loop_Skip_Allowed" in exp_keys:
             exp_setting.first_loop_skip=exp_config["First_Loop_Skip_Allowed"]
-
+        
+        if "Skip_Hint_Text" in exp_keys:
+            exp_setting.skip_hint_text=exp_config["Skip_Hint_Text"]
+        
+        if "Font_size" in exp_keys:
+            exp_setting.table_font_size=exp_config["Font_size"]
 
         return exp_setting
 
