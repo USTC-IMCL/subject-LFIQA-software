@@ -573,8 +573,8 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         if "Skip_Hint_Text" in exp_keys:
             exp_setting.skip_hint_text=exp_config["Skip_Hint_Text"]
         
-        if "Table_Font_size" in exp_keys:
-            exp_setting.table_font_size=exp_config["Table_Font_size"]
+        if "Table_Font_Size" in exp_keys:
+            exp_setting.table_font_size=exp_config["Table_Font_Size"]
         
         if "Hint_Font_Size" in exp_keys:
             exp_setting.hint_text_font_size=exp_config["Hint_Font_Size"]

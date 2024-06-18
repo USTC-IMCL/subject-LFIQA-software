@@ -1,6 +1,6 @@
 {
-    "Training":"Your_Training_Path",
-    "Test":"Your_Test_Path",
+    "Training":"D:/JPEG_LFIQA_DB/train",
+    "Test":"D:/JPEG_LFIQA_DB/test",
     "Exp_Info":{
         "Display_Type":"2D",
         "ThreeD_Type":"LeftRight",
@@ -26,6 +26,9 @@
         "FPS": -1,
         "Auto_Transition": true,
         "Pause_Allowed": false,
-        "First_Loop_Skip_Allowed": false
+        "First_Loop_Skip_Allowed": false,
+        "Skip_Hint_Text": "Your hint here",
+        "Table_Font_Size": 20,
+        "Hint_Font_Size": 60
     }
 }

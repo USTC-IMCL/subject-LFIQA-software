@@ -328,7 +328,7 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
             if page is not None:
                 if isinstance(page,VideoPage):
                     page.CloseVideoPlayer()
-        #self.deleteLater()
+        self.deleteLater()
         
     def keyPressEvent(self, event) -> None:
         cur_page=self.currentWidget()
@@ -953,6 +953,7 @@ class MPVVideoPlayer(QtWidgets.QWidget):
         self.video_path=video_path
 
         self.player_container=QtWidgets.QWidget(self)
+        self.setStyleSheet("background-color: gray;")
         self.player_container.setAttribute(Qt.WA_DontCreateNativeAncestors)
         self.player_container.setAttribute(Qt.WA_NativeWindow)
 
@@ -1198,23 +1199,29 @@ class VideoPage(QtWidgets.QWidget):
         self.right_btn.setFocusPolicy(Qt.NoFocus)
 
         if self.auto_transition:
-            self.video_player.OnVideoPlayerFinished.connect(lambda: self.finish_video.emit())
+            self.video_player.OnVideoPlayerFinished.connect(self.FinishVideo)
 
         self.selected_one=0
         
-        #self.SetSkipHintText(exp_setting.screen_width,exp_setting.skip_hint_text,exp_setting.hint_text_font_size)
+        self.use_hint_text=(not exp_setting.first_loop_skip) and (exp_setting.skip_hint_text!="")
+        
+        if self.use_hint_text:
+            self.SetSkipHintText(exp_setting.screen_width,exp_setting.skip_hint_text,exp_setting.hint_text_font_size)
 
         self.SetNewLFI(exp_setting,dist_lfi_info,video_path)
     
+    def FinishVideo(self):
+        if self.use_hint_text:
+            self.hint_label_window.hide()
+        self.finish_video.emit()
+    
     def SetSkipHintText(self,screen_width,skip_hint_text,hint_text_font_size):
-        self.skip_hint_text=skip_hint_text
-        if skip_hint_text == "":
-            return
         self.skip_hint_text=skip_hint_text
         self.hint_label_window=QtWidgets.QWidget()
         self.hint_label_window.setAttribute(Qt.WA_TranslucentBackground)
         self.hint_label_window.setWindowFlag(Qt.FramelessWindowHint)
         self.hint_label_window.setWindowFlag(Qt.WindowStaysOnTopHint)
+        self.hint_label_window.keyPressEvent = self.handle_key_press
 
         self.skip_hint_label=QtWidgets.QLabel(self.skip_hint_text)
         font=QtGui.QFont()
@@ -1228,6 +1235,7 @@ class VideoPage(QtWidgets.QWidget):
         self.hint_label_window.setGeometry(pos_x,pos_y,self.skip_hint_label.width(),self.skip_hint_label.height())
         self.skip_hint_label.setGeometry(0,0,self.skip_hint_label.width(),self.skip_hint_label.height())
 
+        self.hint_label_window.setFocusPolicy(Qt.NoFocus)
         self.hint_label_window.hide()
 
         
@@ -1235,6 +1243,8 @@ class VideoPage(QtWidgets.QWidget):
         self.exp_setting=exp_setting
         self.dist_lfi_info=dist_lfi_info
         self.video_path=video_path
+        if self.use_hint_text:
+            self.hint_label_window.hide()
         if not exp_setting.first_loop_skip:
             self.disableAllButtons()
 
@@ -1306,14 +1316,18 @@ class VideoPage(QtWidgets.QWidget):
     def mousePressEvent(self, event) -> None:
         if self.pause_allowed:
             self.video_player.toogle_play_pause()
-        return super().mousePressEvent(event)
+            if self.use_hint_text:
+                if self.hint_label_window.isVisible():
+                    self.hint_label_window.raise_()
+        #return super().mousePressEvent(event)
 
     def disableAllButtons(self):
         self.left_btn.setEnabled(False)
         self.right_btn.setEnabled(False)
         self.next_btn.setEnabled(False)
         self.evaluate_enable=False
-        #self.hint_label_window.hide()
+        if self.use_hint_text:
+            self.hint_label_window.hide()
     
     def enableAllButtons(self):
         print('now you can skip')
@@ -1322,7 +1336,9 @@ class VideoPage(QtWidgets.QWidget):
         self.right_btn.setEnabled(True)
         self.next_btn.setEnabled(True)
         self.evaluate_enable=True
-        #self.hint_label_window.show()
+        if self.use_hint_text:
+            self.hint_label_window.show()
+            self.setFocus()
     
     def handle_key_press(self, event) -> None:
     #def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
@@ -1356,12 +1372,16 @@ class VideoPage(QtWidgets.QWidget):
                 return
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
                 self.video_player.StopPlaying()
+                if self.use_hint_text:
+                    self.hint_label_window.hide()
                 self.finish_video.emit()
         #return super().keyPressEvent(event)
     
     def CloseVideoPlayer(self):
         self.video_player.StopPlaying()
-        #self.hint_label_window.hide()
+        if self.use_hint_text:
+            self.hint_label_window.hide()
+            self.hint_label_window.deleteLater()
     '''
         if not self.arrow_key_flag:
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
@@ -1762,7 +1782,7 @@ if __name__ == "__main__":
     exp_setting.skip_hint_text="You can skip the video by pressing Enter now."
     exp_setting.table_font_size=50
 
-    video_path='/home/heathcliff/Documents/1.mov'
+    video_path='C:/Users/ZSY/Downloads/examples/two_folder/foo_1/1.mp4'
     video_page=VideoPage(exp_setting,None,video_path)
 
     video_page.pair_finished.connect(PrintVideoPage)
@@ -1771,7 +1791,6 @@ if __name__ == "__main__":
     video_page.show()
 
     '''
-
     scoring_definition=[['Score: -3 ','Score: -2','Score: -1','Score: 0','Score: 1','Score: 2','Score: 3'],['Score: 5','Score: 4','Score: 3','Score: 2','Score: 1']]
     screen = QtWidgets.QApplication.primaryScreen()
     score_values=[[-3,-2,-1,0,1,2,3],[5,4,3,2,1]]

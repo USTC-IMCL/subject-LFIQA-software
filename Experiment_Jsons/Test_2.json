@@ -26,6 +26,9 @@
         "FPS": -1,
         "Auto_Transition": true,
         "Pause_Allowed": true,
-        "First_Loop_Skip_Allowed": false
+        "First_Loop_Skip_Allowed": false,
+        "Skip_Hint_Text": "Your hint here",
+        "Table_Font_Size": 20,
+        "Hint_Font_Size": 60
     }
 }

@@ -1,6 +1,6 @@
 {
-    "Training":"D:/JPEG_LFIQA_DB/train",
-    "Test":"D:/JPEG_LFIQA_DB/test",
+    "Training":"Your_Training_Path",
+    "Test":"Your_Test_Path",
     "Exp_Info":{
         "Display_Type":"2D",
         "ThreeD_Type":"LeftRight",
