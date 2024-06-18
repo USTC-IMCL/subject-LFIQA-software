@@ -46,6 +46,10 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.file_handler=logging.FileHandler(self.log_file)
         self.file_handler.setFormatter(self.log_text_editor.log_format)
         logger.addHandler(self.file_handler)
+        self.InitTrigger()
+    
+    def InitTrigger(self):
+        self.menuView.addAction(self.action_log)
         self.action_new_project.triggered.connect(self.NewProject)
         self.action_load_project.triggered.connect(self.LoadProject)
         self.action_preprocessing.triggered.connect(self.preprocess)
@@ -100,6 +104,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.init_screen=True
         self.log_dock.hide()
         self.setupUi(self)
+        self.InitTrigger()
 
     def ShowProjectSetting(self):
         if self.text_browser is None:
@@ -126,7 +131,6 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, self.log_dock)
         self.log_dock.hide()
         self.action_log=self.log_dock.toggleViewAction()
-        self.menuView.addAction(self.action_log)
 
     def preprocess(self):
         if self.cur_project is None:
@@ -496,6 +500,8 @@ class MainProject(QMainWindow,Ui_MainWindow):
     def SetFontValue(self,font_target,font_value):       
         exp_setting=self.cur_project.exp_setting
         self.font_setting_dialog=None
+        if font_value<=0:
+            return
         if font_target.lower() == "table":
             exp_setting.table_font_size=font_value
             self.SaveProject()

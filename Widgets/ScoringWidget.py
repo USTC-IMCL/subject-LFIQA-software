@@ -380,7 +380,7 @@ class ScoringWidget(QtWidgets.QStackedWidget):
 
 
         ############
-        self.page_scoring=ScoringPage(screen.height(),screen.width(),self.all_level_names,self.all_score_levels,self.all_score_definitions,self.exp_setting.score_values)
+        self.page_scoring=ScoringPage(screen.height(),screen.width(),self.all_level_names,self.all_score_levels,self.all_score_definitions,self.exp_setting.score_values,font_size=self.exp_setting.table_font_size)
         self.page_scoring.setParent(self)
         self.page_scoring.RefreshAllTables()
         self.page_scoring.HasScored.connect(self.RecordScore)
@@ -1005,7 +1005,7 @@ class MPVVideoPlayer(QtWidgets.QWidget):
             self.video_width=0
 
     def InitTheVideo(self,video_path,raise_crash=True):
-        self.cur_cap=mpv.MPV(wid=str(int(self.player_container.winId())))
+        self.cur_cap=mpv.MPV(wid=str(int(self.player_container.winId())),input_default_bindings=False,border=False,video_unscaled=True)
         self.video_path=video_path
         self.is_playing=False
         self.loop_times=self.loop_times_record
@@ -1196,11 +1196,11 @@ class VideoPage(QtWidgets.QWidget):
 
         self.selected_one=0
 
-        self.SetSkipHintText(exp_setting.screen_width,exp_setting.skip_hint_text)
+        self.SetSkipHintText(exp_setting.screen_width,exp_setting.skip_hint_text,exp_setting.hint_text_font_size)
 
         self.SetNewLFI(exp_setting,dist_lfi_info,video_path)
     
-    def SetSkipHintText(self,screen_width,skip_hint_text):
+    def SetSkipHintText(self,screen_width,skip_hint_text,hint_text_font_size):
         self.skip_hint_text=skip_hint_text
         self.hint_label_window=QtWidgets.QWidget()
         self.hint_label_window.setAttribute(Qt.WA_TranslucentBackground)
@@ -1209,7 +1209,7 @@ class VideoPage(QtWidgets.QWidget):
 
         self.skip_hint_label=QtWidgets.QLabel(self.skip_hint_text)
         font=QtGui.QFont()
-        font.setPointSize()
+        font.setPointSize(hint_text_font_size)
         self.skip_hint_label.setFont(font)
         self.skip_hint_label.setParent(self.hint_label_window)
         self.skip_hint_label.adjustSize()
@@ -1352,6 +1352,7 @@ class VideoPage(QtWidgets.QWidget):
     
     def CloseVideoPlayer(self):
         self.video_player.StopPlaying()
+        self.hint_label_window.hide()
     '''
         if not self.arrow_key_flag:
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
@@ -1373,7 +1374,7 @@ class VideoPage(QtWidgets.QWidget):
 class ScoringPage(QtWidgets.QWidget):
     HasScored=QtCore.Signal(list)
 
-    def __init__(self,screen_height,screen_width,table_names=["Picture Quality","Overall Quality"],scoring_levels=[5,5],scoring_definition=None,score_values=None) -> None:
+    def __init__(self,screen_height,screen_width,table_names=["Picture Quality","Overall Quality"],scoring_levels=[5,5],scoring_definition=None,score_values=None,font_size=PathManager.scoring_table_point_size) -> None:
         super().__init__()
         self.setWindowFlag(Qt.FramelessWindowHint)
         self.setWindowFlag(Qt.WindowStaysOnTopHint)
@@ -1395,7 +1396,7 @@ class ScoringPage(QtWidgets.QWidget):
                 cur_score_values=score_values[table_index]
             else:
                 cur_score_values=None
-            cur_table=ScoringTable(table_name,scoring_levels[table_index],scoring_definition=cur_table_definition,score_values=cur_score_values)
+            cur_table=ScoringTable(table_name,scoring_levels[table_index],scoring_definition=cur_table_definition,score_values=cur_score_values,font_size=font_size)
 
             cur_table.setParent(self)
             table_center_x= (2*table_index+1)*screen_width//(2*table_num)
@@ -1577,6 +1578,7 @@ class ScoringTable(QtWidgets.QWidget):
     
     def SetTableSize(self):
         #calculate the table size here
+        self.setStyleSheet('color: black;')
         font=PySide6.QtGui.QFont()
         font.setPointSize(self.font_size)
         single_radio_btn_width=0
@@ -1749,23 +1751,24 @@ if __name__ == "__main__":
     exp_setting.auto_transition=True
     exp_setting.auto_play=True
     exp_setting.skip_hint_text="You can skip the video by pressing Enter now."
+    exp_setting.table_font_size=50
 
-    video_path='./1.mov'
+    '''
+    video_path='/home/heathcliff/Documents/1.mov'
     video_page=VideoPage(exp_setting,None,video_path)
 
     video_page.pair_finished.connect(PrintVideoPage)
     video_page.finish_video.connect(VideoFinishPage)
 
     video_page.show()
-
     '''
+
     scoring_definition=[['Score: -3 ','Score: -2','Score: -1','Score: 0','Score: 1','Score: 2','Score: 3'],['Score: 5','Score: 4','Score: 3','Score: 2','Score: 1']]
     screen = QtWidgets.QApplication.primaryScreen()
     score_values=[[-3,-2,-1,0,1,2,3],[5,4,3,2,1]]
-    score_page=ScoringPage(screen.size().height(),screen.size().width(),scoring_levels=[7,5], table_names=['Image Quality','It is a very very long long long name'],scoring_definition=scoring_definition,score_values=score_values)
+    score_page=ScoringPage(screen.size().height(),screen.size().width(),scoring_levels=[7,5], table_names=['Image Quality','It is a very very long long long name'],scoring_definition=scoring_definition,score_values=score_values,font_size=exp_setting.table_font_size)
 
     score_page.HasScored.connect(PrintScores)
     score_page.show()#FullScreen()
-    '''
 
     sys.exit(app.exec())
