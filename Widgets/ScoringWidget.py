@@ -1316,9 +1316,9 @@ class VideoPage(QtWidgets.QWidget):
     def mousePressEvent(self, event) -> None:
         if self.pause_allowed:
             self.video_player.toogle_play_pause()
-            if self.use_hint_text:
-                if self.hint_label_window.isVisible():
-                    self.hint_label_window.raise_()
+        if self.use_hint_text:
+            if self.hint_label_window.isVisible():
+                self.hint_label_window.raise_()
         #return super().mousePressEvent(event)
 
     def disableAllButtons(self):
