@@ -177,6 +177,8 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
         #cur_lf_info=self.GetSingleLFIInfo(self.current_lfi_show_index)
         cur_scoring_lfi_info=self.all_lfi_info.GetScoringExpLFIInfo(self.all_show_index[self.current_lfi_show_index])
 
+        locale.setlocale(locale.LC_NUMERIC,"C")
+
         self.SetPageShowing(cur_scoring_lfi_info,init_flag=True)
         #self.SetPageShowing(cur_scoring_lfi_info)
         for page in self.show_page_list:
@@ -326,7 +328,7 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
             if page is not None:
                 if isinstance(page,VideoPage):
                     page.CloseVideoPlayer()
-        self.deleteLater()
+        #self.deleteLater()
         
     def keyPressEvent(self, event) -> None:
         cur_page=self.currentWidget()
@@ -1022,12 +1024,16 @@ class MPVVideoPlayer(QtWidgets.QWidget):
         if self.loop_times ==  0:
             self.loop_times+=1
         
+        '''
         if self.loop_times > 0:
             self.cur_cap._set_property('loop-file',int(self.loop_times))
         else:
             self.cur_cap._set_property('loop-file','inf')
+        '''
         
+        self.cur_cap._set_property('loop-file','inf')
         self.cur_cap._set_property('keep-open','yes')
+
         '''
         if self.auto_transition:
             self.cur_cap.register_event_callback(self._loop_end)
@@ -1195,12 +1201,15 @@ class VideoPage(QtWidgets.QWidget):
             self.video_player.OnVideoPlayerFinished.connect(lambda: self.finish_video.emit())
 
         self.selected_one=0
-
-        self.SetSkipHintText(exp_setting.screen_width,exp_setting.skip_hint_text,exp_setting.hint_text_font_size)
+        
+        #self.SetSkipHintText(exp_setting.screen_width,exp_setting.skip_hint_text,exp_setting.hint_text_font_size)
 
         self.SetNewLFI(exp_setting,dist_lfi_info,video_path)
     
     def SetSkipHintText(self,screen_width,skip_hint_text,hint_text_font_size):
+        self.skip_hint_text=skip_hint_text
+        if skip_hint_text == "":
+            return
         self.skip_hint_text=skip_hint_text
         self.hint_label_window=QtWidgets.QWidget()
         self.hint_label_window.setAttribute(Qt.WA_TranslucentBackground)
@@ -1304,16 +1313,16 @@ class VideoPage(QtWidgets.QWidget):
         self.right_btn.setEnabled(False)
         self.next_btn.setEnabled(False)
         self.evaluate_enable=False
-        self.hint_label_window.hide()
+        #self.hint_label_window.hide()
     
     def enableAllButtons(self):
         print('now you can skip')
-        print(f'self.skip_hint_label geometry: {self.skip_hint_label.geometry()}')
+        #print(f'self.skip_hint_label geometry: {self.skip_hint_label.geometry()}')
         self.left_btn.setEnabled(True)
         self.right_btn.setEnabled(True)
         self.next_btn.setEnabled(True)
         self.evaluate_enable=True
-        self.hint_label_window.show()
+        #self.hint_label_window.show()
     
     def handle_key_press(self, event) -> None:
     #def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
@@ -1352,7 +1361,7 @@ class VideoPage(QtWidgets.QWidget):
     
     def CloseVideoPlayer(self):
         self.video_player.StopPlaying()
-        self.hint_label_window.hide()
+        #self.hint_label_window.hide()
     '''
         if not self.arrow_key_flag:
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
@@ -1753,7 +1762,6 @@ if __name__ == "__main__":
     exp_setting.skip_hint_text="You can skip the video by pressing Enter now."
     exp_setting.table_font_size=50
 
-    '''
     video_path='/home/heathcliff/Documents/1.mov'
     video_page=VideoPage(exp_setting,None,video_path)
 
@@ -1761,6 +1769,7 @@ if __name__ == "__main__":
     video_page.finish_video.connect(VideoFinishPage)
 
     video_page.show()
+
     '''
 
     scoring_definition=[['Score: -3 ','Score: -2','Score: -1','Score: 0','Score: 1','Score: 2','Score: 3'],['Score: 5','Score: 4','Score: 3','Score: 2','Score: 1']]
@@ -1770,5 +1779,7 @@ if __name__ == "__main__":
 
     score_page.HasScored.connect(PrintScores)
     score_page.show()#FullScreen()
+    '''
+    video_path='/home/heathcliff/Documents/1.mov'
 
     sys.exit(app.exec())

@@ -49,6 +49,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.InitTrigger()
     
     def InitTrigger(self):
+        self.action_log=self.log_dock.toggleViewAction()
         self.menuView.addAction(self.action_log)
         self.action_new_project.triggered.connect(self.NewProject)
         self.action_load_project.triggered.connect(self.LoadProject)
@@ -130,7 +131,6 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.log_dock.setWidget(self.log_text_editor)
         self.addDockWidget(Qt.RightDockWidgetArea, self.log_dock)
         self.log_dock.hide()
-        self.action_log=self.log_dock.toggleViewAction()
 
     def preprocess(self):
         if self.cur_project is None:
@@ -281,7 +281,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         else:
             score_page=ScoringWidget(all_scoring_lfi_info,self.exp_setting,all_show_index)
 
-        self.hide()
+        #self.hide()
 
         app=QApplication.instance()
         if app is None:
