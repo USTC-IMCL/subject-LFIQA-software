@@ -1,0 +1,20 @@
+{
+    "Training":"D:/JPEG_LFIQA_DB/train",
+    "Test":"D:/JPEG_LFIQA_DB/test",
+    "Exp_Info":{
+        "Display_Type":"2D",
+        "ThreeD_Type":"LeftRight",
+        "View_Changing":"Passive",
+        "Refocusing":"None",
+        "Comparison":"PairComparison",
+        "Save_Format":"Excel",
+        "Skip_Preprocessing": true,
+        "Two_Folder_Mode": true,
+        "Auto_Play":true,
+        "Loop_Times": 2,
+        "FPS": -1,
+        "Auto_Transition": true,
+        "Pause_Allowed": false,
+        "First_Loop_Skip_Allowed": true
+    }
+}

@@ -1,0 +1,34 @@
+{
+    "Training":"Your_Training_Path",
+    "Test":"Your_Test_Path",
+    "Exp_Info":{
+        "Display_Type":"2D",
+        "ThreeD_Type":"LeftRight",
+        "Score_Levels":7,
+        "Score_Names":[
+            "How do you rate the quality of the left video compared to the right one?"
+        ],
+        "Score_Definition":[
+            ["-3. Much worse",
+            "-2. Worse",
+            "-1. Slightly worse",
+            "0. The same",
+            "1. Slightly better",
+            "2. Better",
+            "3. Much better"]
+        ],
+        "Score_Values":[-3,-2,-1,0,1,2,3],
+        "View_Changing":"Passive",
+        "Refocusing":"None",
+        "Comparison":"doublestimuli",
+        "Save_Format":"Excel",
+        "Skip_Preprocessing": true,
+        "Two_Folder_Mode": true,
+        "Auto_Play":true,
+        "Loop_Times": 2,
+        "FPS": -1,
+        "Auto_Transition": true,
+        "Pause_Allowed": false,
+        "First_Loop_Skip_Allowed": false
+    }
+}
