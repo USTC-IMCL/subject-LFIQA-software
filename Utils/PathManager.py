@@ -29,6 +29,7 @@ btn_width=226
 scoring_btn_height=40
 scoring_btn_width=229
 table_spaceing=25
+hint_text_font_size=60
 scoring_table_point_size=20
 scoring_table_width=290
 scoring_group_box_width=250

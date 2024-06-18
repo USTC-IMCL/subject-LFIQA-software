@@ -12,7 +12,7 @@ sys.path.append('../Widgets/')
 from ScoreTable_ui import Ui_ScoreTable as ScoreTable
 import cv2
 import time
-#os.environ['PATH']+=';./'
+os.environ['PATH']+=';./'
 import mpv
 import logging
 from concurrent.futures import InvalidStateError
@@ -1209,7 +1209,7 @@ class VideoPage(QtWidgets.QWidget):
 
         self.skip_hint_label=QtWidgets.QLabel(self.skip_hint_text)
         font=QtGui.QFont()
-        font.setPointSize(80)
+        font.setPointSize()
         self.skip_hint_label.setFont(font)
         self.skip_hint_label.setParent(self.hint_label_window)
         self.skip_hint_label.adjustSize()
@@ -1739,8 +1739,6 @@ if __name__ == "__main__":
     score_page.show()
 
     '''
-
-
     locale.setlocale(locale.LC_NUMERIC, 'C')
     exp_setting=ExpSetting()
     exp_setting.comparison_type=ComparisonType.DoubleStimuli
@@ -1752,7 +1750,7 @@ if __name__ == "__main__":
     exp_setting.auto_play=True
     exp_setting.skip_hint_text="You can skip the video by pressing Enter now."
 
-    video_path='/home/heathcliff/Documents/1.mov'
+    video_path='./1.mov'
     video_page=VideoPage(exp_setting,None,video_path)
 
     video_page.pair_finished.connect(PrintVideoPage)

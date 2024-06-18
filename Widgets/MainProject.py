@@ -18,6 +18,7 @@ from Log_Form import AboutForm
 from About_JPEG_ui import Ui_About_JPEG_Form
 import PostProcess
 import PathManager
+import FontSetting
 logger=logging.getLogger("LogWindow")
 
 class AboutJPEGForm(QWidget,Ui_About_JPEG_Form):
@@ -58,6 +59,10 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.about_imcl_form=None
         self.about_JPEG_form=None
         self.output_folder=None
+        self.actionTable_Font_Size.triggered.connect(lambda: self.SetCustomFont("Table"))
+        self.actionHint_Text_Size.triggered.connect(lambda: self.SetCustomFont("Hint_text"))
+        self.font_setting_dialog=None
+
     
     def SetProject(self,project_name):
         self.cur_project_name=project_name
@@ -90,10 +95,11 @@ class MainProject(QMainWindow,Ui_MainWindow):
             self.text_browser.clear()
             self.text_browser.deleteLater()
             self.text_browser=None
-        self.text_label.show()
-        self.logo_label.show()
+        #self.text_label.show()
+        #self.logo_label.show()
         self.init_screen=True
         self.log_dock.hide()
+        self.setupUi(self)
 
     def ShowProjectSetting(self):
         if self.text_browser is None:
@@ -469,7 +475,36 @@ class MainProject(QMainWindow,Ui_MainWindow):
                             fid.write(f',{value}')
                             current_col+=1
                         fid.write('\n')
-        
+
+    def SetCustomFont(self,font_target):
+        if  self.cur_project is None:
+            self.ShowMessage("Please select one project first!",1)
+            logger.warning('Please select one project first!')
+            return
+
+        exp_setting=self.cur_project.exp_setting
+        font_size=20
+        if font_target.lower() == "table":
+            font_size=exp_setting.table_font_size
+        if font_target.lower() == "hint_text":
+            font_size=exp_setting.hint_text_font_size
+        font_setting_dialog=FontSetting.FontSettingDialog(font_size=font_size)
+        font_setting_dialog.on_confirm.connect(lambda val: self.SetFontValue(font_target,val))
+        font_setting_dialog.show()
+        self.font_setting_dialog=font_setting_dialog
+
+    def SetFontValue(self,font_target,font_value):       
+        exp_setting=self.cur_project.exp_setting
+        self.font_setting_dialog=None
+        if font_target.lower() == "table":
+            exp_setting.table_font_size=font_value
+            self.SaveProject()
+            return
+        if font_target.lower() == "hint_text":
+            exp_setting.hint_text_font_size=font_value
+            self.SaveProject()
+            return
+
     def GetRandomShowList(self,show_list):
         show_index=list(range(len(show_list)))
         shuffle(show_index)

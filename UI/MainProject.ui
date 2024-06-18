@@ -20,7 +20,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="UI_res.qrc">
-    <normaloff>:/logo/imcl_logo</normaloff>:/logo/imcl_logo</iconset>
+    <normaloff>:/logo/res/jpegpleno-logo.png</normaloff>:/logo/res/jpegpleno-logo.png</iconset>
   </property>
   <property name="windowOpacity">
    <double>0.900000000000000</double>
@@ -105,6 +105,14 @@ color: rgb(255, 255, 255);</string>
     <property name="title">
      <string>Setting</string>
     </property>
+    <widget class="QMenu" name="menuFont_Size">
+     <property name="title">
+      <string>Font Size</string>
+     </property>
+     <addaction name="actionTable_Font_Size"/>
+     <addaction name="actionHint_Text_Size"/>
+    </widget>
+    <addaction name="menuFont_Size"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -234,6 +242,16 @@ color: rgb(255, 255, 255);</string>
    </property>
    <property name="text">
     <string>Preprocessing</string>
+   </property>
+  </action>
+  <action name="actionTable_Font_Size">
+   <property name="text">
+    <string>Table Font Size</string>
+   </property>
+  </action>
+  <action name="actionHint_Text_Size">
+   <property name="text">
+    <string>Hint Text Size</string>
    </property>
   </action>
  </widget>
