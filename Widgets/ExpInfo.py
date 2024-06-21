@@ -12,6 +12,7 @@ from random import shuffle
 sys.path.append('../Utils/')
 
 import PathManager
+import PlayList
 
 logger=logging.getLogger("LogWindow")
 
