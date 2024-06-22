@@ -1087,7 +1087,13 @@ class TwoFolderLFIInfo(AllScoringLFI):
                 cur_single_scoring_lfi_info.passive_refocusing_video_path=os.path.join(in_folder_path,file_name)
                 self.all_exp_lfi_info.append(cur_single_scoring_lfi_info)
         self.exp_lfi_info_num=len(self.all_exp_lfi_info)
-
+    
+    def GetRandomShowOrder(self):
+        all_string_list=[]
+        for i in range(self.exp_lfi_info_num):
+            all_string_list.append(self.all_exp_lfi_info[i].passieview_video_path)
+        random_order=PlayList.MakeARandomScoringList(all_string_list)
+        return random_order[0]
 
 class PorjectPathManager():
     '''

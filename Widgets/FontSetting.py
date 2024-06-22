@@ -6,6 +6,7 @@ import FontSetting_ui
 
 class FontSettingDialog(QtWidgets.QDialog,FontSetting_ui.Ui_Dialog):
     on_confirm = QtCore.Signal(int)
+    on_cancel = QtCore.Signal()
     def __init__(self, parent=None, font_size=20):
         super().__init__(parent)
         self.setupUi(self)
@@ -19,7 +20,7 @@ class FontSettingDialog(QtWidgets.QDialog,FontSetting_ui.Ui_Dialog):
             QtWidgets.QErrorMessage(self).showMessage("Please input a number between 1 and 100 !")
     
     def reject(self):
-        self.on_confirm.emit(0)
+        self.on_cancel.emit()
         self.deleteLater()
 
     def CheckInput(self): 
@@ -39,7 +40,7 @@ class FontSettingDialog(QtWidgets.QDialog,FontSetting_ui.Ui_Dialog):
 if __name__ == "__main__":
     app = QtWidgets.QApplication()
     window = FontSettingDialog()
-    window.on_confirm.connect(lambda x: print(x))
     window.show()
-
+    window.on_confirm.connect(lambda x: print(x))
+    window.on_cancel.connect(lambda: print('cancel'))
     sys.exit(app.exec())

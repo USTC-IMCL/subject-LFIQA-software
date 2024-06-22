@@ -242,13 +242,15 @@ class MainProject(QMainWindow,Ui_MainWindow):
             logger.error("Something is Wrong! Please check the logs above and fix it.")
             return
 
+        subject_info={}
         if mode == "training":
-            subject_name=''
             ok=True
             all_scoring_lfi_info=self.cur_project.training_scoring_lfi_info
         else:
             all_scoring_lfi_info=self.cur_project.test_scoring_lfi_info
-            subject_name, ok =QInputDialog.getText(self, 'Subject Record', 'Enter your name:')
+            
+            
+        
         if not ok:
             logger.warning("Experiment cancelled.")
             return
