@@ -211,6 +211,7 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
 
     def RecordScore(self,ret_score,score_list):
         # get score, then set new lfi image
+        logger.debug(f"Score is {ret_score}")
         score_list.append(ret_score)
         self.NextPage()
     
@@ -404,6 +405,7 @@ class ScoringWidget(QtWidgets.QStackedWidget):
     
     def RecordScore(self,ret_scores):
         # get score, then set new lfi image
+        logger.debug(f'selected score is {ret_scores}')
         self.page_scoring.RefreshAllTables()
         self.all_scores.append(ret_scores)
         self.current_lfi_show_index+=1
@@ -1066,7 +1068,7 @@ class MPVVideoPlayer(QtWidgets.QWidget):
     def _loop_times_recoding(self,event):
         if event.event_id.value == mpv.MpvEventID.SEEK:
             self.play_times+=1
-            print(f'has already played {self.play_times} times')
+            logger.debug(f'has already played {self.play_times} times')
             if self.play_times == 1:
                 self.OnFirstLoopFinished.emit()
             if self.play_times >= self.loop_times and self.loop_times>0:
@@ -1330,7 +1332,7 @@ class VideoPage(QtWidgets.QWidget):
             self.hint_label_window.hide()
     
     def enableAllButtons(self):
-        print('now you can skip')
+        logger.debug('now you can skip')
         #print(f'self.skip_hint_label geometry: {self.skip_hint_label.geometry()}')
         self.left_btn.setEnabled(True)
         self.right_btn.setEnabled(True)

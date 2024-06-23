@@ -1089,9 +1089,10 @@ class TwoFolderLFIInfo(AllScoringLFI):
         self.exp_lfi_info_num=len(self.all_exp_lfi_info)
     
     def GetRandomShowOrder(self):
+        logger.debug("Use the tow-folder mode random order generation now.")
         all_string_list=[]
         for i in range(self.exp_lfi_info_num):
-            all_string_list.append(self.all_exp_lfi_info[i].passieview_video_path)
+            all_string_list.append(self.all_exp_lfi_info[i].passive_view_video_path)
         random_order=PlayList.MakeARandomScoringList(all_string_list)
         return random_order[0]
 

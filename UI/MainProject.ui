@@ -112,7 +112,17 @@ color: rgb(255, 255, 255);</string>
      <addaction name="actionTable_Font_Size"/>
      <addaction name="actionHint_Text_Size"/>
     </widget>
+    <widget class="QMenu" name="menuLog_Level">
+     <property name="title">
+      <string>Log Level</string>
+     </property>
+     <addaction name="actionDebug"/>
+     <addaction name="actionInfo"/>
+     <addaction name="actionWarning"/>
+     <addaction name="actionError"/>
+    </widget>
     <addaction name="menuFont_Size"/>
+    <addaction name="menuLog_Level"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -154,22 +164,6 @@ color: rgb(255, 255, 255);</string>
   <action name="action_new_project">
    <property name="text">
     <string>New...</string>
-   </property>
-  </action>
-  <action name="actionLog">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Logs</string>
-   </property>
-  </action>
-  <action name="action_log">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Log</string>
    </property>
   </action>
   <action name="action_preprocessing">
@@ -252,6 +246,41 @@ color: rgb(255, 255, 255);</string>
   <action name="actionHint_Text_Size">
    <property name="text">
     <string>Hint Text Size</string>
+   </property>
+  </action>
+  <action name="actionDebug">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Debug</string>
+   </property>
+  </action>
+  <action name="actionInfo">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Info</string>
+   </property>
+  </action>
+  <action name="actionWarning">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Warning</string>
+   </property>
+  </action>
+  <action name="actionError">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Error</string>
    </property>
   </action>
  </widget>

@@ -128,14 +128,56 @@ class SoftWarePathManager():
     def __init__(self,file_path='./SoftwareConfig.json') -> None:
         with open(file_path,'r') as fid:
             self.config=json.load(fid)
+        self.file_path=file_path
         self._software_path=self.config["Software_Path"]
-        self._sofwware_version=self.config["Software_Version"]
+        self._software_version=self.config["Software_Version"]
         self._logs_path=self.config["Logs_Path"]
+
+        self.config_keys=[
+            "Software_Path",
+            "Software_Version",
+            "Logs_Path",
+            "Log_Level"
+        ]
+
+        self.log_level_dict={
+            'INFO':logging.INFO,
+            "DEBUG":logging.DEBUG,
+            "WARNING":logging.WARNING,
+            "ERROR": logging.ERROR
+        }
+        self._log_level=self.log_level_dict[self.config['Log_Level']]
+    
+    def __init__(self):
+        self._software_path=''
+        self._software_version=''
+        self._logs_path='./Logs'
+        self._log_level="INFO"
+        self.config_keys=[
+            "Software_Path",
+            "Software_Version",
+            "Logs_Path",
+            "Log_Level"
+        ]
+        self.log_level_dict={
+            'INFO':logging.INFO,
+            "DEBUG":logging.DEBUG,
+            "WARNING":logging.WARNING,
+            "ERROR": logging.ERROR
+        }
+        self.config={}
+        self.config['Software_Path']=self._software_path
+        self.config['Software_Version']=self._software_version
+        self.config['Logs_Path']=self._logs_path
+        self.config['Log_Level']=self.log_level
 
     def CheckInnerPath(self,path):
         if not os.path.exists(path):
             os.makedirs(path)
-
+    
+    def SaveInfo(self):
+        with open(self.file_path,'w') as fid:
+            json.dump(self.config,fid,indent=4)
         
     @property
     def software_path(self):
@@ -144,14 +186,16 @@ class SoftWarePathManager():
     @software_path.setter
     def software_path(self,value):
         self._software_path=value
+        self.config['Software_Path']=value
 
     @property
     def software_version(self):
-        return self._sofwware_version
+        return self._software_version
     
     @software_version.setter
     def software_version(self,value):
-        self._sofwware_version=value
+        self._software_version=value
+        self.config["Software_Version"]=value
     
     @property
     def logs_path(self):
@@ -159,5 +203,51 @@ class SoftWarePathManager():
     @logs_path.setter
     def logs_path(self,value):
         self._logs_path=value
+        self.config['Logs_Path']=value
+
+    @property
+    def log_level(self):
+        return self._log_level
+    @log_level.setter
+    def log_level(self,value):
+        if isinstance(value,str):
+            self._log_level=self.log_level_dict[value]
+            self.config['Log_Level']=value
+        else:
+            self._log_level=value
+            for key,dict_value in self.log_level_dict.items():
+                if value==dict_value:
+                    self.config['Log_Level']=key
+                    break
+    
+    @staticmethod
+    def CheckInitFile(input_json):
+        config_keys=[
+            "Software_Path",
+            "Software_Version",
+            "Logs_Path",
+            "Log_Level"
+        ]
+        with open(input_json,'r') as fid:
+            cur_config=json.load(fid)
+        for config_key in config_keys:
+            if config_key not in cur_config.keys():
+                return False
+        return True
+    
+    @staticmethod
+    def ReadLogLevelOnly(input_json):
+        if not os.path.exists(input_json):
+            return None
+        with open(input_json,'r') as fid:
+            cur_config=json.load(fid)
+        if 'Log_Level' not in cur_config.keys():
+            return None
+        log_level=cur_config['Log_Level']
+        if log_level.upper() not in ['INFO',"ERROR","WARNING","DEBUG"]:
+            return None
+        return log_level
+
+        
 
 

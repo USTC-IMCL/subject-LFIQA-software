@@ -3,7 +3,8 @@ import sys
 sys.path.append('../UI')
 from random import shuffle
 from datetime import date
-from PySide6.QtWidgets import QWidget, QDockWidget, QMainWindow, QTextBrowser, QApplication, QFileDialog, QMessageBox, QProgressDialog, QInputDialog, QErrorMessage
+from PySide6.QtWidgets import QWidget, QDockWidget, QMainWindow, QTextBrowser, QApplication, QFileDialog, QMessageBox, QProgressDialog, QInputDialog, QErrorMessage, QDialog
+from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtCore import Qt, QThread
 from LogWindow import QLogTextEditor
 import ExpInfo
@@ -19,6 +20,7 @@ from About_JPEG_ui import Ui_About_JPEG_Form
 import PostProcess
 import PathManager
 import FontSetting
+import SubjectInfo
 logger=logging.getLogger("LogWindow")
 
 class AboutJPEGForm(QWidget,Ui_About_JPEG_Form):
@@ -38,7 +40,20 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.project_root='./Projects'
         #self.log_form=Log_Form.LogForm()
         #self.log_form.hide()
-        self.log_path='./Logs'
+        custom_init_path='./SoftwareConfig.json'
+        '''
+        inner_json=os.path.join(os.path.dirname(sys.executable),'Utils','SoftwareConfig.json')
+        if not os.path.exists(inner_json):
+            inner_json='./Utils/SoftwareConfig.json'
+        '''
+        custom_log_level=PathManager.SoftWarePathManager.ReadLogLevelOnly(custom_init_path)
+        self.software_manager=PathManager.SoftWarePathManager()
+        if custom_log_level is not None:
+            self.software_manager.log_level=custom_log_level
+        self.software_manager.file_path=custom_init_path
+        self.software_manager.SaveInfo()
+        #self.log_path='./Logs'
+        self.log_path=self.software_manager.logs_path
         if not os.path.exists(self.log_path):
             os.mkdir(self.log_path)
         today_str=date.today().strftime("%Y-%m-%d")
@@ -46,6 +61,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.file_handler=logging.FileHandler(self.log_file)
         self.file_handler.setFormatter(self.log_text_editor.log_format)
         logger.addHandler(self.file_handler)
+        logger.setLevel(self.software_manager.log_level)
         self.InitTrigger()
     
     def InitTrigger(self):
@@ -68,6 +84,59 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.actionHint_Text_Size.triggered.connect(lambda: self.SetCustomFont("Hint_text"))
         self.font_setting_dialog=None
 
+        self.log_level_group=QActionGroup(self)
+        self.log_level_group.setExclusive(True)
+        self.log_level_group.addAction(self.actionDebug)
+        self.log_level_group.addAction(self.actionInfo)
+        self.log_level_group.addAction(self.actionError)
+        self.log_level_group.addAction(self.actionWarning)
+
+        self.log_level_group.triggered.connect(self.GroupSetLevel)
+        self.SetLogActionTriggered()
+    
+    def SetLogActionTriggered(self):
+        if logger.level == logging.DEBUG:
+            self.actionDebug.setChecked(True)
+            return
+        if logger.level == logging.INFO:
+            self.actionInfo.setChecked(True)
+            return 
+        if logger.level == logging.WARNING:
+            self.actionWarning.setChecked(True)
+            return 
+        if logger.level == logging.ERROR:
+            self.actionError.setChecked(True)
+            return 
+
+    def GroupSetLevel(self):
+        if self.actionDebug.isChecked():
+            self.SetLogLevel('debug')
+            return
+        if self.actionInfo.isChecked():
+            self.SetLogLevel('info')
+            return
+        if self.actionWarning.isChecked():
+            self.SetLogLevel('warning')
+            return
+        if self.actionError.isChecked():
+            self.SetLogLevel('error')
+            return
+
+    def SetLogLevel(self,mode):
+        self.software_manager.log_level=mode.upper()
+        self.software_manager.SaveInfo()
+        if mode == 'debug':
+            logger.setLevel(logging.DEBUG)
+            return
+        if mode == 'info':
+            logger.setLevel(logging.INFO)
+            return
+        if mode == 'error':
+            logger.setLevel(logging.ERROR)
+            return
+        if mode == 'warning':
+            logger.setLevel(logging.WARNING)
+            return
     
     def SetProject(self,project_name):
         self.cur_project_name=project_name
@@ -244,22 +313,16 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
         subject_info={}
         if mode == "training":
-            ok=True
             all_scoring_lfi_info=self.cur_project.training_scoring_lfi_info
         else:
             all_scoring_lfi_info=self.cur_project.test_scoring_lfi_info
+            subjectinfo_dialog=SubjectInfo.SubjectInfo()
+            if subjectinfo_dialog.exec() == QDialog.Accepted:
+                subject_info=subjectinfo_dialog.GetResult()
+            else:
+                logger.warning("Experiment cancelled.")
+                return
             
-            
-        
-        if not ok:
-            logger.warning("Experiment cancelled.")
-            return
-        if not subject_name and mode != "training":
-            tmp=QErrorMessage(self)
-            tmp.setWindowTitle('Error')
-            tmp.showMessage('Name is empty, nothing will be recorded.')
-            return
-
         '''
         if mode == "training":
             show_list=ExpInfo.GetShowList(self.training_LFI_info,self.exp_setting,"training")
@@ -296,12 +359,13 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
         #score_page.show()
         if mode == "test":
-            score_page.scoring_finished.connect(lambda all_results: self.GetAndSaveResult(all_results,subject_name,all_show_index,all_scoring_lfi_info))
+            score_page.scoring_finished.connect(lambda all_results: self.GetAndSaveResult(all_results,subject_info,all_show_index,all_scoring_lfi_info))
         else:
             score_page.scoring_finished.connect(lambda all_results: self.show())
         #del score_page
     
-    def GetAndSaveResult(self,all_results,subject_name,all_show_index,show_list:ExpInfo.AllScoringLFI):
+    def GetAndSaveResult(self,all_results,subject_info,all_show_index,show_list:ExpInfo.AllScoringLFI):
+        subject_name=subject_info['name']
         self.output_folder=os.path.join(self.cur_project.project_path,PathManager.subject_results_folder)
         if not os.path.exists(self.output_folder):
             os.makedirs(self.output_folder)
@@ -317,6 +381,12 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 self.SaveExcel_TwoFolderMode(all_results,subject_name,all_show_index,show_list)
             else:
                 self.SaveExcel(all_results,subject_name,all_show_index,show_list)
+
+        person_id=SubjectInfo.PersonInfo()
+        person_id.InitWithSubjectInfo(subject_info)
+        save_file=os.path.join(self.output_folder,'all_subject_info.csv')
+        person_id.AppendToCSV(save_file)
+
         self.show()
         self.cur_project.SaveToFile()
         self.ShowProjectSetting()
@@ -495,9 +565,8 @@ class MainProject(QMainWindow,Ui_MainWindow):
         if font_target.lower() == "hint_text":
             font_size=exp_setting.hint_text_font_size
         font_setting_dialog=FontSetting.FontSettingDialog(font_size=font_size)
-        font_setting_dialog.on_confirm.connect(lambda val: self.SetFontValue(font_target,val))
-        font_setting_dialog.show()
-        self.font_setting_dialog=font_setting_dialog
+        if font_setting_dialog.exec() == QDialog.Accepted:
+            self.SetFontValue(font_target,font_setting_dialog.GetFontValue())
 
     def SetFontValue(self,font_target,font_value):       
         exp_setting=self.cur_project.exp_setting

@@ -5,23 +5,22 @@ sys.path.append('../UI')
 import FontSetting_ui
 
 class FontSettingDialog(QtWidgets.QDialog,FontSetting_ui.Ui_Dialog):
-    on_confirm = QtCore.Signal(int)
-    on_cancel = QtCore.Signal()
     def __init__(self, parent=None, font_size=20):
         super().__init__(parent)
         self.setupUi(self)
+        self.font_value=font_size
         self.font_spinbox.setValue(font_size)
-    
+
     def accept(self):
-        if self.CheckInput():
-            self.on_confirm.emit(self.font_spinbox.value()) 
-            self.deleteLater()
-        else:
+        if not self.CheckInput():
             QtWidgets.QErrorMessage(self).showMessage("Please input a number between 1 and 100 !")
+            return
+        else:
+            self.font_value=self.font_spinbox.value()
+            return super().accept()
     
-    def reject(self):
-        self.on_cancel.emit()
-        self.deleteLater()
+    def GetFontValue(self):
+        return self.font_value
 
     def CheckInput(self): 
         input_val=self.font_spinbox.value()
@@ -40,7 +39,9 @@ class FontSettingDialog(QtWidgets.QDialog,FontSetting_ui.Ui_Dialog):
 if __name__ == "__main__":
     app = QtWidgets.QApplication()
     window = FontSettingDialog()
-    window.show()
-    window.on_confirm.connect(lambda x: print(x))
-    window.on_cancel.connect(lambda: print('cancel'))
+    if window.exec()== QtWidgets.QDialog.Accepted:
+        print('ok')
+        print(window.font_value)
+    else:
+        print('cancelled')
     sys.exit(app.exec())
