@@ -3,4 +3,11 @@
     <file>res/jpegpleno-logo.png</file>
     <file alias="imcl_logo">res/LOGO_imcl_transparent.png</file>
   </qresource>
+  <qresource prefix="icons">
+    <file>res/image.png</file>
+    <file>res/folder_close.svg</file>
+    <file>res/folder_open.svg</file>
+    <file>res/image_add.png</file>
+    <file>res/setting.svg</file>
+  </qresource>
 </RCC>

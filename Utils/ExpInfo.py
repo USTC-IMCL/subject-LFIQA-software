@@ -647,7 +647,7 @@ class ProjectInfo:
     '''
     A whole project managing class
     '''
-    def __init__(self,project_name=None,root_path='./',software_version='2.0'):
+    def __init__(self,project_name=None,root_path='./',project_version='2.0'):
         self.project_name=project_name
         self.root_path=root_path
 
@@ -660,8 +660,8 @@ class ProjectInfo:
             if not os.path.exists(self.project_path):
                 os.makedirs(self.project_path)
 
-        self.software_version=software_version
-        self.project_version=software_version
+        self.software_version=PathManager.software_version
+        self.project_version=project_version
         self.training_scoring_lfi_info=AllScoringLFI("training")
         self.test_scoring_lfi_info=AllScoringLFI("test")
 
@@ -669,11 +669,11 @@ class ProjectInfo:
             self.training_LFI_info=None
             self.test_LFI_info=None
             self.exp_setting=None
-            self.version=None
+            self.project_version=PathManager.software_version
             self.subject_list=[]
         else:
             self.ReadFromFile()
-        
+    
     def InitAllScoringLFIInfo(self):
         if self.exp_setting.two_folder_mode:
             self.training_scoring_lfi_info=self.training_LFI_info
@@ -694,9 +694,11 @@ class ProjectInfo:
     def ReadFromFile(self):
         with open(self.project_file,'rb') as fid:
             self.project_version=pickle.load(fid)
+            '''
             if self.project_version != self.software_version:
                 logger.error("The software version is not matched! The software version is %s, but the project version is %s"%(self.software_version,self.project_version))
                 return False
+            '''
             self.project_name=pickle.load(fid)
             self.project_path=pickle.load(fid)
             self.training_LFI_info=pickle.load(fid)
