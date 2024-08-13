@@ -9,6 +9,8 @@ sys.path.append('../Widgets')
 import logging
 logger=logging.getLogger("LogWindow")
 
+software_version='3.0'
+
 inner_views_refocusing_path="views_refocusing"
 inner_show_views_path="show_views"
 inner_show_refocusing_path="show_refocusing"
@@ -42,6 +44,22 @@ lambda_file="lambda.txt"
 
 # output folders
 subject_results_folder="SubjectResults"
+
+def VersionCMP(v1,v2):
+    v1=v1.split('.')
+    v2=v2.split('.')
+
+    loop_max=max(len(v1),len(v2))
+    if loop_max>len(v1):
+        v1+=[0]*(loop_max-len(v1))
+    if loop_max>len(v2):
+        v2+=[0]*(loop_max-len(v2))
+    for i in loop_max:
+        if int(v1[i])>int(v2[i]):
+            return 1
+        elif int(v1[i])<int(v2[i]):
+            return -1
+    return 0
 
 '''
 Maybe a class to derive and manage the IO paths?
