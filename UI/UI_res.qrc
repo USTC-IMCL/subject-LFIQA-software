@@ -4,6 +4,7 @@
     <file alias="imcl_logo">res/LOGO_imcl_transparent.png</file>
   </qresource>
   <qresource prefix="icons">
+    <file>res/subject.png</file>
     <file>res/image.png</file>
     <file>res/folder_close.svg</file>
     <file>res/folder_open.svg</file>
