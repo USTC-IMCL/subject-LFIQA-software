@@ -191,8 +191,42 @@ class ProjectDisplay(QtWidgets.QFrame):
         self.label_subjects.clicked.connect(lambda index: self.ActivateMenuLabel(index))
         self.left_panel_layout.addWidget(self.label_subjects)
         self.all_menu_labels.append(self.label_subjects)
+        self.label_subjects.clicked.connect(lambda index: self.ActivateMenuLabel(index))
+        self.left_panel_layout.addWidget(self.label_subjects)
+        self.all_menu_labels.append(self.label_subjects)
 
     def MakeRightPanel(self):
+        self.MakeMaterialWidget()
+        self.MakeSettingWidget()
+
+    def MakeMaterialWidget(self):
+        right_stack_width=self.right_stack.width()
+        right_stack_height=self.right_stack.height()
+
+        self.material_widget=QtWidgets.QTabWidget()
+        self.right_stack.addWidget(self.material_widget)
+        self.material_widget.setGeometry(0,0,right_stack_width,right_stack_height)
+
+        self.material_widget.addTab(QtWidgets.QFrame(),u"Training")
+        self.material_widget.addTab(QtWidgets.QFrame(),u"Testing")
+
+    def MakeSettingWidget(self):
+        self.right_stack.addWidget(QtWidgets.QFrame())
+        cur_widget=self.right_stack.widget(2) #currentWidget()
+        cur_widget.setStyleSheet("background-color: lightblue;")
+        
+    def MakeSubjectsWidget(self):
+        self.right_stack.addWidget(QtWidgets.QFrame())
+
+
+    def ActivateMenuLabel(self,index):
+        self.right_stack.setCurrentIndex(index+1)
+        for label in self.all_menu_labels:
+            if label.index==index:
+                continue
+            else:
+                label.DeActive()
+
         self.MakeMaterialWidget()
         self.MakeSettingWidget()
 
