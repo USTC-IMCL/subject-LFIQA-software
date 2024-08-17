@@ -67,14 +67,12 @@ class MaterialFolderFrame(QtWidgets.QFrame):
 
     def UpdateLabelPos(self):
         self.MakeColRowIndex()
-        print(f'now colnum is {self.unit_col_num}')
         if self.need_update:
             self.need_update=False
             for i in range(self.unit_list.exp_lfi_info_num+1):
                 self.unit_list_labels[i].setGeometry(self.item_pos[i][1],self.item_pos[i][0],self.unit_size[1],self.unit_size[0])
 
     def resizeEvent(self, event):
-        print('resized')
         self.need_update=True
         self.UpdateLabelPos()
 
