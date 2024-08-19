@@ -7,25 +7,31 @@ import UI_res_rc
 from ExpInfo import ProjectInfo, AllScoringLFI, ScoringExpLFIInfo
 
 class ImageUnit(QtWidgets.QFrame):
-    def __init__(self, unit_info:ScoringExpLFIInfo=None, img_size=[80,80], *args,**kwargs) -> None:
+    clicked=QtCore.Signal()
+    def __init__(self,unit_info:ScoringExpLFIInfo=None, logo_size=[80,80], icon_img=':/icons/res/image.png', icon_title='Add New al;sjdfl;ajdf;afjds;l', *args, **kwargs):
         super().__init__(*args,**kwargs)
+        self.logo_size=logo_size
+        self.SetBasicParam(unit_info)
+        self.InitIconUI(icon_img, icon_title)
+        
+    def SetBasicParam(self, unit_info:ScoringExpLFIInfo=None):
         self.scoring_info=unit_info
-
         self.label_layout=QtWidgets.QVBoxLayout()
         self.setLayout(self.label_layout)
-
         self.logo_label=QtWidgets.QLabel(self)
         self.logo_title_label=QtWidgets.QLabel(self)
 
-        self.logo_label.setPixmap(QtGui.QPixmap(":/icons/res/icon_add.png"))
-        self.logo_label.setGeometry(QtCore.QRect(0, 0, 80, 80))
+    def InitIconUI(self, icon_img, icon_title):
+        self.logo_label.setPixmap(QtGui.QPixmap(icon_img).scaled(self.logo_size[1],self.logo_size[0]))
+        self.logo_label.setGeometry(QtCore.QRect(0, 0, self.logo_size[1], self.logo_size[0]))
 
-        self.logo_title_label.setText('Add New')
+        self.logo_title_label.setText(icon_title)
+        self.logo_title_label.setFixedWidth(self.logo_size[1])
+        self.logo_title_label.setAlignment(QtCore.Qt.AlignCenter)
         self.logo_title_label.adjustSize()
         title_label_width=self.logo_title_label.width()
         title_label_height=self.logo_title_label.height()
-        self.logo_title_label.setGeometry(QtCore.QRect((img_size[1]-title_label_width)//2, 80, title_label_width, title_label_height))
-    
+        self.logo_title_label.setGeometry(QtCore.QRect((self.logo_size[1]-title_label_width)//2, self.logo_size[0], title_label_width, title_label_height))
 
 class MaterialFolderFrame(QtWidgets.QFrame):
     def __init__(self, unit_list: AllScoringLFI, *args,**kwargs) -> None:
@@ -260,7 +266,7 @@ class ProjectDisplay(QtWidgets.QFrame):
 if __name__ == "__main__":
     app=QtWidgets.QApplication()
 
-    project_info=ProjectInfo('test_1','../Projects/')
+    project_info=ProjectInfo('jpeg_5','../Projects/')
 
     material_frame=MaterialFolderFrame(project_info.training_scoring_lfi_info)
 
