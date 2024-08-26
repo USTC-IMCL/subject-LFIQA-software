@@ -5,10 +5,12 @@ sys.path.append('../Utils')
 sys.path.append('../UI')
 import UI_res_rc
 from ExpInfo import ProjectInfo, AllScoringLFI, ScoringExpLFIInfo
+import PathManager
+import os
 
 class ImageUnit(QtWidgets.QFrame):
     clicked=QtCore.Signal()
-    def __init__(self,unit_info:ScoringExpLFIInfo=None, logo_size=[80,80], icon_img=':/icons/res/image.png', icon_title='Add New al;sjdfl;ajdf;afjds;l', *args, **kwargs):
+    def __init__(self,unit_info:ScoringExpLFIInfo=None, logo_size=[80,80], icon_img=':/icons/res/image.png', icon_title='Add New One', *args, **kwargs):
         super().__init__(*args,**kwargs)
         self.logo_size=logo_size
         self.SetBasicParam(unit_info)
@@ -32,6 +34,23 @@ class ImageUnit(QtWidgets.QFrame):
         title_label_width=self.logo_title_label.width()
         title_label_height=self.logo_title_label.height()
         self.logo_title_label.setGeometry(QtCore.QRect((self.logo_size[1]-title_label_width)//2, self.logo_size[0], title_label_width, title_label_height))
+    
+    def mousePressEvent(self, event):
+        self.clicked.emit()
+        event.ignore()
+        return super().mousePressEvent(event) 
+    
+class ImageUnitInfoDisplay(QtWidgets.QFrame):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args,**kwargs)
+        self.unit_info=None
+        self.unit_layout=QtWidgets.QHBoxLayout()
+        self.setLayout(self.unit_layout)
+
+        self.unit_label=QtWidgets.QLabel(self)
+    
+    def UpdateUnitInfo(self, unit_info:ScoringExpLFIInfo):
+        pass
 
 class MaterialFolderFrame(QtWidgets.QFrame):
     def __init__(self, unit_list: AllScoringLFI, *args,**kwargs) -> None:
@@ -47,6 +66,13 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         self.item_index=[None]*(1+self.unit_list.exp_lfi_info_num) #[[row, col]]
         self.item_pos=[None]*(1+self.unit_list.exp_lfi_info_num) #[height,width]
         self.need_update=True
+
+        self.project_path=None
+        self.cache_root=None
+        self.folder_mode=None
+        self.cache_folder=None
+
+        self.unit_info_display=ImageUnitInfoDisplay(parent=self)
 
         self.MakeUnitLabels()
         self.UpdateLabelPos()
@@ -81,6 +107,24 @@ class MaterialFolderFrame(QtWidgets.QFrame):
     def resizeEvent(self, event):
         self.need_update=True
         self.UpdateLabelPos()
+
+    def MakeCache(self, project_path):
+        self.project_path=project_path
+        self.folder_mode=self.unit_list.mode # training or testing
+
+        self.cache_root=os.path.join(project_path+PathManager.cache_folder)
+        if not os.path.exists(self.cache_root):
+            os.makedirs(self.cache_root)
+        self.cache_folder=os.path.join(self.cache_path,self.folder_mode)
+        if not os.path.exists(self.cache_folder):
+            os.makedirs(self.cache_folder)
+        cache_img=os.path.join(self.cache_folder,PathManager.cache_thumbnail)
+
+    def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
+
+        event.ignore()
+        return super().mousePressEvent(event)
+
 
 
 class ProjectMenuLabel(QtWidgets.QFrame):
@@ -266,7 +310,7 @@ class ProjectDisplay(QtWidgets.QFrame):
 if __name__ == "__main__":
     app=QtWidgets.QApplication()
 
-    project_info=ProjectInfo('jpeg_5','../Projects/')
+    project_info=ProjectInfo('test_1','../Projects/')
 
     material_frame=MaterialFolderFrame(project_info.training_scoring_lfi_info)
 

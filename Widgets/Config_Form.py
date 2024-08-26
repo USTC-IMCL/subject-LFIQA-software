@@ -354,8 +354,8 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
 
         if self.exp_setting.two_folder_mode:
             skip_preprocessing=True
-            training_lfi_info=self.TwoFolderConfiguration(training_lfi_config)
-            test_lfi_info=self.TwoFolderConfiguration(test_lfi_config)
+            training_lfi_info=self.TwoFolderConfiguration(training_lfi_config,"training")
+            test_lfi_info=self.TwoFolderConfiguration(test_lfi_config,"test")
         else:
             training_lfi_info=self.GetConfigInfoWithSpecificJson(training_lfi_config)
             test_lfi_info=self.GetConfigInfoWithSpecificJson(test_lfi_config)
@@ -367,11 +367,11 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
 
         return True,None
 
-    def TwoFolderConfiguration(self,all_lfi_config):
+    def TwoFolderConfiguration(self,all_lfi_config,in_mode="training"):
         if not isinstance(all_lfi_config,str):
             logger.error("For the two folders configuration, the input should be a string!")
             return None
-        all_lfi_config=TwoFolderLFIInfo(all_lfi_config,self.exp_setting.input_video_type_str)
+        all_lfi_config=TwoFolderLFIInfo(all_lfi_config,self.exp_setting.input_video_type_str,in_mode)
         return all_lfi_config
     
     def GetConfigInfoWithSpecificJson(self,all_lfi_config):
