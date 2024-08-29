@@ -58,7 +58,7 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         self.resize(800,600)
         self.unit_size=[100,100] # height x width
         self.unit_list=unit_list
-        self.unit_list_labels=[]
+        self.unit_list_labels=[] # QLabels to show the LFI info
         self.h_space=10
         self.v_space=10
         self.unit_col_num=0
@@ -112,13 +112,18 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         self.project_path=project_path
         self.folder_mode=self.unit_list.mode # training or testing
 
-        self.cache_root=os.path.join(project_path+PathManager.cache_folder)
+        self.cache_root=os.path.join(project_path,PathManager.cache_folder)
         if not os.path.exists(self.cache_root):
             os.makedirs(self.cache_root)
         self.cache_folder=os.path.join(self.cache_path,self.folder_mode)
         if not os.path.exists(self.cache_folder):
             os.makedirs(self.cache_folder)
+        
+        for i in range(self.unit_list.GetLFINum()):
+            cur_scoring_
+
         cache_img=os.path.join(self.cache_folder,PathManager.cache_thumbnail)
+
 
     def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
 
