@@ -8,7 +8,7 @@ from ExpInfo import ProjectInfo, AllScoringLFI, ScoringExpLFIInfo
 
 class ImageUnit(QtWidgets.QFrame):
     clicked=QtCore.Signal()
-    def __init__(self,unit_info:ScoringExpLFIInfo=None, logo_size=[80,80], icon_img=':/icons/res/image.png', icon_title='Add New al;sjdfl;ajdf;afjds;l', *args, **kwargs):
+    def __init__(self,unit_info:ScoringExpLFIInfo=None, logo_size=[80,80], icon_img=':/icons/res/icon_add.png', icon_title='Add New', *args, **kwargs):
         super().__init__(*args,**kwargs)
         self.logo_size=logo_size
         self.SetBasicParam(unit_info)
@@ -69,7 +69,7 @@ class MaterialFolderFrame(QtWidgets.QFrame):
     def MakeUnitLabels(self):
         self.unit_list_labels.append(ImageUnit(parent=self))
         for i in range(self.unit_list.exp_lfi_info_num):
-            self.unit_list_labels.append(ImageUnit(unit_info=self.unit_list.GetScoringExpLFIInfo(i),parent=self))
+            self.unit_list_labels.append(ImageUnit(unit_info=self.unit_list.GetScoringExpLFIInfo(i),icon_img=':/icons/res/image.png',icon_title=f'LFI {i}',parent=self))
 
     def UpdateLabelPos(self):
         self.MakeColRowIndex()
@@ -211,8 +211,8 @@ class ProjectDisplay(QtWidgets.QFrame):
         self.right_stack.addWidget(self.material_widget)
         self.material_widget.setGeometry(0,0,right_stack_width,right_stack_height)
 
-        self.material_widget.addTab(QtWidgets.QFrame(),u"Training")
-        self.material_widget.addTab(QtWidgets.QFrame(),u"Testing")
+        self.material_widget.addTab(MaterialFolderFrame(),u"Training")
+        self.material_widget.addTab(MaterialFolderFrame(),u"Testing")
 
     def MakeSettingWidget(self):
         self.right_stack.addWidget(QtWidgets.QFrame())
@@ -242,8 +242,8 @@ class ProjectDisplay(QtWidgets.QFrame):
         self.right_stack.addWidget(self.material_widget)
         self.material_widget.setGeometry(0,0,right_stack_width,right_stack_height)
 
-        self.material_widget.addTab(QtWidgets.QFrame(),u"Training")
-        self.material_widget.addTab(QtWidgets.QFrame(),u"Testing")
+        self.material_widget.addTab(MaterialFolderFrame(self.cur_project.training_scoring_lfi_info),u"Training")
+        self.material_widget.addTab(MaterialFolderFrame(self.cur_project.test_scoring_lfi_info),u"Testing")
 
     def MakeSettingWidget(self):
         self.right_stack.addWidget(QtWidgets.QFrame())
@@ -268,9 +268,8 @@ if __name__ == "__main__":
 
     project_info=ProjectInfo('jpeg_5','../Projects/')
 
-    material_frame=MaterialFolderFrame(project_info.training_scoring_lfi_info)
+    project_display=ProjectDisplay(project_info)
 
-    material_frame.show()
-
+    project_display.show()
 
     sys.exit(app.exec())
