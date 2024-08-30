@@ -45,6 +45,12 @@ lambda_file="lambda.txt"
 # output folders
 subject_results_folder="SubjectResults"
 
+# cache folders
+cache_folder="Cache"
+training_cache_folder="Training"
+testing_cache_folder="Testing"
+cache_thumbnail='thumbnail.png'
+
 def VersionCMP(v1,v2):
     v1=v1.split('.')
     v2=v2.split('.')

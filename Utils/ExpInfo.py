@@ -908,12 +908,15 @@ class ScoringExpLFIInfo:
 
         self.view_dict={}
 
+        # cache path
+        self.cache_path=None
+        self.cache_thumbnail_file=None
 
     def InitFromLFIInfo(self,in_lfi_info:SingleLFIInfo,exp_setting:ExpSetting,exp_name:str,mode="training",cmp_index=0):
         self.img_height=in_lfi_info.img_height
         self.img_width=in_lfi_info.img_width
         self.angular_height=in_lfi_info.angular_height
-        self.angular_width=in_lfi_info.angular_width-1
+        self.angular_width=in_lfi_info.angular_width # TODO Check the -1 carefully
 
         self.min_height=in_lfi_info.min_height
         self.max_height=in_lfi_info.max_height
