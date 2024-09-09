@@ -50,6 +50,7 @@ cache_folder="Cache"
 training_cache_folder="Training"
 testing_cache_folder="Testing"
 cache_thumbnail='thumbnail.png'
+cache_desc='LFIMapping'
 
 def VersionCMP(v1,v2):
     v1=v1.split('.')
