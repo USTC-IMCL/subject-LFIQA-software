@@ -7,10 +7,11 @@ import UI_res_rc
 from ExpInfo import ProjectInfo, AllScoringLFI, ScoringExpLFIInfo
 import PathManager
 import os
+import pickle
 
 class ImageUnit(QtWidgets.QFrame):
     clicked=QtCore.Signal()
-    def __init__(self,unit_info:ScoringExpLFIInfo=None, logo_size=[80,80], icon_img=':/icons/res/image.png', icon_title='Add New One', *args, **kwargs):
+    def __init__(self,unit_info:ScoringExpLFIInfo=None, logo_size=[80,80], icon_img=':/icons/res/icon_add.png', icon_title='New One', *args, **kwargs):
         super().__init__(*args,**kwargs)
         self.logo_size=logo_size
         self.SetBasicParam(unit_info)
@@ -118,15 +119,35 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         self.cache_folder=os.path.join(self.cache_path,self.folder_mode)
         if not os.path.exists(self.cache_folder):
             os.makedirs(self.cache_folder)
-        
+
+        cache_file=os.path.join(self.cache_folder,PathManager.cache_desc)
+        if os.path.exists(cache_file):
+            with open(cache_file,'rb') as fid:
+                all_mapping=pickle.load(fid)
+        else:
+            cache_desc_fid=open(cache_file,'wb')
+            all_mapping={}
+
         for i in range(self.unit_list.GetLFINum()):
-            cur_scoring_
+            cur_scoring_lfi=self.unit_list.GetScoringExpLFIInfo(i)
+            cur_cache_folder=os.path.join(self.cache_folder,f'LFI_{i}')
+            cur_cache_file=os.path.join(cur_cache_folder,PathManager.cache_desc)
+            if not os.path.exists(cur_cache_folder):
+                os.makedirs(cur_cache_folder)
+            cache_img=os.path.join(cur_cache_folder,PathManager.cache_thumbnail)
+            cur_scoring_lfi.MakeThumbnail(cache_img)
 
-        cache_img=os.path.join(self.cache_folder,PathManager.cache_thumbnail)
-
-
+            cur_cache_fid=open(cur_cache_file,'wb')
+            cur_mapping=[i,cur_cache_folder,cur_scoring_lfi.show_name]
+            pickle.dump(cur_mapping,cur_cache_fid)
+            all_mapping[i]=cur_mapping
+            all_mapping[cur_scoring_lfi.show_name]=cur_mapping
+            cur_cache_fid.close()
+        
+        pickle.dump(all_mapping,cache_desc_fid)
+        cache_desc_fid.close()
+    
     def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
-
         event.ignore()
         return super().mousePressEvent(event)
 
@@ -179,6 +200,8 @@ class ProjectDisplay(QtWidgets.QFrame):
 
         self.main_layout=QtWidgets.QHBoxLayout()
         self.setLayout(self.main_layout)
+
+        self.is_editable=True
 
         #self.h_splitter=QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal,self)
         #self.main_layout.addWidget(self.h_splitter)
@@ -251,6 +274,7 @@ class ProjectDisplay(QtWidgets.QFrame):
     def MakeRightPanel(self):
         self.MakeMaterialWidget()
         self.MakeSettingWidget()
+        self.MakeSubjectsWidget()
 
     def MakeMaterialWidget(self):
         right_stack_width=self.right_stack.width()
@@ -266,22 +290,47 @@ class ProjectDisplay(QtWidgets.QFrame):
     def MakeSettingWidget(self):
         self.right_stack.addWidget(QtWidgets.QFrame())
         cur_widget=self.right_stack.widget(2) #currentWidget()
-        cur_widget.setStyleSheet("background-color: lightblue;")
+
+        display_label=QtWidgets.QLabel("Display Type: ",parent=cur_widget)
+        display_label_box=QtWidgets.QComboBox(cur_widget)
+        display_label_box.addItem("2D")
+        display_label_box.addItem("3D | Left & Right")
+        display_label_box.addItem("3D | Top & Bottom")
+        display_label_box.addItem("3D | Full")
+
+        layout=QtWidgets.QVBoxLayout()
+        layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignLeft)
+        cur_widget.setLayout(layout)
+
+        display_label_layout=QtWidgets.QHBoxLayout()
+        display_label_layout.addWidget(display_label)
+        display_label_layout.addWidget(display_label_box)
+
+        layout.addLayout(display_label_layout)
+
         
     def MakeSubjectsWidget(self):
         self.right_stack.addWidget(QtWidgets.QFrame())
 
+        cur_widget=self.right_stack.widget(3) #currentWidget()
 
-    def ActivateMenuLabel(self,index):
-        self.right_stack.setCurrentIndex(index+1)
-        for label in self.all_menu_labels:
-            if label.index==index:
-                continue
-            else:
-                label.DeActive()
+        layout=QtWidgets.QVBoxLayout()
+        layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignLeft)
+        cur_widget.setLayout(layout)
 
-        self.MakeMaterialWidget()
-        self.MakeSettingWidget()
+        subject_unit=ImageUnit(icon_title="Shengyang",icon_img=":/icons/res/subject.png")
+        subject_unit.setParent(cur_widget)
+
+        subject_unit.setGeometry(0,0,100,100)
+
+    def contextMenuEvent(self, event):
+        menu=QtWidgets.QMenu(self)
+
+        action1 = menu.addAction("Show in folder")
+        action2 = menu.addAction("Open File")
+        action3 = menu.addAction("Delete")
+
+        menu.exec(event.globalPos())
 
     def MakeMaterialWidget(self):
         right_stack_width=self.right_stack.width()
@@ -293,15 +342,6 @@ class ProjectDisplay(QtWidgets.QFrame):
 
         self.material_widget.addTab(MaterialFolderFrame(self.cur_project.training_scoring_lfi_info),u"Training")
         self.material_widget.addTab(MaterialFolderFrame(self.cur_project.test_scoring_lfi_info),u"Testing")
-
-    def MakeSettingWidget(self):
-        self.right_stack.addWidget(QtWidgets.QFrame())
-        cur_widget=self.right_stack.widget(2) #currentWidget()
-        cur_widget.setStyleSheet("background-color: lightblue;")
-        
-    def MakeSubjectsWidget(self):
-        self.right_stack.addWidget(QtWidgets.QFrame())
-
 
     def ActivateMenuLabel(self,index):
         self.right_stack.setCurrentIndex(index+1)
@@ -318,6 +358,7 @@ if __name__ == "__main__":
     project_info=ProjectInfo('test_1','../Projects/')
 
     project_display=ProjectDisplay(project_info)
+    project_display.resize(800,600)
 
     project_display.show()
 

@@ -907,10 +907,12 @@ class ScoringExpLFIInfo:
         self.show_path_manager=None
 
         self.view_dict={}
+        self.all_depth_values=None
 
-        # cache path
+        # cache path, for project management display
         self.cache_path=None
         self.cache_thumbnail_file=None
+        self.show_name=None
 
     def InitFromLFIInfo(self,in_lfi_info:SingleLFIInfo,exp_setting:ExpSetting,exp_name:str,mode="training",cmp_index=0):
         self.img_height=in_lfi_info.img_height
@@ -935,6 +937,9 @@ class ScoringExpLFIInfo:
 
         self.angular_format=in_lfi_info.angular_format
         self.depth_path=in_lfi_info.depth_path
+
+        if self.depth_path is not None:
+            self.all_depth_values=self.GetAllPossibleDepthVal()  
 
         self.lfi_name=in_lfi_info.lfi_name
         in_path=in_lfi_info.view_path
@@ -980,9 +985,30 @@ class ScoringExpLFIInfo:
         self.methodology=exp_setting.comparison_type
         self.exp_name=exp_name
 
+        if self.exp_name is not None:
+            self.show_name = self.exp_name
+        else:
+            self.show_name=self.passive_view_video_path
+
     def GetThumbnail(self,in_video,out_img):
         ffmpeg_cmd=f"{PathManager.ffmpeg_path} -i {in_video} -ss 00:00:00 -frames:v 1 {out_img}"
         os.system(ffmpeg_cmd)
+
+    def MakeThumbnail(self,out_img):
+        if self.active_view_path is not None:
+            show_view=self.GetActiveView(0,0)
+            shutil.copy(show_view,out_img)
+            return
+        elif self.active_refocusing_path is not None:
+            show_view=self.GetRefocusImg(self.all_depth_values[0])
+            shutil.copy(show_view,out_img)
+            return
+        elif self.passive_view_video_path is not None:
+            self.GetThumbnail(self.passive_view_video_path,out_img)
+            return
+        elif self.passive_refocusing_video_path is not None:
+            self.GetThumbnail(self.passive_refocusing_video_path,out_img)
+            return
     
     def GetViewDict(self,all_files,img_post_fix):
         for file_name in all_files:
@@ -1022,7 +1048,6 @@ class ScoringExpLFIInfo:
 
         all_depth_values=unique(depth_map)
         return all_depth_values
-    
 
 class AllScoringLFI:
     def __init__(self,in_mode):
