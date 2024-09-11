@@ -949,6 +949,14 @@ class ScoringExpLFIInfo:
         self.show_name=None
         self.show_name=None
 
+        self.project_ref=None
+
+    def SetProjectInfoRef(self,project_info):
+        self.project_ref=weakref.ref(project_info)
+    
+    def GetProjectInfo(self):
+        return self.project_ref()
+
     def InitFromLFIInfo(self,in_lfi_info:SingleLFIInfo,exp_setting:ExpSetting,exp_name:str,mode="training",cmp_index=0):
         self.img_height=in_lfi_info.img_height
         self.img_width=in_lfi_info.img_width
@@ -1042,6 +1050,53 @@ class ScoringExpLFIInfo:
         
         largest_post_fix=all_post_fix[max(all_post_fix, key=all_post_fix.get)]
         return largest_post_fix
+    
+    def CheckAllInput(self):
+        if self.CheckActiveRefocusing() and self.CheckPassiveRefocusing() and self.CheckActiveView() and self.CheckPassiveView():
+            return True
+        else:
+            return False    
+    
+    def CheckPassiveRefocusing(self):
+        if self.passive_refocusing_video_path is not None:
+            return True
+        passive_video_name=self.passive_view_video_path.split('/')[-1]
+        passive_video_post_fix=passive_video_name.split('.')[-1]
+
+        if passive_video_post_fix in VideoSaveTypeDict.values():
+            return True
+        else:
+            logger.error(f'Can not recogize the input video type {passive_video_post_fix}, or it is not supported.')
+            return False 
+    
+    def CheckActiveRefocusing(self):
+        if self.active_refocusing_path is not None:
+            return True
+    
+    def CheckPassiveView(self):
+        if self.passive_view_video_path is not None:
+            return True
+
+    def CheckActiveView(self):
+        if self.active_view_path is not None:
+            return True
+        
+        all_files=os.listdir(self.active_view_path)
+
+        if len(all_files) == 0:
+            logger.error("The LFI active view folder is empty!")
+            return False
+        
+        all_views=[]
+        for file_name in all_files:
+            if self.img_post_fix in file_name:
+                all_views.append(file_name)
+        if len(all_views) == 0:
+            logger.error("LFI has no active view!")
+            return False
+        
+        self.GetViewDict(all_views,self.img_post_fix)
+        return True
 
     def GetThumbnail(self,in_video,out_img):
         ffmpeg_cmd=f"{PathManager.ffmpeg_path} -i {in_video} -ss 00:00:00 -frames:v 1 {out_img}"
@@ -1183,6 +1238,10 @@ class AllScoringLFI:
         cur_scoring_lfi_info=ScoringExpLFIInfo()
         cur_scoring_lfi_info.InitFromLFIInfo(lfi_info,exp_setting,exp_name,self.mode,cmp_index)
         self.all_exp_lfi_info.append(cur_scoring_lfi_info)
+    
+    def AddScoringLFI(self,scoring_lfi_info:ScoringExpLFIInfo):
+        self.exp_lfi_info_num+=1
+        self.all_exp_lfi_info.append(scoring_lfi_info)
 
     
 class TwoFolderLFIInfo(AllScoringLFI):
