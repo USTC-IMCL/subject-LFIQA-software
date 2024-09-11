@@ -313,8 +313,19 @@ class MaterialFolderFrame(QtWidgets.QFrame):
 
 
     def ConfirmAddNewLFI(self,in_dict):
+        '''
+        in_dict:
+            refocusing_active: str
+            refocusing_passive: str
+            view_changing_active: str
+            view_changing_passive: str
+        '''
         new_scoring_lfi=ScoringExpLFIInfo()
-        new_scoring_lfi.active
+        new_scoring_lfi.active_view_path=in_dict['view_changing_active']
+        new_scoring_lfi.active_refocusing_path=in_dict['refocusing_active']
+        new_scoring_lfi.passive_refocusing_video_path=in_dict['refocusing_passive']
+        new_scoring_lfi.passive_view_video_path=in_dict['view_changing_passive']
+
 
     def CancleAddNewLFI(self):
         self.add_form=None
@@ -487,6 +498,8 @@ class ProjectDisplay(QtWidgets.QFrame):
 
         self.is_editable=True
 
+        self.is_editable=True
+
         #self.h_splitter=QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal,self)
         #self.main_layout.addWidget(self.h_splitter)
 
@@ -581,10 +594,47 @@ class ProjectDisplay(QtWidgets.QFrame):
 
         layout.addLayout(display_label_layout)
 
+
+        display_label=QtWidgets.QLabel("Display Type: ",parent=cur_widget)
+        display_label_box=QtWidgets.QComboBox(cur_widget)
+        display_label_box.addItem("2D")
+        display_label_box.addItem("3D | Left & Right")
+        display_label_box.addItem("3D | Top & Bottom")
+        display_label_box.addItem("3D | Full")
+
+        layout=QtWidgets.QVBoxLayout()
+        layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignLeft)
+        cur_widget.setLayout(layout)
+
+        display_label_layout=QtWidgets.QHBoxLayout()
+        display_label_layout.addWidget(display_label)
+        display_label_layout.addWidget(display_label_box)
+
+        layout.addLayout(display_label_layout)
+
         
     def MakeSubjectsWidget(self):
         self.right_stack.addWidget(QtWidgets.QFrame())
 
+        cur_widget=self.right_stack.widget(3) #currentWidget()
+
+        layout=QtWidgets.QVBoxLayout()
+        layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignLeft)
+        cur_widget.setLayout(layout)
+
+        subject_unit=ImageUnit(icon_title="Shengyang",icon_img=":/icons/res/subject.png")
+        subject_unit.setParent(cur_widget)
+
+        subject_unit.setGeometry(0,0,100,100)
+
+    def contextMenuEvent(self, event):
+        menu=QtWidgets.QMenu(self)
+
+        action1 = menu.addAction("Show in folder")
+        action2 = menu.addAction("Open File")
+        action3 = menu.addAction("Delete")
+
+        menu.exec(event.globalPos())
         cur_widget=self.right_stack.widget(3) #currentWidget()
 
         layout=QtWidgets.QVBoxLayout()
@@ -633,6 +683,7 @@ if __name__ == "__main__":
     project_info=ProjectInfo('test_1','../Projects/')
 
     project_display=ProjectDisplay(project_info)
+    project_display.resize(800,600)
     project_display.resize(800,600)
 
     project_display.show()
