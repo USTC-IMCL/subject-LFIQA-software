@@ -165,6 +165,7 @@ class NewLFISelector(QtWidgets.QFrame):
 class ImageUnit(QtWidgets.QFrame):
     clicked=QtCore.Signal()
     def __init__(self,unit_info:ScoringExpLFIInfo=None, logo_size=[80,80], icon_img=':/icons/res/icon_add.png', icon_title='New One', *args, **kwargs):
+    def __init__(self,unit_info:ScoringExpLFIInfo=None, logo_size=[80,80], icon_img=':/icons/res/icon_add.png', icon_title='New One', *args, **kwargs):
         super().__init__(*args,**kwargs)
         self.logo_size=logo_size
         self.SetBasicParam(unit_info)
