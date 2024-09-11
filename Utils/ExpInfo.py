@@ -939,10 +939,13 @@ class ScoringExpLFIInfo:
 
         self.view_dict={}
         self.all_depth_values=None
+        self.all_depth_values=None
 
+        # cache path, for project management display
         # cache path, for project management display
         self.cache_path=None
         self.cache_thumbnail_file=None
+        self.show_name=None
         self.show_name=None
 
     def InitFromLFIInfo(self,in_lfi_info:SingleLFIInfo,exp_setting:ExpSetting,exp_name:str,mode="training",cmp_index=0):
@@ -968,6 +971,9 @@ class ScoringExpLFIInfo:
 
         self.angular_format=in_lfi_info.angular_format
         self.depth_path=in_lfi_info.depth_path
+
+        if self.depth_path is not None:
+            self.all_depth_values=self.GetAllPossibleDepthVal()  
 
         if self.depth_path is not None:
             self.all_depth_values=self.GetAllPossibleDepthVal()  
@@ -1030,6 +1036,22 @@ class ScoringExpLFIInfo:
     def GetThumbnail(self,in_video,out_img):
         ffmpeg_cmd=f"{PathManager.ffmpeg_path} -i {in_video} -ss 00:00:00 -frames:v 1 {out_img}"
         os.system(ffmpeg_cmd)
+
+    def MakeThumbnail(self,out_img):
+        if self.active_view_path is not None:
+            show_view=self.GetActiveView(0,0)
+            shutil.copy(show_view,out_img)
+            return
+        elif self.active_refocusing_path is not None:
+            show_view=self.GetRefocusImg(self.all_depth_values[0])
+            shutil.copy(show_view,out_img)
+            return
+        elif self.passive_view_video_path is not None:
+            self.GetThumbnail(self.passive_view_video_path,out_img)
+            return
+        elif self.passive_refocusing_video_path is not None:
+            self.GetThumbnail(self.passive_refocusing_video_path,out_img)
+            return
 
     def MakeThumbnail(self,out_img):
         if self.active_view_path is not None:
