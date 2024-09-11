@@ -155,6 +155,7 @@ class NewLFISelector(QtWidgets.QFrame):
             return
         self.hide()
         self.on_confirm.emit(self.ret_dict)
+        self.deleteLater()
 
     def CancelClicked(self):
         self.hide()
@@ -164,12 +165,12 @@ class NewLFISelector(QtWidgets.QFrame):
 
 class ImageUnit(QtWidgets.QFrame):
     clicked=QtCore.Signal()
-    def __init__(self,unit_info:ScoringExpLFIInfo=None, logo_size=[80,80], icon_img=':/icons/res/icon_add.png', icon_title='New One', *args, **kwargs):
-    def __init__(self,unit_info:ScoringExpLFIInfo=None, logo_size=[80,80], icon_img=':/icons/res/icon_add.png', icon_title='New One', *args, **kwargs):
+    def __init__(self,unit_info:ScoringExpLFIInfo=None, logo_size=[80,80], icon_img=':/icons/res/icon_add.png', icon_title='New One',unit_index=0, *args, **kwargs):
         super().__init__(*args,**kwargs)
         self.logo_size=logo_size
         self.SetBasicParam(unit_info)
         self.InitIconUI(icon_img, icon_title)
+        self.index=unit_index
         
     def SetBasicParam(self, unit_info:ScoringExpLFIInfo=None):
         self.scoring_info=unit_info
@@ -263,7 +264,7 @@ class MaterialFolderFrame(QtWidgets.QFrame):
             self.need_update=False
             for i in range(self.unit_list.exp_lfi_info_num+1):
                 self.unit_list_labels[i].setGeometry(self.item_pos[i][1],self.item_pos[i][0],self.unit_size[1],self.unit_size[0])
-
+    
     def resizeEvent(self, event):
         self.need_update=True
         self.UpdateLabelPos()
@@ -311,7 +312,7 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         self.add_form.resize(400,150)
         self.add_form.show()
         self.add_form.on_confirm.connect(self.ConfirmAddNewLFI)
-
+        self.add_form.on_cancel.connect(self.CancleAddNewLFI)
 
     def ConfirmAddNewLFI(self,in_dict):
         '''
@@ -326,7 +327,17 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         new_scoring_lfi.active_refocusing_path=in_dict['refocusing_active']
         new_scoring_lfi.passive_refocusing_video_path=in_dict['refocusing_passive']
         new_scoring_lfi.passive_view_video_path=in_dict['view_changing_passive']
+        
+        be_successful=new_scoring_lfi.CheckAllInput()
 
+
+        if not be_successful:
+            logger.error('Invalid input! Adding terminates.')
+            return
+        else:
+            self.unit_list.AddScoringLFI(new_scoring_lfi)
+            self.unit_list_labels.append(ImageUnit(unit_info=new_scoring_lfi,icon_img=':/icons/res/image.png',icon_title=f'LFI {self.unit_list.exp_lfi_info_num}',parent=self))
+            self.UpdateLabelPos()
 
     def CancleAddNewLFI(self):
         self.add_form=None
