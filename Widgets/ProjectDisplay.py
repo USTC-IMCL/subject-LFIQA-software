@@ -28,6 +28,9 @@ class ExpSettingWidget(QtWidgets.QFrame):
         # scoring control
 
 
+
+
+
 class NewLFISelector(QtWidgets.QFrame):
     on_cancel=QtCore.Signal()
     on_confirm=QtCore.Signal(dict)
