@@ -6,6 +6,7 @@ sys.path.append('../UI')
 import UI_res_rc
 from ExpInfo import ProjectInfo, AllScoringLFI, ScoringExpLFIInfo, ExpSetting, FeatureType
 import ExpInfo
+from CollapsibleContainer import Container
 import PathManager
 import os
 import shutil
