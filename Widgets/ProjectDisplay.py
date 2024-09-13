@@ -29,6 +29,7 @@ class ExpSettingWidget(QtWidgets.QFrame):
 
 
 
+
 class NewLFISelector(QtWidgets.QFrame):
     on_cancel=QtCore.Signal()
     on_confirm=QtCore.Signal(dict)
