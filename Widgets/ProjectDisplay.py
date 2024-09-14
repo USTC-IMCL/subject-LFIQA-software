@@ -6,7 +6,7 @@ sys.path.append('../UI')
 import UI_res_rc
 from ExpInfo import ProjectInfo, AllScoringLFI, ScoringExpLFIInfo, ExpSetting, FeatureType
 import ExpInfo
-from CollapsibleContainer import Container
+from CollapsibleContainer import Container, EditableLabel
 import PathManager
 import os
 import shutil
@@ -17,15 +17,63 @@ logger = logging.getLogger("LogWindow")
 class ExpSettingWidget(QtWidgets.QFrame):
     def __init__(self, exp_setting: ExpSetting,  *args, **kwargs):
         self.exp_setting=exp_setting
+
+        self.b_editable=True
+        # projcet info container & settings
+        self.project_container=Container('Project Information')
+        project_layout=QtWidgets.QVBoxLayout()
+
         project=exp_setting.GetProjectInfo()
         self.project_name=project_info.project_name
         self.project_version=project_info.project_version
+
+        self.project_container.setLayout(project_layout)
+        self.project_name_label=EditableLabel()
+        self.project_name_label.setText(f"Project Name: {self.project_name}")
+        project_layout.addWidget(self.project_name_label)
+
+        project_layout.addWidget(QtWidgets.QLabel().setText(f"Project Version: {self.project_version}"))
+
+        feature_list=[FeatureType.Active, FeatureType.Passive, FeatureType.None_Type]
+        self.refocusing_type=QtWidgets.QComboBox()
+        for feature in feature_list:
+            self.refocusing_type.addItem(feature.name)
+        self.refocusing_type.setCurrentIndex(exp_setting.refocusing_type.value)
+        self.refocusing_type.setEditable(False)
+
+        self.view_changing_type=QtWidgets.QComboBox()
+        for feature in feature_list:
+            self.view_changing_type.addItem(feature.name)
+        self.view_changing_type.setCurrentIndex(exp_setting.view_changing_type.value)
+        self.view_changing_type.setEditable(False)
+
+
+        comparison_list=[ExpInfo.ComparisonType.DoubleStimuli, ExpInfo.ComparisonType.SingleStimuli, ExpInfo.ComparisonType.PairComparison]
+        self.comparison_type=QtWidgets.QComboBox()
+        for comparison in comparison_list:
+            self.comparison_type.addItem(comparison.name)
+        self.comparison_type.setCurrentIndex(exp_setting.comparison_type.value)
+        self.comparison_type.setEditable(False)
         
-        # play control
+        # play control container
+        self.player_control_container=Container("Player Control")
+        player_control_layout=QtWidgets.QVBoxLayout()
+        self.player_control_container.setLayout(player_control_layout)
         self.auto_play=exp_setting.auto_play
         self.auto_transition=exp_setting.auto_transition
-
+        
         # scoring control
+        self.scoring_control_container=Container("Scoring Control")
+        scoring_layout=QtWidgets.QVBoxLayout()
+        self.scoring_control_container.setLayout(scoring_layout)
+
+
+    def SetEditable(self, b_editable):
+        self.b_editable=b_editable
+        
+
+
+        
 
 
 
@@ -712,9 +760,14 @@ if __name__ == "__main__":
 
     project_info=ProjectInfo('test_1','../Projects/')
 
-    project_display=ProjectDisplay(project_info)
-    project_display.resize(800,600)
+    #project_display=ProjectDisplay(project_info)
+    #project_display.resize(800,600)
 
-    project_display.show()
+    #project_display.show()
+
+    exp_setting_display=ExpSettingWidget(project_info)
+    exp_setting_display.resize(800,600)
+
+    exp_setting_display.show()
 
     sys.exit(app.exec())
