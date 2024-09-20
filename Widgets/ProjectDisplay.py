@@ -16,6 +16,7 @@ logger = logging.getLogger("LogWindow")
 
 class ExpSettingWidget(QtWidgets.QFrame):
     def __init__(self, exp_setting: ExpSetting,  *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.exp_setting=exp_setting
 
         self.b_editable=True
@@ -32,7 +33,9 @@ class ExpSettingWidget(QtWidgets.QFrame):
         self.project_name_label.setText(f"Project Name: {self.project_name}")
         project_layout.addWidget(self.project_name_label)
 
-        project_layout.addWidget(QtWidgets.QLabel().setText(f"Project Version: {self.project_version}"))
+        project_version_label=QtWidgets.QLabel()
+        project_version_label.setText(f"Project Version: {self.project_version}")
+        project_layout.addWidget(project_version_label)
 
         feature_list=[FeatureType.Active, FeatureType.Passive, FeatureType.None_Type]
         self.refocusing_type=QtWidgets.QComboBox()
@@ -760,12 +763,16 @@ if __name__ == "__main__":
 
     project_info=ProjectInfo('test_1','../Projects/')
 
+    exp_setting=project_info.exp_setting
+
+    exp_setting.SetProjectInfo(project_info)
+
     #project_display=ProjectDisplay(project_info)
     #project_display.resize(800,600)
 
     #project_display.show()
 
-    exp_setting_display=ExpSettingWidget(project_info)
+    exp_setting_display=ExpSettingWidget(exp_setting)
     exp_setting_display.resize(800,600)
 
     exp_setting_display.show()
