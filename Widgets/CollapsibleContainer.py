@@ -1,5 +1,5 @@
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QSizePolicy, QStackedLayout, QSpacerItem, QVBoxLayout
+from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QSizePolicy, QStackedLayout, QSpacerItem, QVBoxLayout, QFrame
 from PySide6 import QtCore, QtWidgets
 
 
@@ -128,7 +128,7 @@ class EditableLabel(QtWidgets.QWidget):
         self.lineEdit.blockSignals(True)
         self.label.blockSignals(False)
 
-class Header(QWidget):
+class Header(QFrame):
     """
     Header class for collapsible group
     """
@@ -141,10 +141,13 @@ class Header(QWidget):
         """
         super(Header, self).__init__()
         self.content = content_widget
-        self.expand_ico = ">"   
-        self.collapse_ico = "v"  
+        self.collapse_ico = chr(9656)
+        self.expand_ico = chr(9663)
         self.setSizePolicy(QSizePolicy.Expanding,
                            QSizePolicy.Fixed)
+
+        self.header_color="rgba(0,100,200,128)"
+        self.icon_font_size = 22
 
         # Create a stacked layout to hold the background and widget
         stacked = QStackedLayout(self)
@@ -152,7 +155,7 @@ class Header(QWidget):
         # Create a background label with a specific style sheet
         background = QLabel()
         background.setStyleSheet(
-            "QLabel{ background-color: rgb(93, 93, 93); padding-top: -20px; border-radius:2px}")
+            f"QLabel{{ background-color: {self.header_color}; padding-top: -20px; border-radius:2px}}")
 
         # Create a widget and a layout to hold the icon and label
         widget = QWidget()
@@ -162,7 +165,7 @@ class Header(QWidget):
         self.icon = QLabel()
         self.icon.setText(self.expand_ico)
         self.icon.setStyleSheet(
-            "QLabel { font-weight: bold; font-size: 20px; color: #000000 }")
+            f"QLabel {{ font-weight: bold; font-size: {self.icon_font_size}px; color: #000000 }}")
         layout.addWidget(self.icon)
 
         # Add the icon and the label to the layout and set margins
@@ -188,6 +191,8 @@ class Header(QWidget):
         # Set the minimum height of the background based on the layout height
         background.setMinimumHeight(layout.sizeHint().height() * 1.5)
 
+        self.collapse()
+
     def mousePressEvent(self, *args):
         """Handle mouse events, call the function to toggle groups"""
         # Toggle between expand and collapse based on the visibility of the content widget
@@ -196,15 +201,14 @@ class Header(QWidget):
     def expand(self):
         """Expand the collapsible group"""
         self.content.setVisible(True)
-        self.icon.setText(self.collapse_ico)  # Set text instead of pixmap
+        self.icon.setText(self.expand_ico)  # Set text instead of pixmap
 
     def collapse(self):
         """Collapse the collapsible group"""
         self.content.setVisible(False)
-        self.icon.setText(self.expand_ico)
-
-
-class Container(QWidget):
+        self.icon.setText(self.collapse_ico)
+    
+class Container(QFrame):
     """Class for creating a collapsible group similar to how it is implement in Maya
 
         Examples:
@@ -229,21 +233,24 @@ class Container(QWidget):
             layout = QVBoxLayout(self) # Create a QVBoxLayout instance and pass the current object as the parent
             layout.setContentsMargins(0, 0, 0, 0) # Set the margins of the layout to 0
     
-            self._content_widget = QWidget() # Create a QWidget instance and assign it to the instance variable _content_widget
+            self._content_widget = QFrame() # Create a QWidget instance and assign it to the instance variable _content_widget
     
             if color_background:
                 # If color_background is True, set the stylesheet of _content_widget to have a lighter background color
-                self._content_widget.setStyleSheet(".QWidget{background-color: rgb(73, 73, 73); "
+                self._content_widget.setStyleSheet(".QWidget{background-color: rgb(100,100,100,150); "
                                                    "margin-left: 2px; padding-top: 20px; margin-right: 2px}")
     
             header = Header(name, self._content_widget) # Create a Header instance and pass the name and _content_widget as arguments
             layout.addWidget(header) # Add the header to the layout
             layout.addWidget(self._content_widget) # Add the _content_widget to the layout
+            self._content_widget.setStyleSheet(".QFrame{background-color: rgba(0,0,0,80); "
+                                               "margin-left: 2px; padding-top: 20px; margin-right: 2px}")
     
            
             self.collapse = header.collapse 
             self.expand = header.expand 
             self.toggle = header.mousePressEvent 
+
     
     @property
     def contentWidget(self):
@@ -252,6 +259,7 @@ class Container(QWidget):
             Returns: Content widget
             """
             return self._content_widget
+    
 
 if __name__ == "__main__":
      pass

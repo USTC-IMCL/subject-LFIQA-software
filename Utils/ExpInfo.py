@@ -18,6 +18,7 @@ import PlayList
 logger=logging.getLogger("LogWindow")
 
 class CompTypes(IntEnum):
+    '''compression types, not comparison'''
     Origin=0
     Distorted=1
     
@@ -731,7 +732,8 @@ class ProjectInfo:
             self.project_path=pickle.load(fid)
             self.training_LFI_info=pickle.load(fid)
             self.test_LFI_info=pickle.load(fid)
-            self.exp_setting=pickle.load(fid)
+            exp_setting=pickle.load(fid)
+            self.exp_setting=ExpSetting(exp_setting.lfi_features,exp_setting.comparison_type,exp_setting.save_format,exp_setting.post_processing,exp_setting.two_folder_mode)
             self.subject_list=pickle.load(fid)
         
         self.InitAllScoringLFIInfo()

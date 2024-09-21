@@ -20,36 +20,11 @@ class ExpSettingWidget(QtWidgets.QFrame):
         self.exp_setting=exp_setting
 
         self.b_editable=True
-        # projcet info container & settings
-        self.project_container=Container('Project Information')
-        project_layout=QtWidgets.QVBoxLayout()
+        self.widget_layout=QtWidgets.QVBoxLayout()
+        self.widget_layout.setAlignment(QtCore.Qt.AlignTop)
+        self.setLayout(self.widget_layout)
 
-        project=exp_setting.GetProjectInfo()
-        self.project_name=project_info.project_name
-        self.project_version=project_info.project_version
-
-        self.project_container.setLayout(project_layout)
-        self.project_name_label=EditableLabel()
-        self.project_name_label.setText(f"Project Name: {self.project_name}")
-        project_layout.addWidget(self.project_name_label)
-
-        project_version_label=QtWidgets.QLabel()
-        project_version_label.setText(f"Project Version: {self.project_version}")
-        project_layout.addWidget(project_version_label)
-
-        feature_list=[FeatureType.Active, FeatureType.Passive, FeatureType.None_Type]
-        self.refocusing_type=QtWidgets.QComboBox()
-        for feature in feature_list:
-            self.refocusing_type.addItem(feature.name)
-        self.refocusing_type.setCurrentIndex(exp_setting.refocusing_type.value)
-        self.refocusing_type.setEditable(False)
-
-        self.view_changing_type=QtWidgets.QComboBox()
-        for feature in feature_list:
-            self.view_changing_type.addItem(feature.name)
-        self.view_changing_type.setCurrentIndex(exp_setting.view_changing_type.value)
-        self.view_changing_type.setEditable(False)
-
+        self.MakeProjectInfoContainer()
 
         comparison_list=[ExpInfo.ComparisonType.DoubleStimuli, ExpInfo.ComparisonType.SingleStimuli, ExpInfo.ComparisonType.PairComparison]
         self.comparison_type=QtWidgets.QComboBox()
@@ -69,6 +44,43 @@ class ExpSettingWidget(QtWidgets.QFrame):
         self.scoring_control_container=Container("Scoring Control")
         scoring_layout=QtWidgets.QVBoxLayout()
         self.scoring_control_container.setLayout(scoring_layout)
+
+
+        self.widget_layout.addWidget(self.project_container)
+        self.widget_layout.addWidget(self.player_control_container)
+        self.widget_layout.addWidget(self.scoring_control_container)
+
+    def MakeProjectInfoContainer(self):
+        # projcet info container & settings
+        self.project_container=Container('Project Information',color_background=False)
+        project_layout=QtWidgets.QVBoxLayout(self.project_container.contentWidget)
+
+        project_info=exp_setting.GetProjectInfo()
+        self.project_name=project_info.project_name
+        self.project_version=project_info.project_version
+
+        self.project_name_label=EditableLabel()
+        self.project_name_label.setText(f"Project Name: {self.project_name}")
+        project_layout.addWidget(self.project_name_label)
+
+        project_version_label=EditableLabel()
+        project_version_label.setText(f"Project Version: {self.project_version}")
+        project_layout.addWidget(project_version_label)
+
+        feature_list=[FeatureType.Active, FeatureType.Passive, FeatureType.None_Type]
+        self.refocusing_type=QtWidgets.QComboBox()
+        for feature in feature_list:
+            self.refocusing_type.addItem(feature.name)
+        self.refocusing_type.setCurrentIndex(exp_setting.refocusing_type.value)
+        self.refocusing_type.setEditable(False)
+        project_layout.addWidget(self.refocusing_type)
+
+        self.view_changing_type=QtWidgets.QComboBox()
+        for feature in feature_list:
+            self.view_changing_type.addItem(feature.name)
+        self.view_changing_type.setCurrentIndex(exp_setting.view_changing_type.value)
+        self.view_changing_type.setEditable(False)
+        project_layout.addWidget(self.view_changing_type)
 
 
     def SetEditable(self, b_editable):
