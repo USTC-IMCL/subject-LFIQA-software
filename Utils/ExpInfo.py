@@ -50,6 +50,12 @@ class LFIFeatures(IntEnum):
     None_ViewChanging=9
     None_Refocusing=10 
 
+class DisplayType(IntEnum):
+    TwoD=0
+    ThreeD_LR=1
+    ThreeD_UD=2
+    ThreeD_Full=3
+
 class FeatureType(IntEnum):
     Active=0
     Passive=1
@@ -587,6 +593,17 @@ class ExpSetting:
             self.view_changing_type=FeatureType.Passive
         else:
             self.view_changing_type=FeatureType.None_Type
+        
+        self.display_type=DisplayType.TwoD
+        if LFIFeatures.TwoD in self.lfi_features:
+            self.display_type=DisplayType.TwoD
+        elif LFIFeatures.ThreeD in self.lfi_features:
+            if LFIFeatures.Stereo_horizontal in self.lfi_features:
+                self.display_type=DisplayType.ThreeD_LR
+            if LFIFeatures.Stereo_vertical in self.lfi_features:
+                self.display_type=DisplayType.ThreeD_UD
+            if LFIFeatures.Stereo_full in self.lfi_features:
+                self.display_type=DisplayType.ThreeD_Full
 
         self.pair_wise_config=""
         self.pair_wise_dict={}

@@ -1,12 +1,13 @@
 import sys
+import copy
 from PySide6 import QtWidgets,QtCore, QtGui
 from PySide6.QtWidgets import QSizePolicy
 sys.path.append('../Utils')
 sys.path.append('../UI')
 import UI_res_rc
-from ExpInfo import ProjectInfo, AllScoringLFI, ScoringExpLFIInfo, ExpSetting, FeatureType
+from ExpInfo import ProjectInfo, AllScoringLFI, ScoringExpLFIInfo, ExpSetting, FeatureType, LFIFeatures
 import ExpInfo
-from CollapsibleContainer import Container, EditableLabel
+from CollapsibleContainer import Container, EditableLabel, QToggle
 import PathManager
 import os
 import shutil
@@ -19,20 +20,26 @@ class ExpSettingWidget(QtWidgets.QFrame):
         super().__init__(*args, **kwargs)
         self.exp_setting=exp_setting
 
-        self.b_editable=True
+        self.has_subjects=kwargs.get('has_subjects',False)
+        if self.has_subjects:
+            self.b_editable=False
+        else:
+            self.b_editable=True
+        
+        project_info=exp_setting.GetProjectInfo()
+        self.temp_project_info=copy.deepcopy(project_info)
+
         self.widget_layout=QtWidgets.QVBoxLayout()
         self.widget_layout.setAlignment(QtCore.Qt.AlignTop)
         self.setLayout(self.widget_layout)
 
+        self.editable_text="Editatable  "
+        self.disabled_text="Not Editable  "
+        self.locked_text="Locked  "
+
+        self.MakeEditToogle()
         self.MakeProjectInfoContainer()
 
-        comparison_list=[ExpInfo.ComparisonType.DoubleStimuli, ExpInfo.ComparisonType.SingleStimuli, ExpInfo.ComparisonType.PairComparison]
-        self.comparison_type=QtWidgets.QComboBox()
-        for comparison in comparison_list:
-            self.comparison_type.addItem(comparison.name)
-        self.comparison_type.setCurrentIndex(exp_setting.comparison_type.value)
-        self.comparison_type.setEditable(False)
-        
         # play control container
         self.player_control_container=Container("Player Control")
         player_control_layout=QtWidgets.QVBoxLayout()
@@ -45,54 +52,221 @@ class ExpSettingWidget(QtWidgets.QFrame):
         scoring_layout=QtWidgets.QVBoxLayout()
         self.scoring_control_container.setLayout(scoring_layout)
 
-
+        
         self.widget_layout.addWidget(self.project_container)
         self.widget_layout.addWidget(self.player_control_container)
         self.widget_layout.addWidget(self.scoring_control_container)
+    
+    def MakeEditToogle(self):
+        edit_toogle_layout=QtWidgets.QHBoxLayout()
+        self.edit_toogle=QToggle()
+        self.edit_toogle.setMinimumHeight(26)
+        self.edit_toogle.setText(self.editable_text)
+        self.edit_toogle.setStyleSheet("QToggle{"
+                            "qproperty-bg_color:#FAA;"
+                            "font-size: 18px;}")
+        self.edit_toogle.toggled.connect(self.ToogleEditable)
+        if self.has_subjects:
+            self.edit_toogle.setText(self.disabled_text)
+            self.edit_toogle.setToolTip("The experiment has already begun, the settings are not editable now.")
+            self.edit_toogle.setEnabled(False)
+
+        self.edit_save_button=QtWidgets.QPushButton("Save")
+        self.edit_save_button.clicked.connect(self.EditSave)
+        self.edit_cancel_button=QtWidgets.QPushButton("Cancel")
+        self.edit_cancel_button.clicked.connect(self.EditCancel)
+        
+        edit_toogle_layout.addWidget(self.edit_toogle,alignment=QtCore.Qt.AlignmentFlag.AlignLeft,stretch=8)
+        button_layout=QtWidgets.QHBoxLayout()
+        button_layout.addWidget(self.edit_save_button)
+        button_layout.addWidget(self.edit_cancel_button)
+        edit_toogle_layout.addLayout(button_layout,stretch=2)
+
+        self.widget_layout.addLayout(edit_toogle_layout)
+
+        if not self.b_editable:
+            self.edit_save_button.hide()
+            self.edit_cancel_button.hide()
+    
+    def EditCancel(self):
+        logger.info("Editing cancelled.")
+        self.SetEditable(False)
+    
+    def EditSave(self):
+        logger.info("Now try to update the project information.")
 
     def MakeProjectInfoContainer(self):
         # projcet info container & settings
+        self.project_list=[]
         self.project_container=Container('Project Information',color_background=False)
-        project_layout=QtWidgets.QVBoxLayout(self.project_container.contentWidget)
+        project_layout=QtWidgets.QGridLayout(self.project_container.contentWidget)
 
         project_info=exp_setting.GetProjectInfo()
         self.project_name=project_info.project_name
         self.project_version=project_info.project_version
 
-        self.project_name_label=EditableLabel()
-        self.project_name_label.setText(f"Project Name: {self.project_name}")
-        project_layout.addWidget(self.project_name_label)
+        project_version_label=QtWidgets.QLabel()
+        project_version_label.setText(f"Project Version")
+        project_version_value=QtWidgets.QLabel()
+        project_version_value.setText(self.project_version)
+        project_layout.addWidget(project_version_label,0,0)
+        project_layout.addWidget(project_version_value,0,1)
+        project_layout.setColumnStretch(0,3.5)
+        project_layout.setColumnStretch(1,3)
+        project_layout.setColumnStretch(2,4)
 
-        project_version_label=EditableLabel()
-        project_version_label.setText(f"Project Version: {self.project_version}")
-        project_layout.addWidget(project_version_label)
+        self.project_name_label=QtWidgets.QLabel()
+        self.project_name_value=QtWidgets.QLabel()
+        #self.project_name_value=EditableLabel()
+        #self.project_list.append(self.project_name_value)
+        self.project_name_label.setText("Project Name")
+        self.project_name_value.setText(self.project_name)
+        project_layout.addWidget(self.project_name_label,1,0)
+        project_layout.addWidget(self.project_name_value,1,1)
 
         feature_list=[FeatureType.Active, FeatureType.Passive, FeatureType.None_Type]
         self.refocusing_type=QtWidgets.QComboBox()
+        self.project_list.append(self.refocusing_type)
         for feature in feature_list:
-            self.refocusing_type.addItem(feature.name)
+            if 'none' in feature.name.lower():
+                self.refocusing_type.addItem("None")
+            else:
+                self.refocusing_type.addItem(feature.name)
         self.refocusing_type.setCurrentIndex(exp_setting.refocusing_type.value)
-        self.refocusing_type.setEditable(False)
-        project_layout.addWidget(self.refocusing_type)
+        refocusing_type_label=QtWidgets.QLabel()
+        refocusing_type_label.setText("Refocusing Type")
+        project_layout.addWidget(refocusing_type_label,2,0)
+        project_layout.addWidget(self.refocusing_type,2,1)
 
         self.view_changing_type=QtWidgets.QComboBox()
+        self.project_list.append(self.view_changing_type)
         for feature in feature_list:
-            self.view_changing_type.addItem(feature.name)
+            if 'none' in feature.name.lower():
+                self.view_changing_type.addItem("None")
+            else:
+                self.view_changing_type.addItem(feature.name)
+        self.project_container.content_clicked.connect(self.ProjectReturn)
         self.view_changing_type.setCurrentIndex(exp_setting.view_changing_type.value)
-        self.view_changing_type.setEditable(False)
-        project_layout.addWidget(self.view_changing_type)
+        view_changing_type_label=QtWidgets.QLabel()
+        view_changing_type_label.setText("View Changing Type")
+        project_layout.addWidget(view_changing_type_label,3,0)
+        project_layout.addWidget(self.view_changing_type,3,1)
 
+        comparison_list=[ExpInfo.ComparisonType.SingleStimuli, ExpInfo.ComparisonType.DoubleStimuli, ExpInfo.ComparisonType.PairComparison]
+        self.comparison_type=QtWidgets.QComboBox()
+        self.project_list.append(self.comparison_type)
+        for comparison in comparison_list:
+            if 'single' in comparison.name.lower():
+                cur_name='Single-Stimulus'
+            if 'pair' in comparison.name.lower():
+                cur_name='Pair-Comparison'
+            if 'double' in comparison.name.lower():
+                cur_name='Double-Stimuli'
+            self.comparison_type.addItem(cur_name)
+        self.comparison_type.setCurrentIndex(exp_setting.comparison_type.value)
+        comparison_type_label=QtWidgets.QLabel()
+        comparison_type_label.setText("Comparison Type")
+        project_layout.addWidget(comparison_type_label,4,0)
+        project_layout.addWidget(self.comparison_type,4,1)
+
+        display_type=QtWidgets.QComboBox()
+        self.project_list.append(display_type)
+        display_type.addItem("2D")
+        display_type.addItem("3D | Left & Right")
+        display_type.addItem("3D | Up & Down")
+        display_type.addItem("3D | Full")
+        display_type.setCurrentIndex(exp_setting.display_type.value)
+        display_type_label=QtWidgets.QLabel()
+        display_type_label.setText("Display Type")
+        project_layout.addWidget(display_type_label,5,0)
+        project_layout.addWidget(display_type,5,1)
+
+        self.save_format=QtWidgets.QComboBox()
+        self.project_list.append(self.save_format)
+        self.save_format.addItem("Excel")
+        self.save_format.addItem("CSV")
+        self.save_format.setCurrentIndex(exp_setting.save_format.value)
+        save_format_label=QtWidgets.QLabel()
+        save_format_label.setText("Save Format")
+        project_layout.addWidget(save_format_label,6,0)
+        project_layout.addWidget(self.save_format,6,1)
+
+        self.widget_layout.addWidget(self.project_container)
+
+    def SetViewChangeType(self, index):
+        lfi_features=self.temp_project_info.exp_setting.lfi_features
+        view_change_type=FeatureType(index)
+        old_type=self.temp_project_info.exp_setting.view_changing_type
+        if old_type==view_change_type:
+            return
+        if old_type == FeatureType.Active and LFIFeatures.Active_ViewChanging in lfi_features:
+            lfi_features.remove(LFIFeatures.Active_ViewChanging)
+        if old_type == FeatureType.Passive and LFIFeatures.Passive_ViewChanging in lfi_features:
+            lfi_features.remove(LFIFeatures.Passive_ViewChanging)
+        if old_type == FeatureType.None_Type and LFIFeatures.None_ViewChanging in lfi_features:
+            lfi_features.remove(LFIFeatures.None_ViewChanging)
+        if view_change_type == FeatureType.Active:
+            lfi_features.append(LFIFeatures.Active_ViewChanging)
+        if view_change_type == FeatureType.Passive:
+            lfi_features.append(LFIFeatures.Passive_ViewChanging)
+        if view_change_type == FeatureType.None_Type:
+            lfi_features.append(LFIFeatures.None_ViewChanging)
+
+    def SetRefocusingType(self, index):
+        pass
+
+    def SetComparisonType(self, index):
+        pass
+
+    def SetDisplayType(self, index):
+        pass
+
+    def SetSaveFormat(self, index):
+        pass
+
+    def ProjectReturn(self):
+        for item in self.project_list:
+            if isinstance(item,EditableLabel):
+                item.returnPressedAction()
 
     def SetEditable(self, b_editable):
-        self.b_editable=b_editable
+        if self.has_subjects:
+            self.b_editable=False
+        else:
+            self.b_editable=b_editable
+    
+        if not self.b_editable:
+            for item in self.project_list:
+                if isinstance(item,EditableLabel):
+                    item.escapePressedAction()
+                    item.setDisabled(not self.b_editable)
+                if isinstance(item,QtWidgets.QComboBox):
+                    item.setDisabled(not self.b_editable)
+        else:
+            for item in self.project_list:
+                if isinstance(item,EditableLabel):
+                    item.setDisabled(not self.b_editable)
+                if isinstance(item,QtWidgets.QComboBox):
+                    item.setDisabled(not self.b_editable)
         
-
-
+    def ToogleEditable(self):
+        self.SetEditable(not self.b_editable)
+        if self.b_editable:
+            self.edit_toogle.setText(self.editable_text)
+        else:
+            self.edit_toogle.setText(self.locked_text)
+        if self.has_subjects:
+            self.edit_toogle.setText(self.disabled_text)
+            self.edit_toogle.setToolTip("The experiment has already begun, the settings are not editable now.")
+            self.edit_toogle.setEnabled(False)
         
-
-
-
-
+        if not self.b_editable:
+            self.edit_save_button.hide()
+            self.edit_cancel_button.hide()
+        else:
+            self.edit_save_button.show()
+            self.edit_cancel_button.show()
+        
 
 class NewLFISelector(QtWidgets.QFrame):
     on_cancel=QtCore.Signal()
