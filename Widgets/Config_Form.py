@@ -578,6 +578,9 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         
         if "Hint_Font_Size" in exp_keys:
             exp_setting.hint_text_font_size=exp_config["Hint_Font_Size"]
+        
+        if "Allow_Undistinguishable" in exp_keys:
+            exp_setting.allow_undistinguishable=exp_config["Allow_Undistinguishable"]
 
         return exp_setting
 

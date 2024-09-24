@@ -348,6 +348,11 @@ class QToggle(QCheckBox):
             event.ignore()
         if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
             event.ignore()
+    
+    def ManualShutDown(self):
+        self.setChecked(True)
+        self._user_checked = True
+        self.start_transition(True)
 
     def mousePressEvent(self, event):
         self._user_checked = True  # Set flag when user manually clicks the toggle

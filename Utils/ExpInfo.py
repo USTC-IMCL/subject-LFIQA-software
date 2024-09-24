@@ -642,6 +642,7 @@ class ExpSetting:
         self.skip_hint_text=""
         self.hint_text_font_size=PathManager.hint_text_font_size
         self.table_font_size=PathManager.scoring_table_point_size
+        self.allow_undistinguishable=True
     
     def AddInputVideoType(self,video_type):
         if isinstance(video_type,VideoSaveType):
@@ -751,6 +752,14 @@ class ProjectInfo:
             self.test_LFI_info=pickle.load(fid)
             exp_setting=pickle.load(fid)
             self.exp_setting=ExpSetting(exp_setting.lfi_features,exp_setting.comparison_type,exp_setting.save_format,exp_setting.post_processing,exp_setting.two_folder_mode)
+
+            all_exp_setting_vars=dir(exp_setting)
+            all_exp_setting_vars=[x for x in all_exp_setting_vars if not x.startswith('__') and not x.startswith('_')]
+            all_exp_setting_vars=[x for  x in all_exp_setting_vars if not callable(getattr(exp_setting,x))]
+
+            for var in all_exp_setting_vars:
+                setattr(self.exp_setting,var,getattr(exp_setting,var))
+
             self.subject_list=pickle.load(fid)
         
         self.InitAllScoringLFIInfo()
@@ -770,6 +779,7 @@ class ProjectInfo:
             pickle.dump(self.project_path,fid)
             pickle.dump(self.training_LFI_info,fid)
             pickle.dump(self.test_LFI_info,fid)
+            self.exp_setting.project_info_ref=None
             pickle.dump(self.exp_setting,fid)
             pickle.dump(self.subject_list,fid)
     

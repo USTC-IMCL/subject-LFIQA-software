@@ -33,29 +33,18 @@ class ExpSettingWidget(QtWidgets.QFrame):
         self.widget_layout.setAlignment(QtCore.Qt.AlignTop)
         self.setLayout(self.widget_layout)
 
-        self.editable_text="Editatable  "
+        self.editable_text="Editable  "
         self.disabled_text="Not Editable  "
         self.locked_text="Locked  "
 
         self.MakeEditToogle()
         self.MakeProjectInfoContainer()
-
-        # play control container
-        self.player_control_container=Container("Player Control")
-        player_control_layout=QtWidgets.QVBoxLayout()
-        self.player_control_container.setLayout(player_control_layout)
-        self.auto_play=exp_setting.auto_play
-        self.auto_transition=exp_setting.auto_transition
-        
-        # scoring control
-        self.scoring_control_container=Container("Scoring Control")
-        scoring_layout=QtWidgets.QVBoxLayout()
-        self.scoring_control_container.setLayout(scoring_layout)
+        self.MakePlayerControlContainer()
+        self.MakeScoringControlContainer()
 
         
-        self.widget_layout.addWidget(self.project_container)
-        self.widget_layout.addWidget(self.player_control_container)
-        self.widget_layout.addWidget(self.scoring_control_container)
+        
+        
     
     def MakeEditToogle(self):
         edit_toogle_layout=QtWidgets.QHBoxLayout()
@@ -90,10 +79,13 @@ class ExpSettingWidget(QtWidgets.QFrame):
     
     def EditCancel(self):
         logger.info("Editing cancelled.")
-        self.SetEditable(False)
+        self.edit_toogle.ManualShutDown()
     
     def EditSave(self):
         logger.info("Now try to update the project information.")
+        self.project_info=copy.deepcopy(self.temp_project_info)
+        self.project_info.SaveToFile()
+        self.edit_toogle.ManualShutDown()
 
     def MakeProjectInfoContainer(self):
         # projcet info container & settings
@@ -205,6 +197,8 @@ class ExpSettingWidget(QtWidgets.QFrame):
             lfi_features.remove(LFIFeatures.Passive_ViewChanging)
         if old_type == FeatureType.None_Type and LFIFeatures.None_ViewChanging in lfi_features:
             lfi_features.remove(LFIFeatures.None_ViewChanging)
+
+        self.temp_project_info.exp_setting.view_changing_type=view_change_type
         if view_change_type == FeatureType.Active:
             lfi_features.append(LFIFeatures.Active_ViewChanging)
         if view_change_type == FeatureType.Passive:
@@ -213,16 +207,149 @@ class ExpSettingWidget(QtWidgets.QFrame):
             lfi_features.append(LFIFeatures.None_ViewChanging)
 
     def SetRefocusingType(self, index):
-        pass
+        lfi_features=self.temp_project_info.exp_setting.lfi_features
+        refocusing_type=FeatureType(index)
+        old_type=self.temp_project_info.exp_setting.refocusing_type
+        if old_type==refocusing_type:
+            return
+        if old_type == FeatureType.Active and LFIFeatures.Active_Refocusing in lfi_features:
+            lfi_features.remove(LFIFeatures.Active_Refocusing)
+        if old_type == FeatureType.Passive and LFIFeatures.Passive_Refocusing in lfi_features:
+            lfi_features.remove(LFIFeatures.Passive_Refocusing)
+        if old_type == FeatureType.None_Type and LFIFeatures.None_Refocusing in lfi_features:
+            lfi_features.remove(LFIFeatures.None_Refocusing)
+        
+        self.temp_project_info.exp_setting.refocusing_type=refocusing_type
+        if refocusing_type == FeatureType.Active:
+            lfi_features.append(LFIFeatures.Active_Refocusing)
+        if refocusing_type == FeatureType.Passive:
+            lfi_features.append(LFIFeatures.Passive_Refocusing)
+        if refocusing_type == FeatureType.None_Type:
+            lfi_features.append(LFIFeatures.None_Refocusing)
 
     def SetComparisonType(self, index):
-        pass
+        old_type=self.temp_project_info.exp_setting.comparison_type
+        comparison_type=ExpInfo.ComparisonType(index)
+        if old_type==comparison_type:
+            return
+        self.temp_project_info.exp_setting.comparison_type=comparison_type
 
     def SetDisplayType(self, index):
-        pass
+        lfi_features=self.temp_project_info.exp_setting.lfi_features
+        old_type=self.temp_project_info.exp_setting.display_type
+        display_type=ExpInfo.DisplayType(index)
+
+        if old_type==display_type:
+            return
+        if old_type == ExpInfo.DisplayType.TwoD and ExpInfo.LFIFeatures.TwoD in lfi_features:
+            lfi_features.remove(ExpInfo.LFIFeatures.TwoD)
+        if old_type == ExpInfo.DisplayType.ThreeD_LR and ExpInfo.LFIFeatures.Stereo_horizontal in lfi_features:
+            lfi_features.remove(ExpInfo.LFIFeatures.Stereo_horizontal)
+        if old_type == ExpInfo.DisplayType.ThreeD_UD and ExpInfo.LFIFeatures.Stereo_vertical in lfi_features:
+            lfi_features.remove(ExpInfo.LFIFeatures.Stereo_vertical)
+        if old_type == ExpInfo.DisplayType.ThreeD_Full and ExpInfo.LFIFeatures.Stereo_full in lfi_features:
+            lfi_features.remove(ExpInfo.LFIFeatures.Stereo_full)
+
+        self.temp_project_info.exp_setting.display_type=display_type
+        if display_type == ExpInfo.DisplayType.TwoD:
+            lfi_features.append(ExpInfo.LFIFeatures.TwoD)
+        if display_type == ExpInfo.DisplayType.ThreeD_LR:
+            lfi_features.append(ExpInfo.LFIFeatures.Stereo_horizontal)
+        if display_type == ExpInfo.DisplayType.ThreeD_UD:
+            lfi_features.append(ExpInfo.LFIFeatures.Stereo_vertical)
+        if display_type == ExpInfo.DisplayType.ThreeD_Full:
+            lfi_features.append(ExpInfo.LFIFeatures.Stereo_full)
 
     def SetSaveFormat(self, index):
-        pass
+        old_type=self.temp_project_info.exp_setting.save_format
+        save_format=ExpInfo.SaveFormat(index)
+        if old_type==save_format:
+            return
+        self.temp_project_info.exp_setting.save_format=save_format
+
+    def MakePlayerControlContainer(self):
+        self.player_control_container=Container("Player Control")
+        self.player_control_list=[]
+        player_control_layout=QtWidgets.QGridLayout(self.player_control_container._content_widget)
+
+        player_control_layout.setColumnStretch(0,3.5)
+        player_control_layout.setColumnStretch(1,3)
+        player_control_layout.setColumnStretch(2,4)
+
+        auto_play_label=QtWidgets.QLabel("Auto Play")
+        auto_play=self.temp_project_info.exp_setting.auto_play
+        self.auto_play_box=QtWidgets.QComboBox()
+        self.player_control_list.append(self.auto_play_box)
+        self.auto_play_box.addItems(["False","True"])
+        self.auto_play_box.setCurrentIndex(1 if auto_play else 0)
+        player_control_layout.addWidget(auto_play_label,0,0)
+        player_control_layout.addWidget(self.auto_play_box,0,1)
+
+        auto_transition_label=QtWidgets.QLabel("Auto Transition")
+        auto_transition=self.temp_project_info.exp_setting.auto_transition
+        self.auto_transition_box=QtWidgets.QComboBox()
+        self.player_control_list.append(self.auto_transition_box)
+        self.auto_transition_box.addItems(["False","True"])
+        self.auto_transition_box.setCurrentIndex(1 if auto_transition else 0)
+        player_control_layout.addWidget(auto_transition_label,1,0)
+        player_control_layout.addWidget(self.auto_transition_box,1,1)
+
+        loop_times_label=QtWidgets.QLabel("Loop Times")
+        self.loop_times_box=QtWidgets.QSpinBox()
+        self.player_control_list.append(self.loop_times_box)
+        self.loop_times_box.setValue(self.temp_project_info.exp_setting.loop_times)
+        self.loop_times_box.setRange(0,100)
+        self.loop_times_box.setToolTip("Set the loop times of the video player. 0 means infinite loop.")
+        player_control_layout.addWidget(loop_times_label,2,0)
+        player_control_layout.addWidget(self.loop_times_box,2,1)
+
+        self.widget_layout.addWidget(self.player_control_container)
+
+    def MakeScoringControlContainer(self):
+        self.scoring_control_container=Container("Scoring Control")
+        self.scoring_control_list=[]
+        scoring_layout=QtWidgets.QGridLayout(self.scoring_control_container._content_widget)
+
+        scoring_layout.setColumnStretch(0,3.5)
+        scoring_layout.setColumnStretch(1,3)
+        scoring_layout.setColumnStretch(2,4)
+
+        pause_allowed_label=QtWidgets.QLabel("Pause Allowed")
+        pause_allowed=self.temp_project_info.exp_setting.pause_allowed
+        self.pause_allowed_box=QtWidgets.QComboBox()
+        self.scoring_control_list.append(self.pause_allowed_box)
+        self.pause_allowed_box.addItems(["False","True"])
+        self.pause_allowed_box.setCurrentIndex(1 if pause_allowed else 0)
+        scoring_layout.addWidget(pause_allowed_label,0,0)
+        scoring_layout.addWidget(self.pause_allowed_box,0,1)
+
+        first_loop_skip_label=QtWidgets.QLabel("First Loop Skip")
+        first_loop_skip=self.temp_project_info.exp_setting.first_loop_skip
+        self.first_loop_skip_box=QtWidgets.QComboBox()
+        self.scoring_control_list.append(self.first_loop_skip_box)
+        self.first_loop_skip_box.addItems(["False","True"])
+        self.first_loop_skip_box.setCurrentIndex(1 if first_loop_skip else 0)
+        scoring_layout.addWidget(first_loop_skip_label,1,0)
+        scoring_layout.addWidget(self.first_loop_skip_box,1,1)
+
+        skip_hint_label=QtWidgets.QLabel("Skip Hint")
+        skip_hint=self.temp_project_info.exp_setting.skip_hint_text
+        self.skip_hint_box=EditableLabel()
+        self.scoring_control_list.append(self.skip_hint_box)
+        self.skip_hint_box.setText(skip_hint)
+        scoring_layout.addWidget(skip_hint_label,2,0)
+        scoring_layout.addWidget(self.skip_hint_box,2,1)
+
+        allow_undistinguishable_label=QtWidgets.QLabel("Allow Undistinguishable")
+        allow_undistinguishable=self.temp_project_info.exp_setting.allow_undistinguishable
+        self.allow_undistinguishable_box=QtWidgets.QComboBox()
+        self.scoring_control_list.append(self.allow_undistinguishable_box)
+        self.allow_undistinguishable_box.addItems(["False","True"])
+        self.allow_undistinguishable_box.setCurrentIndex(1 if allow_undistinguishable else 0)
+        scoring_layout.addWidget(allow_undistinguishable_label,3,0)
+        scoring_layout.addWidget(self.allow_undistinguishable_box,3,1)
+
+        self.widget_layout.addWidget(self.scoring_control_container)
 
     def ProjectReturn(self):
         for item in self.project_list:
@@ -237,20 +364,19 @@ class ExpSettingWidget(QtWidgets.QFrame):
     
         if not self.b_editable:
             for item in self.project_list:
-                if isinstance(item,EditableLabel):
+                if isinstance(item,QtWidgets.QComboBox):
+                    item.setDisabled(not self.b_editable)
+                else:
                     item.escapePressedAction()
                     item.setDisabled(not self.b_editable)
-                if isinstance(item,QtWidgets.QComboBox):
-                    item.setDisabled(not self.b_editable)
+
         else:
             for item in self.project_list:
-                if isinstance(item,EditableLabel):
-                    item.setDisabled(not self.b_editable)
-                if isinstance(item,QtWidgets.QComboBox):
-                    item.setDisabled(not self.b_editable)
+                item.setDisabled(not self.b_editable)
         
     def ToogleEditable(self):
         self.SetEditable(not self.b_editable)
+        #self.edit_toogle.setChecked(self.b_editable)
         if self.b_editable:
             self.edit_toogle.setText(self.editable_text)
         else:
