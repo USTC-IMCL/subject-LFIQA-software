@@ -243,7 +243,9 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
             return
         self.temp_project_info.exp_setting.comparison_type=comparison_type
 
-    def SetDisplayType(self, index):
+    def SetDisplayType(self, index=None):
+        if index is None:
+            index=self.display_type.currentIndex()
         lfi_features=self.temp_project_info.exp_setting.lfi_features
         old_type=self.temp_project_info.exp_setting.display_type
         display_type=ExpInfo.DisplayType(index)
@@ -269,7 +271,9 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         if display_type == ExpInfo.DisplayType.ThreeD_Full:
             lfi_features.append(ExpInfo.LFIFeatures.Stereo_full)
 
-    def SetSaveFormat(self, index):
+    def SetSaveFormat(self, index=None):
+        if index is None:
+            index=self.save_format.currentIndex()
         old_type=self.temp_project_info.exp_setting.save_format
         save_format=ExpInfo.SaveFormat(index)
         if old_type==save_format:
