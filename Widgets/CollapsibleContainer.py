@@ -138,6 +138,7 @@ class Header(QFrame):
     """
     Header class for collapsible group
     """
+    clicked = QtCore.Signal()
     def __init__(self, name, content_widget):
         """Header Class Constructor to initialize the object.
 
@@ -203,6 +204,7 @@ class Header(QFrame):
         """Handle mouse events, call the function to toggle groups"""
         # Toggle between expand and collapse based on the visibility of the content widget
         self.expand() if not self.content.isVisible() else self.collapse()
+        self.clicked.emit()
 
     def expand(self):
         """Expand the collapsible group"""

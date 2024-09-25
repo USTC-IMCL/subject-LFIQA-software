@@ -15,9 +15,15 @@ import pickle
 import logging
 logger = logging.getLogger("LogWindow")
 
-class ExpSettingWidget(QtWidgets.QFrame):
+class ExpSettingWidget(QtWidgets.QScrollArea):
     def __init__(self, exp_setting: ExpSetting,  *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setWidgetResizable(True)
+        self.content_widget=QtWidgets.QWidget()
+        self.setWidget(self.content_widget)
         self.exp_setting=exp_setting
 
         self.has_subjects=kwargs.get('has_subjects',False)
@@ -31,7 +37,7 @@ class ExpSettingWidget(QtWidgets.QFrame):
 
         self.widget_layout=QtWidgets.QVBoxLayout()
         self.widget_layout.setAlignment(QtCore.Qt.AlignTop)
-        self.setLayout(self.widget_layout)
+        self.content_widget.setLayout(self.widget_layout)
 
         self.editable_text="Editable  "
         self.disabled_text="Not Editable  "
@@ -42,9 +48,6 @@ class ExpSettingWidget(QtWidgets.QFrame):
         self.MakePlayerControlContainer()
         self.MakeScoringControlContainer()
 
-        
-        
-        
     
     def MakeEditToogle(self):
         edit_toogle_layout=QtWidgets.QHBoxLayout()
@@ -137,7 +140,6 @@ class ExpSettingWidget(QtWidgets.QFrame):
                 self.view_changing_type.addItem("None")
             else:
                 self.view_changing_type.addItem(feature.name)
-        self.project_container.content_clicked.connect(self.ProjectReturn)
         self.view_changing_type.setCurrentIndex(exp_setting.view_changing_type.value)
         view_changing_type_label=QtWidgets.QLabel()
         view_changing_type_label.setText("View Changing Type")
@@ -183,9 +185,12 @@ class ExpSettingWidget(QtWidgets.QFrame):
         project_layout.addWidget(save_format_label,6,0)
         project_layout.addWidget(self.save_format,6,1)
 
+        self.project_container.content_clicked.connect(self.ProjectReturn)
         self.widget_layout.addWidget(self.project_container)
 
-    def SetViewChangeType(self, index):
+    def SetViewChangeType(self, index=None):
+        if index is None:
+            index=self.view_changing_type.currentIndex()
         lfi_features=self.temp_project_info.exp_setting.lfi_features
         view_change_type=FeatureType(index)
         old_type=self.temp_project_info.exp_setting.view_changing_type
@@ -206,7 +211,9 @@ class ExpSettingWidget(QtWidgets.QFrame):
         if view_change_type == FeatureType.None_Type:
             lfi_features.append(LFIFeatures.None_ViewChanging)
 
-    def SetRefocusingType(self, index):
+    def SetRefocusingType(self, index=None):
+        if index is None:
+            index=self.refocusing_type.currentIndex()
         lfi_features=self.temp_project_info.exp_setting.lfi_features
         refocusing_type=FeatureType(index)
         old_type=self.temp_project_info.exp_setting.refocusing_type
@@ -227,7 +234,9 @@ class ExpSettingWidget(QtWidgets.QFrame):
         if refocusing_type == FeatureType.None_Type:
             lfi_features.append(LFIFeatures.None_Refocusing)
 
-    def SetComparisonType(self, index):
+    def SetComparisonType(self, index=None):
+        if index is None:
+            index=self.comparison_type.currentIndex()
         old_type=self.temp_project_info.exp_setting.comparison_type
         comparison_type=ExpInfo.ComparisonType(index)
         if old_type==comparison_type:
@@ -303,6 +312,7 @@ class ExpSettingWidget(QtWidgets.QFrame):
         player_control_layout.addWidget(loop_times_label,2,0)
         player_control_layout.addWidget(self.loop_times_box,2,1)
 
+        self.player_control_container.content_clicked.connect(self.PlayerControlReturn)
         self.widget_layout.addWidget(self.player_control_container)
 
     def MakeScoringControlContainer(self):
@@ -349,10 +359,19 @@ class ExpSettingWidget(QtWidgets.QFrame):
         scoring_layout.addWidget(allow_undistinguishable_label,3,0)
         scoring_layout.addWidget(self.allow_undistinguishable_box,3,1)
 
+        self.scoring_control_container.content_clicked.connect(self.ScoringControlReturn)
         self.widget_layout.addWidget(self.scoring_control_container)
 
     def ProjectReturn(self):
         for item in self.project_list:
+            if isinstance(item,EditableLabel):
+                item.returnPressedAction()
+    def PlayerControlReturn(self):
+        for item in self.player_control_list:
+            if isinstance(item,EditableLabel):
+                item.returnPressedAction()
+    def ScoringControlReturn(self):
+        for item in self.scoring_control_list:
             if isinstance(item,EditableLabel):
                 item.returnPressedAction()
 
@@ -365,14 +384,29 @@ class ExpSettingWidget(QtWidgets.QFrame):
         if not self.b_editable:
             for item in self.project_list:
                 if isinstance(item,QtWidgets.QComboBox):
-                    item.setDisabled(not self.b_editable)
+                    item.setDisabled(True)
                 else:
                     item.escapePressedAction()
-                    item.setDisabled(not self.b_editable)
-
+                    item.setDisabled(True)
+            for item in self.scoring_control_list:
+                if isinstance(item,QtWidgets.QComboBox):
+                    item.setDisabled(True)
+                elif isinstance(item,QtWidgets.QSpinBox):
+                    item.setDisabled(True)
+                else:
+                    item.escapePressedAction()
+                    item.setDisabled(True)
+            for item in self.player_control_list:
+                if isinstance(item, EditableLabel):
+                    item.escapePressedAction()
+                item.setDisabled(True)
         else:
             for item in self.project_list:
-                item.setDisabled(not self.b_editable)
+                item.setDisabled(False)
+            for item in self.player_control_list:
+                item.setDisabled(False)
+            for item in self.scoring_control_list:
+                item.setDisabled(False)
         
     def ToogleEditable(self):
         self.SetEditable(not self.b_editable)
@@ -1084,9 +1118,12 @@ if __name__ == "__main__":
 
     #project_display.show()
 
+
     exp_setting_display=ExpSettingWidget(exp_setting)
+
     exp_setting_display.resize(800,600)
 
     exp_setting_display.show()
+
 
     sys.exit(app.exec())
