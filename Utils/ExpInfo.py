@@ -762,6 +762,7 @@ class ProjectInfo:
 
             self.subject_list=pickle.load(fid)
         
+        self.exp_setting.SetProjectInfo(self)
         self.InitAllScoringLFIInfo()
 
     def SaveToFile(self,save_file=None): 
@@ -782,6 +783,7 @@ class ProjectInfo:
             self.exp_setting.project_info_ref=None
             pickle.dump(self.exp_setting,fid)
             pickle.dump(self.subject_list,fid)
+        self.exp_setting.SetProjectInfo(self)
     
     def PrintAll(self):
         ret_str=''
@@ -1013,12 +1015,6 @@ class ScoringExpLFIInfo:
         if self.depth_path is not None:
             self.all_depth_values=self.GetAllPossibleDepthVal()  
 
-        if self.depth_path is not None:
-            self.all_depth_values=self.GetAllPossibleDepthVal()  
-
-        if self.depth_path is not None:
-            self.all_depth_values=self.GetAllPossibleDepthVal()  
-
         self.lfi_name=in_lfi_info.lfi_name
         in_path=in_lfi_info.view_path
 
@@ -1146,38 +1142,6 @@ class ScoringExpLFIInfo:
         elif self.passive_refocusing_video_path is not None:
             self.GetThumbnail(self.passive_refocusing_video_path,out_img)
             return
-
-    def MakeThumbnail(self,out_img):
-        if self.active_view_path is not None:
-            show_view=self.GetActiveView(0,0)
-            shutil.copy(show_view,out_img)
-            return
-        elif self.active_refocusing_path is not None:
-            show_view=self.GetRefocusImg(self.all_depth_values[0])
-            shutil.copy(show_view,out_img)
-            return
-        elif self.passive_view_video_path is not None:
-            self.GetThumbnail(self.passive_view_video_path,out_img)
-            return
-        elif self.passive_refocusing_video_path is not None:
-            self.GetThumbnail(self.passive_refocusing_video_path,out_img)
-            return
-
-    def MakeThumbnail(self,out_img):
-        if self.active_view_path is not None:
-            show_view=self.GetActiveView(0,0)
-            shutil.copy(show_view,out_img)
-            return
-        elif self.active_refocusing_path is not None:
-            show_view=self.GetRefocusImg(self.all_depth_values[0])
-            shutil.copy(show_view,out_img)
-            return
-        elif self.passive_view_video_path is not None:
-            self.GetThumbnail(self.passive_view_video_path,out_img)
-            return
-        elif self.passive_refocusing_video_path is not None:
-            self.GetThumbnail(self.passive_refocusing_video_path,out_img)
-            return
     
     def GetViewDict(self,all_files,img_post_fix):
         for file_name in all_files:
@@ -1191,6 +1155,64 @@ class ScoringExpLFIInfo:
                 col=int(col)-self.min_width
                 self.view_dict[(row,col)]=file_name
     
+    def ParseFolder(self,folder_path):
+        '''only active view changing is supported now'''
+        if not os.path.exists(folder_path):
+            self.is_valid=False
+            return None
+        all_files=os.listdir(folder_path)
+        if len(all_files)==0:
+            self.is_valid=False
+            return None
+        view_num=0
+        for img_file in all_files:
+            if self.img_post_fix in img_file and PathManager.thumbnail_name not in img_file:
+                view_num+=1
+        if view_num==0:
+            return None
+        max_height=0
+        max_width=0
+        min_height=10000
+        min_width=10000
+
+        path_dict={}
+        for img_file in all_files:
+            if "depth" in img_file:
+                self.depth_path=os.path.join(folder_path,img_file)
+                continue
+            if os.path.isdir(os.path.join(folder_path,img_file)):
+                continue
+            test_img_name=img_file
+            temp_list=img_file.split('.')[0].split('_')
+            if self.angular_format == AngularFormat.XY:
+                cur_width,cur_height=int(temp_list[0]), int(temp_list[1])
+            else:
+                cur_height,cur_width=int(temp_list[0]), int(temp_list[1])
+            path_dict[(cur_width,cur_height)]=os.path.join(folder_path,img_file)
+            if cur_height>max_height:
+                max_height=cur_height
+            if cur_height<min_height:
+                min_height=cur_height
+            if cur_width>max_width:
+                max_width=cur_width
+            if cur_width<min_width:
+                min_width=cur_width
+
+        test_img=cv2.imread(os.path.join(folder_path,test_img_name))
+        img_height,img_width=test_img.shape[0],test_img.shape[1]
+
+        self.max_height=max_height
+        self.max_width=max_width
+        self.min_height=min_height
+        self.min_width=min_width
+
+        self.angular_height=max_height-min_height+1
+        self.angular_width=max_width-min_width+1
+        self.img_height=img_height
+        self.img_width=img_width 
+
+        self.GetViewDict(all_files,self.img_post_fix)
+
     def GetActiveView(self,v_row,v_col):
         #v_row+=self.min_height
         #v_col+=self.min_width
@@ -1298,6 +1320,25 @@ class TwoFolderLFIInfo(AllScoringLFI):
             all_string_list.append(self.all_exp_lfi_info[i].passive_view_video_path)
         random_order=PlayList.MakeARandomScoringList(all_string_list)
         return random_order[0]
+
+class ActiveTwoFolderLFIInfo(AllScoringLFI):
+    def __init__(self, in_folder_path,in_mode="None"):
+        super().__init__(in_mode)
+        self.in_folder_path=in_folder_path
+
+        all_folders=os.listdir(in_folder_path)
+        for folder_name in all_folders:
+            cur_single_scoring_lfi_info=ScoringExpLFIInfo()
+            img_post_fix=cur_single_scoring_lfi_info.DetectPostfix(folder_name)
+            cur_single_scoring_lfi_info.img_post_fix=img_post_fix
+
+            cur_single_scoring_lfi_info.active_view_path=os.path.join(in_folder_path,folder_name)
+            cur_single_scoring_lfi_info.active_refocusing_path=None
+
+            cur_single_scoring_lfi_info.ParseFolder(cur_single_scoring_lfi_info.active_view_path)
+
+            self.all_exp_lfi_info.append(cur_single_scoring_lfi_info)
+        self.exp_lfi_info_num=len(self.all_exp_lfi_info)
 
 class PorjectPathManager():
     '''

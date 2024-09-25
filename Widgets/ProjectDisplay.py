@@ -7,7 +7,7 @@ sys.path.append('../UI')
 import UI_res_rc
 from ExpInfo import ProjectInfo, AllScoringLFI, ScoringExpLFIInfo, ExpSetting, FeatureType, LFIFeatures
 import ExpInfo
-from CollapsibleContainer import Container, EditableLabel, QToggle
+from CollapsibleContainer import Container, EditableLabel, QToggle, EditableTexeEdit
 import PathManager
 import os
 import shutil
@@ -16,7 +16,7 @@ import logging
 logger = logging.getLogger("LogWindow")
 
 class ExpSettingWidget(QtWidgets.QScrollArea):
-    def __init__(self, exp_setting: ExpSetting,  *args, **kwargs):
+    def __init__(self, exp_setting: ExpSetting, has_subjects=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
@@ -26,14 +26,14 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         self.setWidget(self.content_widget)
         self.exp_setting=exp_setting
 
-        self.has_subjects=kwargs.get('has_subjects',False)
+        self.has_subjects=has_subjects
         if self.has_subjects:
             self.b_editable=False
         else:
             self.b_editable=True
         
-        project_info=exp_setting.GetProjectInfo()
-        self.temp_project_info=copy.deepcopy(project_info)
+        self.project_info=exp_setting.GetProjectInfo()
+        self.temp_project_info=copy.deepcopy(self.project_info)
 
         self.widget_layout=QtWidgets.QVBoxLayout()
         self.widget_layout.setAlignment(QtCore.Qt.AlignTop)
@@ -43,12 +43,29 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         self.disabled_text="Not Editable  "
         self.locked_text="Locked  "
 
+        self.set_method_set=[
+            self.SetRefocusingType,
+            self.SetViewChangeType,
+            self.SetComparisonType,
+            self.SetDisplayType,
+            self.SetSaveFormat,
+            self.SetAutoPlay,
+            self.SetAutoTransition,
+            self.SetLoppTimes,
+            self.SetPauseAllowed,
+            self.SetFirstLoopSkip,
+            self.SetSkipHint,
+            self.SetAllowUndistinguishable
+        ]
         self.MakeEditToogle()
         self.MakeProjectInfoContainer()
         self.MakePlayerControlContainer()
         self.MakeScoringControlContainer()
 
-    
+    def GetAllInput(self):
+        for set_method in self.set_method_set:
+            set_method()
+
     def MakeEditToogle(self):
         edit_toogle_layout=QtWidgets.QHBoxLayout()
         self.edit_toogle=QToggle()
@@ -83,9 +100,12 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
     def EditCancel(self):
         logger.info("Editing cancelled.")
         self.edit_toogle.ManualShutDown()
+        self.RefreshAll()
     
     def EditSave(self):
         logger.info("Now try to update the project information.")
+
+        self.GetAllInput()
         self.project_info=copy.deepcopy(self.temp_project_info)
         self.project_info.SaveToFile()
         self.edit_toogle.ManualShutDown()
@@ -96,7 +116,7 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         self.project_container=Container('Project Information',color_background=False)
         project_layout=QtWidgets.QGridLayout(self.project_container.contentWidget)
 
-        project_info=exp_setting.GetProjectInfo()
+        project_info=self.exp_setting.GetProjectInfo()
         self.project_name=project_info.project_name
         self.project_version=project_info.project_version
 
@@ -127,7 +147,7 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
                 self.refocusing_type.addItem("None")
             else:
                 self.refocusing_type.addItem(feature.name)
-        self.refocusing_type.setCurrentIndex(exp_setting.refocusing_type.value)
+        self.refocusing_type.setCurrentIndex(self.exp_setting.refocusing_type.value)
         refocusing_type_label=QtWidgets.QLabel()
         refocusing_type_label.setText("Refocusing Type")
         project_layout.addWidget(refocusing_type_label,2,0)
@@ -140,7 +160,7 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
                 self.view_changing_type.addItem("None")
             else:
                 self.view_changing_type.addItem(feature.name)
-        self.view_changing_type.setCurrentIndex(exp_setting.view_changing_type.value)
+        self.view_changing_type.setCurrentIndex(self.exp_setting.view_changing_type.value)
         view_changing_type_label=QtWidgets.QLabel()
         view_changing_type_label.setText("View Changing Type")
         project_layout.addWidget(view_changing_type_label,3,0)
@@ -157,19 +177,20 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
             if 'double' in comparison.name.lower():
                 cur_name='Double-Stimuli'
             self.comparison_type.addItem(cur_name)
-        self.comparison_type.setCurrentIndex(exp_setting.comparison_type.value)
+        self.comparison_type.setCurrentIndex(self.exp_setting.comparison_type.value)
         comparison_type_label=QtWidgets.QLabel()
         comparison_type_label.setText("Comparison Type")
         project_layout.addWidget(comparison_type_label,4,0)
         project_layout.addWidget(self.comparison_type,4,1)
 
-        display_type=QtWidgets.QComboBox()
+        self.display_type=QtWidgets.QComboBox()
+        display_type=self.display_type
         self.project_list.append(display_type)
         display_type.addItem("2D")
         display_type.addItem("3D | Left & Right")
         display_type.addItem("3D | Up & Down")
         display_type.addItem("3D | Full")
-        display_type.setCurrentIndex(exp_setting.display_type.value)
+        display_type.setCurrentIndex(self.exp_setting.display_type.value)
         display_type_label=QtWidgets.QLabel()
         display_type_label.setText("Display Type")
         project_layout.addWidget(display_type_label,5,0)
@@ -179,7 +200,7 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         self.project_list.append(self.save_format)
         self.save_format.addItem("Excel")
         self.save_format.addItem("CSV")
-        self.save_format.setCurrentIndex(exp_setting.save_format.value)
+        self.save_format.setCurrentIndex(self.exp_setting.save_format.value)
         save_format_label=QtWidgets.QLabel()
         save_format_label.setText("Save Format")
         project_layout.addWidget(save_format_label,6,0)
@@ -319,6 +340,27 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         self.player_control_container.content_clicked.connect(self.PlayerControlReturn)
         self.widget_layout.addWidget(self.player_control_container)
 
+    def SetAutoPlay(self,index=None):
+        if index is None:
+            index=self.auto_play_box.currentIndex()
+        if index==0:
+            self.temp_project_info.exp_setting.auto_play=False
+        else:
+            self.temp_project_info.exp_setting.auto_play=True
+    
+    def SetAutoTransition(self,index=None):
+        if index is None:
+            index=self.auto_transition_box.currentIndex()
+        if index==0:
+            self.temp_project_info.exp_setting.auto_transition=False
+        else:
+            self.temp_project_info.exp_setting.auto_transition=True
+    
+    def SetLoppTimes(self,index=None):
+        if index is None:
+            index=self.loop_times_box.value()
+        self.temp_project_info.exp_setting.loop_times=index
+
     def MakeScoringControlContainer(self):
         self.scoring_control_container=Container("Scoring Control")
         self.scoring_control_list=[]
@@ -363,8 +405,102 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         scoring_layout.addWidget(allow_undistinguishable_label,3,0)
         scoring_layout.addWidget(self.allow_undistinguishable_box,3,1)
 
+        table_num=len(self.exp_setting.score_names)
+        table_num_label=QtWidgets.QLabel("Table Num")
+        table_num_value=QtWidgets.QLabel(str(table_num))
+        scoring_layout.addWidget(table_num_label,4,0)
+        scoring_layout.addWidget(table_num_value,4,1)
+
+        cur_layout_index=5
+        for i in range(table_num):
+            score_name=self.exp_setting.score_names[i]
+            score_definition=self.exp_setting.score_definition[i]
+            score_value=self.exp_setting.score_values[i]
+            score_value=[str(x) for x in score_value]
+            cur_layout_index=self.MakeTableDesc(scoring_layout,cur_layout_index,i+1,score_name,score_definition,score_value)
+
+
         self.scoring_control_container.content_clicked.connect(self.ScoringControlReturn)
         self.widget_layout.addWidget(self.scoring_control_container)
+    
+    def MakeTableDesc(self,in_layout:QtWidgets.QGridLayout,layout_index,table_index,score_name,score_definition,score_values):
+        table_label=QtWidgets.QLabel("Scoring table "+str(table_index))
+        in_layout.addWidget(table_label,layout_index,0)
+
+        table_title_label=QtWidgets.QLabel("Title")
+        #table_title_value=EditableLabel()
+        table_title_value=QtWidgets.QLabel()
+        table_title_value.setText(score_name)
+        #self.scoring_control_list.append(table_title_value)
+        in_layout.addWidget(table_title_label,layout_index,1)
+        in_layout.addWidget(table_title_value,layout_index,2)
+
+        layout_index+=1
+        table_values_label=QtWidgets.QLabel("Scoring Values")
+        #talbe_values_value=EditableLabel()
+        table_values_value=QtWidgets.QLabel()
+        table_values_value.setText(",".join(score_values))
+        #self.scoring_control_list.append(table_values_value)
+        in_layout.addWidget(table_values_label,layout_index,1)
+        in_layout.addWidget(table_values_value,layout_index,2)
+
+        layout_index+=1
+        table_definition_label=QtWidgets.QLabel("Score Definition")        
+        #table_definition_value=EditableLabel()
+        table_definition_value=QtWidgets.QLabel()
+        #self.scoring_control_list.append(table_definition_value)
+        table_definition_value.setText("\n".join(score_definition))
+        in_layout.addWidget(table_definition_label,layout_index,1)
+        in_layout.addWidget(table_definition_value,layout_index,2)
+
+        layout_index+=1
+        return layout_index
+        
+    def SetPauseAllowed(self,index=None):
+        if index is None:
+            index=self.pause_allowed_box.currentIndex()
+        if index==0:
+            self.temp_project_info.exp_setting.pause_allowed=False
+        else:
+            self.temp_project_info.exp_setting.pause_allowed=True
+    
+    def SetFirstLoopSkip(self,index=None):
+        if index is None:
+            index=self.first_loop_skip_box.currentIndex()
+        if index==0:
+            self.temp_project_info.exp_setting.first_loop_skip=False
+        else:
+            self.temp_project_info.exp_setting.first_loop_skip=True
+    
+    def SetAllowUndistinguishable(self,index=None):
+        if index is None:
+            index=self.allow_undistinguishable_box.currentIndex()
+        if index==0:
+            self.temp_project_info.exp_setting.allow_undistinguishable=False
+        else:
+            self.temp_project_info.exp_setting.allow_undistinguishable=True
+    
+    def SetSkipHint(self,text=None):
+        if text is None:
+            text=self.skip_hint_box.text()
+        self.temp_project_info.exp_setting.skip_hint_text=text
+    
+    def RefreshAll(self):
+        self.refocusing_type.setCurrentIndex(self.project_info.exp_setting.refocusing_type.value)
+        self.view_changing_type.setCurrentIndex(self.project_info.exp_setting.view_changing_type.value)
+        self.comparison_type.setCurrentIndex(self.project_info.exp_setting.comparison_type.value)
+        
+        self.SetDisplayType(self.project_info.exp_setting.display_type.value)
+        self.save_format.setCurrentIndex(self.project_info.exp_setting.save_format.value)
+
+        self.auto_play_box.setCurrentIndex(1 if self.project_info.exp_setting.auto_play else 0)
+        self.auto_transition_box.setCurrentIndex(1 if self.project_info.exp_setting.auto_transition else 0)
+        self.loop_times_box.setValue(self.project_info.exp_setting.loop_times)
+
+        self.pause_allowed_box.setCurrentIndex(1 if self.project_info.exp_setting.pause_allowed else 0)
+        self.first_loop_skip_box.setCurrentIndex(1 if self.project_info.exp_setting.first_loop_skip else 0)
+        self.skip_hint_box.setText(self.project_info.exp_setting.skip_hint_text)
+
 
     def ProjectReturn(self):
         for item in self.project_list:
@@ -387,11 +523,9 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
     
         if not self.b_editable:
             for item in self.project_list:
-                if isinstance(item,QtWidgets.QComboBox):
-                    item.setDisabled(True)
-                else:
+                if isinstance(item,EditableLabel):
                     item.escapePressedAction()
-                    item.setDisabled(True)
+                item.setDisabled(True)
             for item in self.scoring_control_list:
                 if isinstance(item,QtWidgets.QComboBox):
                     item.setDisabled(True)
@@ -420,6 +554,7 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         else:
             self.edit_toogle.setText(self.locked_text)
         if self.has_subjects:
+            self.b_editable=False
             self.edit_toogle.setText(self.disabled_text)
             self.edit_toogle.setToolTip("The experiment has already begun, the settings are not editable now.")
             self.edit_toogle.setEnabled(False)
@@ -427,9 +562,12 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         if not self.b_editable:
             self.edit_save_button.hide()
             self.edit_cancel_button.hide()
+            self.RefreshAll()
         else:
             self.edit_save_button.show()
             self.edit_cancel_button.show()
+        
+
         
 
 class NewLFISelector(QtWidgets.QFrame):
@@ -1005,44 +1143,12 @@ class ProjectDisplay(QtWidgets.QFrame):
         self.MakeSubjectsWidget()
 
     def MakeSettingWidget(self):
-        self.right_stack.addWidget(QtWidgets.QFrame())
-        cur_widget=self.right_stack.widget(2) #currentWidget()
-
-        display_label=QtWidgets.QLabel("Display Type: ",parent=cur_widget)
-        display_label_box=QtWidgets.QComboBox(cur_widget)
-        display_label_box.addItem("2D")
-        display_label_box.addItem("3D | Left & Right")
-        display_label_box.addItem("3D | Top & Bottom")
-        display_label_box.addItem("3D | Full")
-
-        layout=QtWidgets.QVBoxLayout()
-        layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignLeft)
-        cur_widget.setLayout(layout)
-
-        display_label_layout=QtWidgets.QHBoxLayout()
-        display_label_layout.addWidget(display_label)
-        display_label_layout.addWidget(display_label_box)
-
-        layout.addLayout(display_label_layout)
-
-
-        display_label=QtWidgets.QLabel("Display Type: ",parent=cur_widget)
-        display_label_box=QtWidgets.QComboBox(cur_widget)
-        display_label_box.addItem("2D")
-        display_label_box.addItem("3D | Left & Right")
-        display_label_box.addItem("3D | Top & Bottom")
-        display_label_box.addItem("3D | Full")
-
-        layout=QtWidgets.QVBoxLayout()
-        layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignLeft)
-        cur_widget.setLayout(layout)
-
-        display_label_layout=QtWidgets.QHBoxLayout()
-        display_label_layout.addWidget(display_label)
-        display_label_layout.addWidget(display_label_box)
-
-        layout.addLayout(display_label_layout)
-
+        subject_num=len(self.cur_project.subject_list)
+        if subject_num > 0:
+            has_subjects=True
+        else:
+            has_subjects=False
+        self.right_stack.addWidget(ExpSettingWidget(self.cur_project.exp_setting,has_subjects=has_subjects))
         
     def MakeSubjectsWidget(self):
         self.right_stack.addWidget(QtWidgets.QFrame())
@@ -1111,23 +1217,24 @@ class ProjectDisplay(QtWidgets.QFrame):
 if __name__ == "__main__":
     app=QtWidgets.QApplication()
 
-    project_info=ProjectInfo('test_1','../Projects/')
+    #project_info=ProjectInfo('test_1','../Projects/')
+    project_info=ProjectInfo('jpeg_1','../Projects/')
 
-    exp_setting=project_info.exp_setting
+    #exp_setting=project_info.exp_setting
 
-    exp_setting.SetProjectInfo(project_info)
+    #exp_setting.SetProjectInfo(project_info)
 
-    #project_display=ProjectDisplay(project_info)
-    #project_display.resize(800,600)
+    project_display=ProjectDisplay(project_info)
+    project_display.resize(800,600)
 
-    #project_display.show()
+    project_display.show()
 
 
-    exp_setting_display=ExpSettingWidget(exp_setting)
+    #exp_setting_display=ExpSettingWidget(exp_setting)
 
-    exp_setting_display.resize(800,600)
+    #exp_setting_display.resize(800,600)
 
-    exp_setting_display.show()
+    #exp_setting_display.show()
 
 
     sys.exit(app.exec())

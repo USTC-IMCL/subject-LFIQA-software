@@ -371,7 +371,14 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         if not isinstance(all_lfi_config,str):
             logger.error("For the two folders configuration, the input should be a string!")
             return None
-        all_lfi_config=TwoFolderLFIInfo(all_lfi_config,self.exp_setting.input_video_type_str,in_mode)
+        
+        if self.exp_setting.view_changing_type == FeatureType.Active:
+            all_lfi_config=ActiveTwoFolderLFIInfo(all_lfi_config,in_mode)
+        elif self.exp_setting.view_changing_type == FeatureType.Passive:
+            all_lfi_config=TwoFolderLFIInfo(all_lfi_config,self.exp_setting.input_video_type_str,in_mode)
+        else:
+            logger.warning("For the two folders configuration, the view changing type should be active or passive! Active refocusing two-folder mode is not supported now.") 
+            all_lfi_config=None
         return all_lfi_config
     
     def GetConfigInfoWithSpecificJson(self,all_lfi_config):
