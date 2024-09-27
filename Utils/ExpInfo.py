@@ -1072,19 +1072,25 @@ class ScoringExpLFIInfo:
             if cur_post_fix not in all_post_fix.keys():
                 all_post_fix[cur_post_fix]=0
             all_post_fix[cur_post_fix]+=1
+
+        all_post_fix_str=[]
+        all_post_fix_num=[]
+        for keys,values in all_post_fix.items():
+            all_post_fix_str.append(keys)
+            all_post_fix_num.append(values)
         
-        largest_post_fix=all_post_fix[max(all_post_fix, key=all_post_fix.get)]
+        largest_post_fix=all_post_fix_str[all_post_fix_num.index(max(all_post_fix_num))]
         return largest_post_fix
     
     def CheckAllInput(self):
-        if self.CheckActiveRefocusing() and self.CheckPassiveRefocusing() and self.CheckActiveView() and self.CheckPassiveView():
+        if self.CheckActiveRefocusing() or self.CheckPassiveRefocusing() or self.CheckActiveView() or self.CheckPassiveView():
             return True
         else:
             return False    
     
     def CheckPassiveRefocusing(self):
-        if self.passive_refocusing_video_path is not None:
-            return True
+        if self.passive_refocusing_video_path is None:
+            return False
         passive_video_name=self.passive_view_video_path.split('/')[-1]
         passive_video_post_fix=passive_video_name.split('.')[-1]
 
@@ -1103,25 +1109,13 @@ class ScoringExpLFIInfo:
             return True
 
     def CheckActiveView(self):
-        if self.active_view_path is not None:
-            return True
-        
-        all_files=os.listdir(self.active_view_path)
-
-        if len(all_files) == 0:
-            logger.error("The LFI active view folder is empty!")
+        if self.active_view_path is None:
             return False
         
-        all_views=[]
-        for file_name in all_files:
-            if self.img_post_fix in file_name:
-                all_views.append(file_name)
-        if len(all_views) == 0:
-            logger.error("LFI has no active view!")
-            return False
+        if self.img_post_fix is None:
+            self.img_post_fix=self.DetectPostfix(self.active_view_path)
         
-        self.GetViewDict(all_views,self.img_post_fix)
-        return True
+        return self.ParseFolder(self.active_view_path)
 
     def GetThumbnail(self,in_video,out_img):
         ffmpeg_cmd=f"{PathManager.ffmpeg_path} -i {in_video} -ss 00:00:00 -frames:v 1 {out_img}"
@@ -1159,17 +1153,17 @@ class ScoringExpLFIInfo:
         '''only active view changing is supported now'''
         if not os.path.exists(folder_path):
             self.is_valid=False
-            return None
+            return False
         all_files=os.listdir(folder_path)
         if len(all_files)==0:
             self.is_valid=False
-            return None
+            return False
         view_num=0
         for img_file in all_files:
             if self.img_post_fix in img_file and PathManager.thumbnail_name not in img_file:
                 view_num+=1
         if view_num==0:
-            return None
+            return False
         max_height=0
         max_width=0
         min_height=10000
@@ -1212,6 +1206,7 @@ class ScoringExpLFIInfo:
         self.img_width=img_width 
 
         self.GetViewDict(all_files,self.img_post_fix)
+        return True
 
     def GetActiveView(self,v_row,v_col):
         #v_row+=self.min_height
@@ -1329,7 +1324,7 @@ class ActiveTwoFolderLFIInfo(AllScoringLFI):
         all_folders=os.listdir(in_folder_path)
         for folder_name in all_folders:
             cur_single_scoring_lfi_info=ScoringExpLFIInfo()
-            img_post_fix=cur_single_scoring_lfi_info.DetectPostfix(folder_name)
+            img_post_fix=cur_single_scoring_lfi_info.DetectPostfix(os.path.join(in_folder_path,folder_name))
             cur_single_scoring_lfi_info.img_post_fix=img_post_fix
 
             cur_single_scoring_lfi_info.active_view_path=os.path.join(in_folder_path,folder_name)

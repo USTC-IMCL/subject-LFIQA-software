@@ -18,6 +18,17 @@ sys.stderr=StreamToLogger(logger,logging.ERROR)
 
 gray_color=(128,128,128)
 
+def SpatialComplexity(img:np.ndarray):
+    pass
+
+def TemporalComplexity(img:np.ndarray):
+    pass
+
+class DatasetEvaluate:
+    def __init__(self):
+        pass
+
+
 class PreProcessThread(QObject):
     sub_task_finished=Signal(int,str)
     total_finished=Signal()

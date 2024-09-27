@@ -53,8 +53,8 @@ class QLogTextEditor(QTextEdit):
         self.logger.addHandler(self.widget_handler)
         self.logger.setLevel(logging.DEBUG)
 
-        sys.stdout=StreamToLogger(self.logger,logging.INFO)
-        sys.stderr=StreamToLogger(self.logger,logging.ERROR)
+        #sys.stdout=StreamToLogger(self.logger,logging.INFO)
+        #sys.stderr=StreamToLogger(self.logger,logging.ERROR)
 
         self.log_dict={
             'debug':self.logger.debug,
@@ -63,6 +63,9 @@ class QLogTextEditor(QTextEdit):
             'error':self.logger.error,
             'critical':self.logger.critical
         }
+    
+    def RemoveWidgetHandler(self):
+        self.logger.removeHandler(self.widget_handler)
     
     def RecordMessage(self,message,level='info'):
         if level in self.log_dict.keys():
@@ -102,8 +105,8 @@ class QLogWidget(QWidget, LogWidget):
         self.logger.addHandler(self.widget_handler)
         self.logger.setLevel(logging.DEBUG)
 
-        sys.stdout=StreamToLogger(self.logger, logging.INFO)
-        sys.stderr=StreamToLogger(self.logger, logging.ERROR)
+        #sys.stdout=StreamToLogger(self.logger, logging.INFO)
+        #sys.stderr=StreamToLogger(self.logger, logging.ERROR)
 
         self.log_dict={
             'debug':self.logger.debug,

@@ -13,7 +13,87 @@ import os
 import shutil
 import pickle
 import logging
+from LogWindow import QLogTextEditor
 logger = logging.getLogger("LogWindow")
+
+class ScrollUnitArea(QtWidgets.QScrollArea):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.content_widget=QtWidgets.QFrame()
+        self.setWidget(self.content_widget)
+
+        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.setHorizontalScrollBar(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setWidgetResizable(True)
+
+        self.unit_col_num=0
+        self.unit_num=0
+        self.need_update=True
+        self.force_update=False
+
+        self.unit_size=[100,100] # height x width
+        self.h_space=10
+        self.v_space=10
+        self.unit_list=None
+        self.unit_list_labels=[] # QLabels to show the LFI info
+        self.item_index=[None]*(1+self.unit_list.exp_lfi_info_num) #[[row, col]]
+        self.item_pos=[None]*(1+self.unit_list.exp_lfi_info_num) #[height,width]
+
+        self.margin_top=10
+        self.margin_bottom=10
+        self.margin_left=10
+        self.margin_right=10
+
+    def MakeColRowIndex(self):
+        old_unit_col_num=self.unit_col_num
+        self.unit_col_num=(self.width()-self.margin_left-self.margin_right+self.h_space)//(self.unit_size[1]+self.h_space)
+        if self.unit_col_num < 1:
+            self.unit_col_num=1
+        if old_unit_col_num == self.unit_col_num and (not self.force_update):
+            self.need_update=False
+            return
+        else:
+            self.need_update=True
+
+        start_x=self.margin_left
+        start_y=self.margin_top 
+        for list_index in range(self.unit_list.exp_lfi_info_num+1):
+            row=list_index//self.unit_col_num
+            col=list_index-row*self.unit_col_num
+            self.item_index [list_index]=[row,col]
+            self.item_pos[list_index]=[row*(self.unit_size[0]+self.h_space),col*(self.unit_size[1]+self.h_space)]
+
+class SubjectsManagerWidget(QtWidgets.QScrollArea):
+    def __init__(self, subject_list, *args, **kwargs):
+        super().__init__(*args,*kwargs)
+        self.content_widget=QtWidgets.QFrame()
+        self.setWidget(self.main_widget)
+
+        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.setHorizontalScrollBar(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setWidgetResizable(True)
+
+    def MakeRowCol(self):
+        old_unit_col_num=self.unit_col_num
+        self.unit_col_num=(self.width()+self.h_space)//(self.unit_size[1]+self.h_space)
+        if self.unit_col_num < 1:
+            self.unit_col_num=1
+        if old_unit_col_num == self.unit_col_num and (not self.force_update):
+            self.need_update=False
+            return
+        else:
+            self.need_update=True 
+        
+        for list_index in range(self.unit_list.exp_lfi_info_num+1):
+            row=list_index//self.unit_col_num
+            col=list_index-row*self.unit_col_num
+            self.item_index [list_index]=[row,col]
+            self.item_pos[list_index]=[row*(self.unit_size[0]+self.h_space),col*(self.unit_size[1]+self.h_space)]
+
+    def MakeSubjectLabels(self):
+        pass
+
+
 
 class ExpSettingWidget(QtWidgets.QScrollArea):
     def __init__(self, exp_setting: ExpSetting, has_subjects=False, *args, **kwargs):
@@ -185,7 +265,7 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
 
         self.display_type=QtWidgets.QComboBox()
         display_type=self.display_type
-        self.project_list.append(display_type)
+        self.project_list.append(self.display_type)
         display_type.addItem("2D")
         display_type.addItem("3D | Left & Right")
         display_type.addItem("3D | Up & Down")
@@ -490,7 +570,7 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         self.view_changing_type.setCurrentIndex(self.project_info.exp_setting.view_changing_type.value)
         self.comparison_type.setCurrentIndex(self.project_info.exp_setting.comparison_type.value)
         
-        self.SetDisplayType(self.project_info.exp_setting.display_type.value)
+        self.display_type.setCurrentIndex(self.project_info.exp_setting.display_type.value)
         self.save_format.setCurrentIndex(self.project_info.exp_setting.save_format.value)
 
         self.auto_play_box.setCurrentIndex(1 if self.project_info.exp_setting.auto_play else 0)
@@ -608,6 +688,9 @@ class NewLFISelector(QtWidgets.QFrame):
                 refocusing_type=FeatureType.Passive
             else:
                 refocusing_type=FeatureType.None_Type
+        else:
+            refocusing_type=exp_setting.refocusing_type
+
         if not hasattr(exp_setting, 'view_changing_type'):
             if ExpInfo.LFIFeatures.Active_ViewChanging in exp_setting.lfi_features:
                 view_changing_type=FeatureType.Active
@@ -615,6 +698,8 @@ class NewLFISelector(QtWidgets.QFrame):
                 view_changing_type=FeatureType.Passive
             else:
                 view_changing_type=FeatureType.None_Type
+        else:
+            view_changing_type=exp_setting.view_changing_type
 
 
         if refocusing_type != FeatureType.None_Type:
@@ -722,12 +807,14 @@ class NewLFISelector(QtWidgets.QFrame):
 
 class ImageUnit(QtWidgets.QFrame):
     clicked=QtCore.Signal()
+    menu_clicked=QtCore.Signal(int,int)
     def __init__(self,unit_info:ScoringExpLFIInfo=None, logo_size=[80,80], icon_img=':/icons/res/icon_add.png', icon_title='New One',unit_index=0, *args, **kwargs):
         super().__init__(*args,**kwargs)
         self.logo_size=logo_size
         self.SetBasicParam(unit_info)
         self.InitIconUI(icon_img, icon_title)
         self.index=unit_index
+        self.open_menu=False
         
     def SetBasicParam(self, unit_info:ScoringExpLFIInfo=None):
         self.scoring_info=unit_info
@@ -749,9 +836,26 @@ class ImageUnit(QtWidgets.QFrame):
         self.logo_title_label.setGeometry(QtCore.QRect((self.logo_size[1]-title_label_width)//2, self.logo_size[0], title_label_width, title_label_height))
     
     def mousePressEvent(self, event):
-        self.clicked.emit()
-        event.ignore()
-        return super().mousePressEvent(event) 
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+            event.ignore()
+        return super().mousePressEvent(event)
+    
+    def MakeMenu(self, menu_text):
+        self.open_menu=True
+        self.menu=QtWidgets.QMenu(self)
+        self.menu_action_list=[]
+        self.menu_dict={}
+        for index,text in enumerate(menu_text):
+            self.menu_action_list.append(self.menu.addAction(text))
+            self.menu_dict[text]=index
+            self.menu_action_list[-1].triggered.connect(lambda: self.menu_clicked.emit(self.index,self.menu_dict[text]))
+
+    def contextMenuEvent(self, event):
+        if not self.open_menu:
+            return
+
+        self.menu.exec(event.globalPos())
 
 class ImageUnitInfoDisplay(QtWidgets.QFrame):
     def __init__(self, *args, **kwargs) -> None:
@@ -777,6 +881,7 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         self.unit_col_num=0
 
         self.exp_setting=exp_setting
+        self.force_update=False
 
         self.item_index=[None]*(1+self.unit_list.exp_lfi_info_num) #[[row, col]]
         self.item_pos=[None]*(1+self.unit_list.exp_lfi_info_num) #[height,width]
@@ -799,9 +904,11 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         self.unit_col_num=(self.width()+self.h_space)//(self.unit_size[1]+self.h_space)
         if self.unit_col_num < 1:
             self.unit_col_num=1
-        if old_unit_col_num == self.unit_col_num:
+        if old_unit_col_num == self.unit_col_num and (not self.force_update):
             self.need_update=False
             return
+        else:
+            self.need_update=True 
         
         for list_index in range(self.unit_list.exp_lfi_info_num+1):
             row=list_index//self.unit_col_num
@@ -814,6 +921,7 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         self.unit_list_labels[0].clicked.connect(self.AddNewLFI)
         for i in range(self.unit_list.exp_lfi_info_num):
             self.unit_list_labels.append(ImageUnit(unit_info=self.unit_list.GetScoringExpLFIInfo(i),icon_img=':/icons/res/image.png',icon_title=f'LFI {i}',parent=self))
+            self.unit_list_labels[-1].MakeMenu(['Open in folder','Delete'])
 
     def UpdateLabelPos(self):
         self.MakeColRowIndex()
@@ -894,7 +1002,11 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         else:
             self.unit_list.AddScoringLFI(new_scoring_lfi)
             self.unit_list_labels.append(ImageUnit(unit_info=new_scoring_lfi,icon_img=':/icons/res/image.png',icon_title=f'LFI {self.unit_list.exp_lfi_info_num}',parent=self))
+            self.item_index=[None]*(1+self.unit_list.exp_lfi_info_num) #[[row, col]]
+            self.item_pos=[None]*(1+self.unit_list.exp_lfi_info_num) #[height,width]
+            self.force_update=True
             self.UpdateLabelPos()
+            self.force_update=False
 
     def CancleAddNewLFI(self):
         self.add_form=None
@@ -1085,7 +1197,7 @@ class ProjectDisplay(QtWidgets.QFrame):
         self.right_stack.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,QtWidgets.QSizePolicy.Policy.Expanding)
         #self.main_layout.addWidget(self.right_stack)
 
-        self.right_text_editor=QtWidgets.QTextEdit()
+        self.right_text_editor=QLogTextEditor()
         self.right_text_editor.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,QtWidgets.QSizePolicy.Policy.Expanding)
 
         self.right_stack_splitter.addWidget(self.right_stack)
@@ -1159,38 +1271,17 @@ class ProjectDisplay(QtWidgets.QFrame):
         layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignLeft)
         cur_widget.setLayout(layout)
 
-        subject_unit=ImageUnit(icon_title="Shengyang",icon_img=":/icons/res/subject.png")
-        subject_unit.setParent(cur_widget)
+        icon_img=":/icons/res/subject.png"
 
-        subject_unit.setGeometry(0,0,100,100)
+        subject_num=len(self.cur_project.subject_list)
+        self.all_subjects=[]
+        for i in range(subject_num):
+            subject_unit=ImageUnit(icon_title=f"Subject {i}",icon_img=icon_img)
+            subject_unit.MakeMenu(['Open in folder','Open file','Delete'])
+            subject_unit.setParent(cur_widget)
+            self.all_subjects.append(subject_unit)
+            subject_unit.setGeometry(0,0,100,100)
 
-    def contextMenuEvent(self, event):
-        menu=QtWidgets.QMenu(self)
-
-        action1 = menu.addAction("Show in folder")
-        action2 = menu.addAction("Open File")
-        action3 = menu.addAction("Delete")
-
-        menu.exec(event.globalPos())
-        cur_widget=self.right_stack.widget(3) #currentWidget()
-
-        layout=QtWidgets.QVBoxLayout()
-        layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignLeft)
-        cur_widget.setLayout(layout)
-
-        subject_unit=ImageUnit(icon_title="Shengyang",icon_img=":/icons/res/subject.png")
-        subject_unit.setParent(cur_widget)
-
-        subject_unit.setGeometry(0,0,100,100)
-
-    def contextMenuEvent(self, event):
-        menu=QtWidgets.QMenu(self)
-
-        action1 = menu.addAction("Show in folder")
-        action2 = menu.addAction("Open File")
-        action3 = menu.addAction("Delete")
-
-        menu.exec(event.globalPos())
 
     def MakeMaterialWidget(self):
         right_stack_width=self.right_stack.width()
@@ -1217,8 +1308,8 @@ class ProjectDisplay(QtWidgets.QFrame):
 if __name__ == "__main__":
     app=QtWidgets.QApplication()
 
-    #project_info=ProjectInfo('test_1','../Projects/')
-    project_info=ProjectInfo('jpeg_1','../Projects/')
+    project_info=ProjectInfo('test_1','../Projects/')
+    #project_info=ProjectInfo('jpeg_1','../Projects/')
 
     #exp_setting=project_info.exp_setting
 

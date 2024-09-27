@@ -6,7 +6,7 @@ from datetime import date
 from PySide6.QtWidgets import QWidget, QDockWidget, QMainWindow, QTextBrowser, QApplication, QFileDialog, QMessageBox, QProgressDialog, QInputDialog, QErrorMessage, QDialog
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtCore import Qt, QThread
-from LogWindow import QLogTextEditor
+from LogWindow import QLogTextEditor, StreamToLogger
 import ExpInfo
 from MainProject_ui import Ui_MainWindow
 import Log_Form
@@ -21,6 +21,7 @@ import PostProcess
 import PathManager
 import FontSetting
 import SubjectInfo
+from ProjectDisplay import ProjectDisplay
 logger=logging.getLogger("LogWindow")
 
 class AboutJPEGForm(QWidget,Ui_About_JPEG_Form):
@@ -32,9 +33,10 @@ class MainProject(QMainWindow,Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.make_dock_widget()
+        #self.make_dock_widget()
         self.text_browser=None #QTextBrowser()
         self.cur_project_name=None
+        self.project_display=None
         self.cur_project=None
         self.init_screen=True
         self.project_root='./Projects'
@@ -50,6 +52,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.software_manager=PathManager.SoftWarePathManager()
         if custom_log_level is not None:
             self.software_manager.log_level=custom_log_level
+
         self.software_manager.file_path=custom_init_path
         self.software_manager.SaveInfo()
         #self.log_path='./Logs'
@@ -59,14 +62,19 @@ class MainProject(QMainWindow,Ui_MainWindow):
         today_str=date.today().strftime("%Y-%m-%d")
         self.log_file=os.path.join(self.log_path,today_str+'.log')
         self.file_handler=logging.FileHandler(self.log_file)
-        self.file_handler.setFormatter(self.log_text_editor.log_format)
+        format_str='%(asctime)s [%(levelname)s]: %(message)s'
+        self.file_handler.setFormatter(logging.Formatter(fmt=format_str,datefmt='%Y-%m-%d-%H:%M'))
         logger.addHandler(self.file_handler)
         logger.setLevel(self.software_manager.log_level)
+
+        sys.stdout=StreamToLogger(logger, logging.INFO)
+        sys.stderr=StreamToLogger(logger, logging.ERROR)
+
         self.InitTrigger()
     
     def InitTrigger(self):
-        self.action_log=self.log_dock.toggleViewAction()
-        self.menuView.addAction(self.action_log)
+        #self.action_log=self.log_dock.toggleViewAction()
+        #self.menuView.addAction(self.action_log)
         self.action_new_project.triggered.connect(self.NewProject)
         self.action_load_project.triggered.connect(self.LoadProject)
         self.action_preprocessing.triggered.connect(self.preprocess)
@@ -141,9 +149,17 @@ class MainProject(QMainWindow,Ui_MainWindow):
     def SetProject(self,project_name):
         self.cur_project_name=project_name
         self.cur_project=ExpInfo.ProjectInfo(project_name,self.project_root)
+        '''
         if self.init_screen:
             self.log_dock.show()
             self.init_screen=False
+        '''
+        if self.project_display is not None:
+            self.project_display.hide()
+            self.project_display.right_text_editor.RemoveWidgetHandler()
+            self.project_display.deleteLater()
+            self.project_display=None
+        
         self.ShowProjectSetting()
         
     def LoadProject(self):
@@ -155,34 +171,29 @@ class MainProject(QMainWindow,Ui_MainWindow):
         project_name=project_name.split('.')[0]
         project_root=os.path.dirname(os.path.dirname(project_file))
 
+        if self.project_display is not None:
+            self.project_display.hide()
+            self.project_display.right_text_editor.RemoveWidgetHandler()
+            self.project_display.deleteLater()
         self.cur_project_name=project_name
         self.cur_project=ExpInfo.ProjectInfo(project_name,project_root)
-        if self.init_screen:
-            self.log_dock.show()
-            self.init_screen=False
         self.ShowProjectSetting()
     
     def CloseProject(self):
         self.cur_project=None
         self.cur_project_name=None
-        if self.text_browser is not None:
-            self.text_browser.clear()
-            self.text_browser.deleteLater()
-            self.text_browser=None
         #self.text_label.show()
         #self.logo_label.show()
-        self.init_screen=True
-        self.log_dock.hide()
+        self.project_display.hide()
+        self.project_display.right_text_editor.RemoveWidgetHandler()
+        self.project_display.deleteLater()
+        self.project_display=None
         self.setupUi(self)
         self.InitTrigger()
 
     def ShowProjectSetting(self):
-        if self.text_browser is None:
-            self.text_browser=QTextBrowser()
-            self.setCentralWidget(self.text_browser)
-        self.text_browser.show()
-        self.text_browser.clear()
-        self.text_browser.setText(self.cur_project.PrintAll())
+        self.project_display=ProjectDisplay(self.cur_project)
+        self.setCentralWidget(self.project_display)
     
     def NewProject(self):
         print("Create a new project now.")

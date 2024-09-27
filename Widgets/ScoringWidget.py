@@ -421,7 +421,7 @@ class ScoringWidget(QtWidgets.QStackedWidget):
     
     def SetPageShowing(self,cur_lf_info:ScoringExpLFIInfo,init_flag=False):
         exp_setting=self.exp_setting
-        if exp_setting.two_folder_mode:
+        if exp_setting.two_folder_mode and LFIFeatures.Passive_ViewChanging in exp_setting.lfi_features:
             if init_flag:
                 page_showing=VideoPage(exp_setting,None,cur_lf_info.passive_view_video_path)
                 self.addWidget(page_showing)
