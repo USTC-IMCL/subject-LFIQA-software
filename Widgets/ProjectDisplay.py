@@ -650,7 +650,7 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
 
         
 
-class NewLFISelector(QtWidgets.QFrame):
+class NewLFISelector(QtWidgets.QDialog):
     on_cancel=QtCore.Signal()
     on_confirm=QtCore.Signal(dict)
     def __init__(self, exp_setting: ExpSetting,  *args, **kwargs):
@@ -761,6 +761,9 @@ class NewLFISelector(QtWidgets.QFrame):
         self.refocusing_line_editor=refocusing_text_line
         self.view_changing_line_editor=view_changing_text_line
         
+    def GetFilePath(self):
+        passive_file_path=QtWidgets.QFileDialog.getOpenFileName(self,'Select video file','./',PathManager.)
+
     def ConfirmClicked(self):
         if self.refocusing_line_editor is not None:
             if self.refocusing_line_editor.text() == '':
@@ -973,8 +976,7 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         cache_desc_fid.close()
     
     def AddNewLFI(self):
-        self.add_form=NewLFISelector(self.exp_setting)
-        self.add_form.resize(400,150)
+        self.add_form=NewLFISelector(self.exp_setting,parent=self)
         self.add_form.show()
         self.add_form.on_confirm.connect(self.ConfirmAddNewLFI)
         self.add_form.on_cancel.connect(self.CancleAddNewLFI)
