@@ -1279,6 +1279,10 @@ class AllScoringLFI:
                         exp_name=f"{lfi_name}_{dist_type}_{dist_level}"
                         self.AddOne(exp_setting,cur_lfi_info,exp_name)
     
+    def DeleteScoringLFI(self,index:int):
+        self.exp_lfi_info_num-=1
+        self.all_exp_lfi_info.pop(index)
+    
     def AddOne(self,exp_setting:ExpSetting,lfi_info:SingleLFIInfo,exp_name,cmp_index=0):
         self.exp_lfi_info_num+=1
         cur_scoring_lfi_info=ScoringExpLFIInfo()

@@ -729,8 +729,10 @@ class NewLFISelector(QtWidgets.QDialog):
             view_changing_button=QtWidgets.QPushButton('Browse')
             if view_changing_type == FeatureType.Active:
                 view_changing_label.setText('View changing mode: <font color="red">Active</font><br>Select the folder path: ')
+                view_changing_button.clicked.connect(lambda : view_changing_text_line.setText(self.GetFolderName()))
             else:
                 view_changing_label.setText('View changing mode: <font color="red">Passive</font><br>Select the video path: ')
+                view_changing_button.clicked.connect(lambda : view_changing_text_line.setText(self.GetFileName()))
             
             view_changing_layout.setStretchFactor(view_changing_text_line, 8)
             view_changing_layout.setStretchFactor(view_changing_button,2)
@@ -761,8 +763,15 @@ class NewLFISelector(QtWidgets.QDialog):
         self.refocusing_line_editor=refocusing_text_line
         self.view_changing_line_editor=view_changing_text_line
         
-    def GetFilePath(self):
-        passive_file_path=QtWidgets.QFileDialog.getOpenFileName(self,'Select video file','./',PathManager.)
+    def GetFileName(self):
+        video_type=['*.'+x.name for x in ExpInfo.VideoSaveType]
+        video_filter='Video Files (%s)' %(' '.join(video_type))
+        passive_file_path=QtWidgets.QFileDialog.getOpenFileName(self,'Select video file','./',video_filter)[0]
+        return passive_file_path
+    
+    def GetFolderName(self):
+        folder_name=QtWidgets.QFileDialog.getExistingDirectory(self,'select the LFI Folder','./')[0]
+        return folder_name
 
     def ConfirmClicked(self):
         if self.refocusing_line_editor is not None:
@@ -838,6 +847,9 @@ class ImageUnit(QtWidgets.QFrame):
         title_label_height=self.logo_title_label.height()
         self.logo_title_label.setGeometry(QtCore.QRect((self.logo_size[1]-title_label_width)//2, self.logo_size[0], title_label_width, title_label_height))
     
+    def SetText(self, text):
+        self.logo_title_label.setText(text)
+    
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
             self.clicked.emit()
@@ -899,9 +911,17 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         self.unit_info_display=ImageUnitInfoDisplay(parent=self)
         self.add_form=None
 
+        self.is_editable=True
+
+        self.menu_text=['Show in folder','Delete']
+        self.menu_func={}
+
         self.MakeUnitLabels()
         self.UpdateLabelPos()
     
+    def SetEditable(self, is_editable):
+        self.is_editable=is_editable
+
     def MakeColRowIndex(self):
         old_unit_col_num=self.unit_col_num
         self.unit_col_num=(self.width()+self.h_space)//(self.unit_size[1]+self.h_space)
@@ -924,7 +944,18 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         self.unit_list_labels[0].clicked.connect(self.AddNewLFI)
         for i in range(self.unit_list.exp_lfi_info_num):
             self.unit_list_labels.append(ImageUnit(unit_info=self.unit_list.GetScoringExpLFIInfo(i),icon_img=':/icons/res/image.png',icon_title=f'LFI {i}',parent=self))
-            self.unit_list_labels[-1].MakeMenu(['Open in folder','Delete'])
+            self.unit_list_labels[-1].MakeMenu(self.menu_text)
+            self.unit_list_labels[-1].menu_clicked.connect
+    
+    def ShowInFolder(self, index):
+        img_unit
+    def ImgUnitMenuClicked(self,unit_index,menu_index):
+
+
+
+    def OpenFolder(self, path):
+        if os.path.exists(path):
+            os.startfile(path)
 
     def UpdateLabelPos(self):
         self.MakeColRowIndex()
@@ -980,6 +1011,10 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         self.add_form.show()
         self.add_form.on_confirm.connect(self.ConfirmAddNewLFI)
         self.add_form.on_cancel.connect(self.CancleAddNewLFI)
+    
+    def DeleteLFI(self,index):
+        self.unit_list.DeleteScoringLFI(index)
+    
 
     def ConfirmAddNewLFI(self,in_dict):
         '''
@@ -1003,7 +1038,9 @@ class MaterialFolderFrame(QtWidgets.QFrame):
             return
         else:
             self.unit_list.AddScoringLFI(new_scoring_lfi)
-            self.unit_list_labels.append(ImageUnit(unit_info=new_scoring_lfi,icon_img=':/icons/res/image.png',icon_title=f'LFI {self.unit_list.exp_lfi_info_num}',parent=self))
+            self.unit_list_labels.append(ImageUnit(unit_info=self.unit_list.GetScoringExpLFIInfo(self.unit_list.exp_lfi_info_num-1),icon_img=':/icons/res/image.png',icon_title=f'LFI {self.unit_list.exp_lfi_info_num-1}',parent=self))
+            self.unit_list_labels[-1].MakeMenu(['Open in folder','Delete'])
+            self.unit_list_labels[-1].show()
             self.item_index=[None]*(1+self.unit_list.exp_lfi_info_num) #[[row, col]]
             self.item_pos=[None]*(1+self.unit_list.exp_lfi_info_num) #[height,width]
             self.force_update=True
@@ -1014,7 +1051,16 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         self.add_form=None
 
     def DeleteFLI(self,index):
-        pass
+        self.unit_list.DeleteScoringLFI(index)
+        self.unit_list_labels.pop(index).deleteLater()
+        self.UpdateLabelText()
+        self.force_update=True
+        self.UpdateLabelPos()
+        self.force_update=False
+
+    def UpdateLabelText(self):
+        for index,image_unit in enumerate(self.unit_list_labels[1:]):
+            image_unit.SetText(f'LFI {index}')
     
     def CheckCache(self,project_path):
         if self.cache_root is None:
