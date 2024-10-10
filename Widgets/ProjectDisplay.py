@@ -948,9 +948,10 @@ class MaterialFolderFrame(QtWidgets.QFrame):
             self.unit_list_labels[-1].menu_clicked.connect
     
     def ShowInFolder(self, index):
-        img_unit
+        pass
+        #img_unit
     def ImgUnitMenuClicked(self,unit_index,menu_index):
-
+        pass
 
 
     def OpenFolder(self, path):
