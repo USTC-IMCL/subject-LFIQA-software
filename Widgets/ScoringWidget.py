@@ -1,4 +1,7 @@
 import sys
+sys.path.append('../UI')
+sys.path.append('../Widgets/')
+sys.path.append('../Utils')
 import os
 from typing import Optional
 from PySide6 import QtCore, QtGui, QtWidgets
@@ -7,8 +10,6 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt, QUrl, QTimer
 from ExpInfo import *
 import PathManager
-sys.path.append('../UI')
-sys.path.append('../Widgets/')
 from ScoreTable_ui import Ui_ScoreTable as ScoreTable
 import cv2
 import time
@@ -1784,7 +1785,8 @@ if __name__ == "__main__":
     exp_setting.skip_hint_text="You can skip the video by pressing Enter now."
     exp_setting.table_font_size=50
 
-    video_path='C:/Users/ZSY/Downloads/examples/two_folder/foo_1/1.mp4'
+    video_path='/data_0/shengyang/Work/JPEG/LFIQA/examples/two_folder/foo_1/1.mp4'
+    #video_path='C:/Users/ZSY/Downloads/examples/two_folder/foo_1/1.mp4'
     video_page=VideoPage(exp_setting,None,video_path)
 
     video_page.pair_finished.connect(PrintVideoPage)

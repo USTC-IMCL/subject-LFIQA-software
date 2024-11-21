@@ -597,13 +597,12 @@ class ExpSetting:
         self.display_type=DisplayType.TwoD
         if LFIFeatures.TwoD in self.lfi_features:
             self.display_type=DisplayType.TwoD
-        elif LFIFeatures.ThreeD in self.lfi_features:
-            if LFIFeatures.Stereo_horizontal in self.lfi_features:
-                self.display_type=DisplayType.ThreeD_LR
-            if LFIFeatures.Stereo_vertical in self.lfi_features:
-                self.display_type=DisplayType.ThreeD_UD
-            if LFIFeatures.Stereo_full in self.lfi_features:
-                self.display_type=DisplayType.ThreeD_Full
+        if LFIFeatures.Stereo_horizontal in self.lfi_features:
+            self.display_type=DisplayType.ThreeD_LR
+        if LFIFeatures.Stereo_vertical in self.lfi_features:
+            self.display_type=DisplayType.ThreeD_UD
+        if LFIFeatures.Stereo_full in self.lfi_features:
+            self.display_type=DisplayType.ThreeD_Full
 
         self.pair_wise_config=""
         self.pair_wise_dict={}

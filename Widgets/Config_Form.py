@@ -471,6 +471,10 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         if disp_type == '3d':
             if threed_type == "lr" or threed_type =="leftright":
                 all_lfi_features.append(LFIFeatures.Stereo_horizontal)
+            if threed_type == "ud" or threed_type =="updown":
+                all_lfi_features.append(LFIFeatures.Stereo_vertical)
+            if threed_type == "full" or threed_type =="fullfield":
+                all_lfi_features.append(LFIFeatures.Stereo_full)
 
         view_change_type=view_change_type.lower()
         if view_change_type == "active":

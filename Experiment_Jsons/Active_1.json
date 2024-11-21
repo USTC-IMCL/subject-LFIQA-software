@@ -1,0 +1,34 @@
+{
+    "Training":"/data_0/shengyang/Work/JPEG/LFIQA/examples/ActiveTwoFolder/foo_1",
+    "Test":"/data_0/shengyang/Work/JPEG/LFIQA/examples/ActiveTwoFolder/foo_2",
+    "Exp_Info":{
+        "Display_Type":"2D",
+        "ThreeD_Type":"LeftRight",
+        "Score_Levels":5,
+        "Score_Names":[
+            "Please Rate the Quality"
+        ],
+        "Score_Definition":[
+            ["5. Imperceptible",
+            "4. Perceptible but not annoying",
+            "3. Slightly Annoying",
+            "2. Annoying",
+            "1. Very Annoying"]
+        ],
+        "View_Changing":"Active",
+        "Refocusing":"None",
+        "Comparison":"SingleStimulus",
+        "Save_Format":"Excel",
+        "Skip_Preprocessing": true,
+        "Two_Folder_Mode": true,
+        "Auto_Play":true,
+        "Loop_Times": 2,
+        "FPS": -1,
+        "Auto_Transition": true,
+        "Pause_Allowed": false,
+        "First_Loop_Skip_Allowed": false,
+        "Skip_Hint_Text": "Your hint here",
+        "Table_Font_Size": 20,
+        "Hint_Font_Size": 60
+    }
+}
