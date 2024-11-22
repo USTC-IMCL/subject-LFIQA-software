@@ -67,11 +67,26 @@ class SubjectsManagerWidget(QtWidgets.QScrollArea):
     def __init__(self, subject_list, *args, **kwargs):
         super().__init__(*args,*kwargs)
         self.content_widget=QtWidgets.QFrame()
-        self.setWidget(self.main_widget)
+        self.setWidget(self.content_widget)
 
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setHorizontalScrollBar(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setWidgetResizable(True)
+
+        self.unit_col_num=0
+        self.unit_num=0
+        self.need_update=True
+        self.force_update=False
+
+        self.unit_size=[100,100] # height x width
+        self.h_space=10
+        self.v_space=10
+        self.unit_list=subject_list
+        self.unit_list_labels=[] # QLabels to show the LFI info
+        self.item_index=[None]*(1+self.unit_list.exp_lfi_info_num) #[[row, col]]
+        self.item_pos=[None]*(1+self.unit_list.exp_lfi_info_num) #[height,width]
+
+        self.margin_top=10
 
     def MakeRowCol(self):
         old_unit_col_num=self.unit_col_num
@@ -1312,7 +1327,8 @@ class ProjectDisplay(QtWidgets.QFrame):
         self.right_stack.addWidget(ExpSettingWidget(self.cur_project.exp_setting,has_subjects=has_subjects))
         
     def MakeSubjectsWidget(self):
-        self.right_stack.addWidget(QtWidgets.QFrame())
+        #self.right_stack.addWidget(QtWidgets.QFrame())
+        self.right_stack.addWidget(SubjectsManagerWidget(self.cur_project.subject_list))
 
         cur_widget=self.right_stack.widget(3) #currentWidget()
 
