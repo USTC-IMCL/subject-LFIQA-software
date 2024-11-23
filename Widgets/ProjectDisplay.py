@@ -13,36 +13,53 @@ import os
 import shutil
 import pickle
 import logging
+from SubjectInfo import PersonInfo
 from LogWindow import QLogTextEditor
 logger = logging.getLogger("LogWindow")
 
 class ScrollUnitArea(QtWidgets.QScrollArea):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, item_list=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.content_widget=QtWidgets.QFrame()
         self.setWidget(self.content_widget)
+
+        if 'use_add_icon' in kwargs.keys():
+            self.use_add_icon=kwargs['use_add_icon']
+        else:
+            self.use_add_icon=True
+        self.add_icon=':/icons/res/icon_add.png'
+
+        if 'icon' in kwargs.keys():
+            self.icon_img=kwargs['icon']
+        else:
+            self.icon_img=':/icons/res/image.png'
 
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setHorizontalScrollBar(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setWidgetResizable(True)
 
         self.unit_col_num=0
-        self.unit_num=0
         self.need_update=True
         self.force_update=False
 
         self.unit_size=[100,100] # height x width
         self.h_space=10
         self.v_space=10
-        self.unit_list=None
+        self.unit_list=item_list
+        self.unit_num=len(self.unit_list)
+        if self.use_add_icon:
+            self.unit_num+=1
         self.unit_list_labels=[] # QLabels to show the LFI info
-        self.item_index=[None]*(1+self.unit_list.exp_lfi_info_num) #[[row, col]]
-        self.item_pos=[None]*(1+self.unit_list.exp_lfi_info_num) #[height,width]
+
+        self.item_index=[None]*self.unit_num #[[row, col]]
+        self.item_pos=[None]*self.unit_num #[height,width]
 
         self.margin_top=10
         self.margin_bottom=10
         self.margin_left=10
         self.margin_right=10
+
+        self.MakeColRowIndex()
 
     def MakeColRowIndex(self):
         old_unit_col_num=self.unit_col_num
@@ -55,58 +72,58 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         else:
             self.need_update=True
 
-        start_x=self.margin_left
-        start_y=self.margin_top 
-        for list_index in range(self.unit_list.exp_lfi_info_num+1):
+        for list_index in range(self.unit_num):
             row=list_index//self.unit_col_num
             col=list_index-row*self.unit_col_num
             self.item_index [list_index]=[row,col]
             self.item_pos[list_index]=[row*(self.unit_size[0]+self.h_space),col*(self.unit_size[1]+self.h_space)]
-
-class SubjectsManagerWidget(QtWidgets.QScrollArea):
-    def __init__(self, subject_list, *args, **kwargs):
-        super().__init__(*args,*kwargs)
-        self.content_widget=QtWidgets.QFrame()
-        self.setWidget(self.content_widget)
-
-        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.setHorizontalScrollBar(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setWidgetResizable(True)
-
-        self.unit_col_num=0
-        self.unit_num=0
-        self.need_update=True
-        self.force_update=False
-
-        self.unit_size=[100,100] # height x width
-        self.h_space=10
-        self.v_space=10
-        self.unit_list=subject_list
-        self.unit_list_labels=[] # QLabels to show the LFI info
-        self.item_index=[None]*(1+self.unit_list.exp_lfi_info_num) #[[row, col]]
-        self.item_pos=[None]*(1+self.unit_list.exp_lfi_info_num) #[height,width]
-
-        self.margin_top=10
-
-    def MakeRowCol(self):
-        old_unit_col_num=self.unit_col_num
-        self.unit_col_num=(self.width()+self.h_space)//(self.unit_size[1]+self.h_space)
-        if self.unit_col_num < 1:
-            self.unit_col_num=1
-        if old_unit_col_num == self.unit_col_num and (not self.force_update):
-            self.need_update=False
+    
+    def MakeUnitLabels(self):
+        if len(self.unit_list_labels) == self.unit_num:
             return
+        if self.use_add_icon:
+            self.unit_list_labels.append(ImageUnit(icon_img=self.add_icon,parent=self))
+            start_index=1
         else:
-            self.need_update=True 
-        
-        for list_index in range(self.unit_list.exp_lfi_info_num+1):
-            row=list_index//self.unit_col_num
-            col=list_index-row*self.unit_col_num
-            self.item_index [list_index]=[row,col]
-            self.item_pos[list_index]=[row*(self.unit_size[0]+self.h_space),col*(self.unit_size[1]+self.h_space)]
+            start_index=0
 
-    def MakeSubjectLabels(self):
-        pass
+        for i in range(start_index,self.unit_num-start_index):
+            self.unit_list_labels.append(ImageUnit(None,self.unit_size,self.GetIconImg(i),icon_title=self.GetItemName(i),parent=self))
+    
+    def UpdateUnitLabels(self):
+        self.MakeColRowIndex()
+        if self.need_update:
+            self.need_update=False
+            for i in range(self.unit_num):
+                self.unit_list_labels[i].setGeometry(self.item_pos[i][1],self.item_pos[i][0],self.unit_size[1],self.unit_size[0])
+
+
+    def GetItemName(self,index):
+        return "Item"+str(index)
+
+    def GetIconImg(self,index):
+        return self.icon_img
+
+    def SetClickFunc(self,index,func):
+        self.unit_list_labels[index].clicked.connect(func)
+
+
+class SubjectsManagerWidget(ScrollUnitArea):
+    def __init__(self, subject_list: list[PersonInfo], *args, **kwargs):
+        super().__init__(item_list=subject_list, *args, **kwargs)
+        self.use_add_icon=False
+
+        self.icon_img=':/icons/res/user.png'
+        self.menu=None
+
+    def GetItemName(self,index):
+        return self.unit_list[index].name
+    
+    def MakeMenu(self, menu_text):
+        if self.menu is not None:
+            return
+        self.menu=QtWidgets.QMenu()
+        self.menu_action_list
 
 
 
@@ -969,10 +986,6 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         pass
 
 
-    def OpenFolder(self, path):
-        if os.path.exists(path):
-            os.startfile(path)
-
     def UpdateLabelPos(self):
         self.MakeColRowIndex()
         if self.need_update:
@@ -1309,9 +1322,6 @@ class ProjectDisplay(QtWidgets.QFrame):
         self.label_subjects.clicked.connect(lambda index: self.ActivateMenuLabel(index))
         self.left_panel_layout.addWidget(self.label_subjects)
         self.all_menu_labels.append(self.label_subjects)
-        self.label_subjects.clicked.connect(lambda index: self.ActivateMenuLabel(index))
-        self.left_panel_layout.addWidget(self.label_subjects)
-        self.all_menu_labels.append(self.label_subjects)
 
     def MakeRightPanel(self):
         self.MakeMaterialWidget()
@@ -1327,25 +1337,7 @@ class ProjectDisplay(QtWidgets.QFrame):
         self.right_stack.addWidget(ExpSettingWidget(self.cur_project.exp_setting,has_subjects=has_subjects))
         
     def MakeSubjectsWidget(self):
-        #self.right_stack.addWidget(QtWidgets.QFrame())
         self.right_stack.addWidget(SubjectsManagerWidget(self.cur_project.subject_list))
-
-        cur_widget=self.right_stack.widget(3) #currentWidget()
-
-        layout=QtWidgets.QVBoxLayout()
-        layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignLeft)
-        cur_widget.setLayout(layout)
-
-        icon_img=":/icons/res/subject.png"
-
-        subject_num=len(self.cur_project.subject_list)
-        self.all_subjects=[]
-        for i in range(subject_num):
-            subject_unit=ImageUnit(icon_title=f"Subject {i}",icon_img=icon_img)
-            subject_unit.MakeMenu(['Open in folder','Open file','Delete'])
-            subject_unit.setParent(cur_widget)
-            self.all_subjects.append(subject_unit)
-            subject_unit.setGeometry(0,0,100,100)
 
 
     def MakeMaterialWidget(self):
