@@ -876,7 +876,8 @@ class MPVFramePlayer(QtWidgets.QWidget):
         here we use the mpv as a video capture.
         it shows the video frame by frame.
         '''
-        self.cur_cap=mpv.MPV(wid=str(int(self.player_container.winId())))
+        #self.cur_cap=mpv.MPV(wid=str(int(self.player_container.winId())))
+        self.cur_cap=mpv.MPV(wid=str(int(self.player_container.winId())),input_default_bindings=False,border=False,video_unscaled=True)
         self.video_path=video_path
         self.is_playing=False
         self.loop_times=self.loop_times_record
@@ -1011,6 +1012,8 @@ class MPVVideoPlayer(QtWidgets.QWidget):
             self.video_width=0
 
     def InitTheVideo(self,video_path,raise_crash=True):
+        import locale
+        locale.setlocale(locale.LC_NUMERIC, 'C')
         self.cur_cap=mpv.MPV(wid=str(int(self.player_container.winId())),input_default_bindings=False,border=False,video_unscaled=True)
         self.video_path=video_path
         self.is_playing=False

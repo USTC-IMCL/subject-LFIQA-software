@@ -104,6 +104,11 @@ VideoSaveTypeDict={
     VideoSaveType.ogg:"ogg"
 }
 
+SaveFormatDict={
+    SaveFormat.CSV:"csv",
+    SaveFormat.Excel:"xlsx"
+}
+
 def MakeAJsonTemplate(output_path_file):
     json_dict={}
     json_dict["LFI_Info"]=[
@@ -719,6 +724,7 @@ class ProjectInfo:
             self.subject_list=[]
         else:
             self.ReadFromFile()
+        self.person_list=[]
     
     def InitAllScoringLFIInfo(self):
         if self.exp_setting.two_folder_mode:
@@ -736,6 +742,28 @@ class ProjectInfo:
         self.test_LFI_info=test_lfi_info
         self.exp_setting=exp_setting
     
+    def BuildPersonList(self):
+        self.person_list=[]
+        all_subject_info_file=PathManager.GetAllSubjectInfoFile(self.project_path)
+        save_file_postfix=SaveFormatDict[self.exp_setting.save_format]
+        if not os.path.exists(all_subject_info_file):
+            logger.error("All subject info file does not exist!")
+            return False
+        with open(all_subject_info_file,'r') as fid:
+            for i in range(len(self.subject_list)):
+                cur_person=PersonInfo()
+                if not cur_person.ReadFromCSV(fid):
+                    return False
+                subject_file=f'{str(cur_person.name)}.{save_file_postfix}'
+                cur_person.result_file=PathManager.GetSubjectResultFilePath(self.project_path,subject_file)
+                self.person_list.append(cur_person)
+        return True
+            
+    def GetPersonList(self):
+        if len(self.person_list) == 0 and len(self.subject_list) > 0:
+            if self.BuildPersonList():
+                return self.person_list
+        return []
 
     def ReadFromFile(self):
         with open(self.project_file,'rb') as fid:
@@ -746,7 +774,7 @@ class ProjectInfo:
                 return False
             '''
             self.project_name=pickle.load(fid)
-            self.project_path=pickle.load(fid)
+            self.project_path=pickle.load(fid) # 相对 -- > 绝对
             self.training_LFI_info=pickle.load(fid)
             self.test_LFI_info=pickle.load(fid)
             exp_setting=pickle.load(fid)
@@ -1501,3 +1529,56 @@ class PorjectPathManager():
     def CheckInnerPath(self,path):
         if not os.path.exists(path):
             os.makedirs(path)
+
+class PersonInfo:
+    def __init__(self) -> None:
+        self.name=None
+        self.age=None
+        self.job=None
+        self.gender=None
+        self.result_file=None
+
+        self.subject_info={
+            'name':self.name,
+            'gender':self.gender,
+            'age':self.age,
+            'job':self.job
+        }
+    
+    def GetName(self):
+        return self.name
+    
+    def GetAge(self):
+        return self.age
+    
+    def GetJob(self):
+        return self.job
+    
+    def GetGender(self):
+        return self.gender
+    
+    def InitWithSubjectInfo(self,subject_info):
+        self.subject_info=subject_info
+        self.age=int(subject_info['age'])
+        self.gender=subject_info['gender']
+        self.name=subject_info['name']
+        self.job=subject_info['job']
+    
+    def AppendToCSV(self,file_name):
+        with open(file_name,'a+') as fid:
+            fid.write(f"Name:, {self.name}\n")
+            fid.write(f'Gender:,{self.gender}\n')
+            fid.write(f'Age:,{self.age}\n')
+            fid.write(f'Job:,{self.job}\n')
+            fid.write('\n')
+    
+    def ReadFromCSV(self,fid):
+        all_keys=['Name','Gender','Age','Job']
+        for i in range(4):
+            line=fid.readline()
+            if not line:
+                return False
+            value=line.split(':')[1].strip()
+            self.subject_info[all_keys[i]]=value
+        line=fid.readline()
+        return True

@@ -1,6 +1,8 @@
 import sys
 sys.path.append('../UI')
+sys.path.append('../Utils')
 from SubjectInfo_ui import Ui_SubjectIfo
+from ExpInfo import PersonInfo
 
 from PySide6 import QtWidgets, QtCore, QtGui
 import logging
@@ -40,47 +42,7 @@ class SubjectInfo(QtWidgets.QDialog,Ui_SubjectIfo):
                 return False
         return True
 
-class PersonInfo:
-    def __init__(self) -> None:
-        self.name=None
-        self.age=None
-        self.job=None
-        self.gender=None
 
-        self.subject_info={
-            'name':self.name,
-            'gender':self.gender,
-            'age':self.age,
-            'job':self.job
-
-        }
-    
-    def GetName(self):
-        return self.name
-    
-    def GetAge(self):
-        return self.age
-    
-    def GetJob(self):
-        return self.job
-    
-    def GetGender(self):
-        return self.gender
-    
-    def InitWithSubjectInfo(self,subject_info):
-        self.subject_info=subject_info
-        self.age=int(subject_info['age'])
-        self.gender=subject_info['gender']
-        self.name=subject_info['name']
-        self.job=subject_info['job']
-    
-    def AppendToCSV(self,file_name):
-        with open(file_name,'a+') as fid:
-            fid.write(f"Name:, {self.name}\n")
-            fid.write(f'Gender:,{self.gender}\n')
-            fid.write(f'Age:,{self.age}\n')
-            fid.write(f'Job:,{self.job}\n')
-            fid.write('\n')
 
 
 if __name__ == '__main__':

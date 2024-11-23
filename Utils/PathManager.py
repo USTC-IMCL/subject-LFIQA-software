@@ -44,6 +44,7 @@ lambda_file="lambda.txt"
 
 # output folders
 subject_results_folder="SubjectResults"
+all_subject_info_file='all_subject_info.csv'
 
 # cache folders
 cache_folder="Cache"
@@ -282,6 +283,12 @@ class SoftWarePathManager():
             return None
         return log_level
 
+def GetSubjectResultFolder(project_path):
+    return os.path.join(project_path,subject_results_folder)
+
+def GetAllSubjectInfoFile(project_path):
+    return os.path.join(project_path,subject_results_folder,all_subject_info_file)
+
+def GetSubjectResultFile(project_path,subject_file_name):
+    return os.path.join(project_path,subject_results_folder,subject_file_name)
         
-
-

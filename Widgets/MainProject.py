@@ -393,14 +393,15 @@ class MainProject(QMainWindow,Ui_MainWindow):
             else:
                 self.SaveExcel(all_results,subject_name,all_show_index,show_list)
 
-        person_id=SubjectInfo.PersonInfo()
+        person_id=ExpInfo.PersonInfo()
         person_id.InitWithSubjectInfo(subject_info)
-        save_file=os.path.join(self.output_folder,'all_subject_info.csv')
+        save_file=os.path.join(self.output_folder,PathManager.all_subject_info_file)
         person_id.AppendToCSV(save_file)
 
         self.show()
         self.cur_project.SaveToFile()
-        self.ShowProjectSetting()
+        #self.ShowProjectSetting()
+        self.SetProject(self.cur_project_name)
     
     def SaveExcel_TwoFolderMode(self,all_results,subject_name,all_show_index,show_list:ExpInfo.AllScoringLFI):
         save_file=os.path.join(self.output_folder,subject_name+'.xlsx')

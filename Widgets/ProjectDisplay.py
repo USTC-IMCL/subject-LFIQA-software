@@ -13,8 +13,9 @@ import os
 import shutil
 import pickle
 import logging
-from SubjectInfo import PersonInfo
+from ExpInfo import PersonInfo
 from LogWindow import QLogTextEditor
+from typing import List
 logger = logging.getLogger("LogWindow")
 
 class ScrollUnitArea(QtWidgets.QScrollArea):
@@ -35,7 +36,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
             self.icon_img=':/icons/res/image.png'
 
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.setHorizontalScrollBar(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setWidgetResizable(True)
 
         self.unit_col_num=0
@@ -58,8 +59,6 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         self.margin_bottom=10
         self.margin_left=10
         self.margin_right=10
-
-        self.MakeColRowIndex()
 
     def MakeColRowIndex(self):
         old_unit_col_num=self.unit_col_num
@@ -109,12 +108,15 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
 
 
 class SubjectsManagerWidget(ScrollUnitArea):
-    def __init__(self, subject_list: list[PersonInfo], *args, **kwargs):
+    def __init__(self, subject_list: List[PersonInfo], *args, **kwargs):
         super().__init__(item_list=subject_list, *args, **kwargs)
         self.use_add_icon=False
 
         self.icon_img=':/icons/res/user.png'
         self.menu=None
+
+        self.MakeColRowIndex()
+        self.MakeUnitLabels()
 
     def GetItemName(self,index):
         return self.unit_list[index].name
@@ -518,6 +520,8 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         scoring_layout.addWidget(self.allow_undistinguishable_box,3,1)
 
         table_num=len(self.exp_setting.score_names)
+        if self.exp_setting.score_definition is None:
+            table_num = 0
         table_num_label=QtWidgets.QLabel("Table Num")
         table_num_value=QtWidgets.QLabel(str(table_num))
         scoring_layout.addWidget(table_num_label,4,0)
@@ -1337,7 +1341,8 @@ class ProjectDisplay(QtWidgets.QFrame):
         self.right_stack.addWidget(ExpSettingWidget(self.cur_project.exp_setting,has_subjects=has_subjects))
         
     def MakeSubjectsWidget(self):
-        self.right_stack.addWidget(SubjectsManagerWidget(self.cur_project.subject_list))
+        person_list=self.cur_project.GetPersonList()
+        self.right_stack.addWidget(SubjectsManagerWidget(person_list))
 
 
     def MakeMaterialWidget(self):
@@ -1365,7 +1370,7 @@ class ProjectDisplay(QtWidgets.QFrame):
 if __name__ == "__main__":
     app=QtWidgets.QApplication()
 
-    project_info=ProjectInfo('test_1','../Projects/')
+    project_info=ProjectInfo('jpeg_1','../Projects/')
     #project_info=ProjectInfo('jpeg_1','../Projects/')
 
     #exp_setting=project_info.exp_setting
