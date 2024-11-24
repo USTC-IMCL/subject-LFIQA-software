@@ -127,7 +127,8 @@ class SubjectsManagerWidget(ScrollUnitArea):
     
     def
     
-    def MakeMenu(self, menu_text):
+    def MakeMenu(self):
+        
         if self.menu is not None:
             return
         self.menu=QtWidgets.QMenu()
