@@ -755,7 +755,7 @@ class ProjectInfo:
                 if not cur_person.ReadFromCSV(fid):
                     return False
                 subject_file=f'{str(cur_person.name)}.{save_file_postfix}'
-                cur_person.result_file=PathManager.GetSubjectResultFilePath(self.project_path,subject_file)
+                cur_person.result_file=PathManager.GetSubjectResultFile(self.project_path,subject_file)
                 self.person_list.append(cur_person)
         return True
             
@@ -775,6 +775,9 @@ class ProjectInfo:
             '''
             self.project_name=pickle.load(fid)
             self.project_path=pickle.load(fid) # 相对 -- > 绝对
+            if not os.path.isabs(self.project_path):
+                self.project_path=os.path.abspath(self.project_path)
+
             self.training_LFI_info=pickle.load(fid)
             self.test_LFI_info=pickle.load(fid)
             exp_setting=pickle.load(fid)
@@ -797,9 +800,12 @@ class ProjectInfo:
             save_file=self.project_file
         else:
             self.project_file=save_file
-            self.project_path=os.path.dirname(self.project_path)
+            self.project_path=os.path.dirname(self.self.project_file)
             if not os.path.exists(self.project_path):
                 os.makedirs(self.project_path)
+        
+        if not os.path.isabs(self.project_path):
+            self.project_path=os.path.abspath(self.project_path)
 
         with open(save_file,'wb') as fid:
             pickle.dump(self.project_version,fid)
@@ -1573,12 +1579,18 @@ class PersonInfo:
             fid.write('\n')
     
     def ReadFromCSV(self,fid):
-        all_keys=['Name','Gender','Age','Job']
+        all_values=[]
         for i in range(4):
             line=fid.readline()
             if not line:
                 return False
-            value=line.split(':')[1].strip()
-            self.subject_info[all_keys[i]]=value
+            line=line.rstrip('\n')
+            value=line.split(',')[1].strip()
+            all_values.append(value)
+        
+        self.name=all_values[0]
+        self.gender=all_values[1]
+        self.age=all_values[2]
+        self.job=all_values[3]
         line=fid.readline()
         return True

@@ -19,8 +19,8 @@ from typing import List
 logger = logging.getLogger("LogWindow")
 
 class ScrollUnitArea(QtWidgets.QScrollArea):
-    def __init__(self, item_list=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, item_list=None, parent=None, *args, **kwargs):
+        super().__init__(parent=parent)
         self.content_widget=QtWidgets.QFrame()
         self.setWidget(self.content_widget)
 
@@ -59,6 +59,9 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         self.margin_bottom=10
         self.margin_left=10
         self.margin_right=10
+
+        # do not call the make function here, 
+        # as some parameters are not ready.
 
     def MakeColRowIndex(self):
         old_unit_col_num=self.unit_col_num
@@ -109,6 +112,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
 
 class SubjectsManagerWidget(ScrollUnitArea):
     def __init__(self, subject_list: List[PersonInfo], *args, **kwargs):
+        kwargs['use_add_icon'] = False
         super().__init__(item_list=subject_list, *args, **kwargs)
         self.use_add_icon=False
 
@@ -120,6 +124,8 @@ class SubjectsManagerWidget(ScrollUnitArea):
 
     def GetItemName(self,index):
         return self.unit_list[index].name
+    
+    def
     
     def MakeMenu(self, menu_text):
         if self.menu is not None:
@@ -1370,7 +1376,7 @@ class ProjectDisplay(QtWidgets.QFrame):
 if __name__ == "__main__":
     app=QtWidgets.QApplication()
 
-    project_info=ProjectInfo('jpeg_1','../Projects/')
+    project_info=ProjectInfo('jpeg_1',os.path.abspath('../Projects/'))
     #project_info=ProjectInfo('jpeg_1','../Projects/')
 
     #exp_setting=project_info.exp_setting
