@@ -121,7 +121,8 @@ class SubjectsManagerWidget(ScrollUnitArea):
     def GetItemName(self,index):
         return self.unit_list[index].name
     
-    def MakeMenu(self, menu_text):
+    def MakeMenu(self):
+        
         if self.menu is not None:
             return
         self.menu=QtWidgets.QMenu()

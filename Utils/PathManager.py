@@ -291,4 +291,16 @@ def GetAllSubjectInfoFile(project_path):
 
 def GetSubjectResultFile(project_path,subject_file_name):
     return os.path.join(project_path,subject_results_folder,subject_file_name)
-        
+
+def OpenPath(path):
+    if not os.path.exists(path):
+        logger.warning(f"The path {path} does not exist!")
+        return False
+    else:
+        if sys.platform == "win32":
+            os.system(f'explorer {path}')
+        elif sys.platform == "linux":
+            os.system(f'xdg-open {path}')
+        else:
+            os.system(f'open {path}')
+        return True        
