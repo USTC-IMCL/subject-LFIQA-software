@@ -92,7 +92,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         for i in range(start_index,self.unit_num-start_index):
             self.unit_list_labels.append(ImageUnit(None,self.unit_size,self.GetIconImg(i),icon_title=self.GetItemName(i),parent=self))
     
-    def UpdateUnitLabels(self):
+    def UpdateLabelPos(self):
         self.MakeColRowIndex()
         if self.need_update:
             self.need_update=False
@@ -116,23 +116,22 @@ class SubjectsManagerWidget(ScrollUnitArea):
         super().__init__(item_list=subject_list, *args, **kwargs)
         self.use_add_icon=False
 
-        self.icon_img=':/icons/res/user.png'
+        self.icon_img=':/icons/res/subject.png'
         self.menu=None
 
-        self.MakeColRowIndex()
         self.MakeUnitLabels()
+        self.UpdateLabelPos()
 
     def GetItemName(self,index):
         return self.unit_list[index].name
     
-    def
+    #def
     
     def MakeMenu(self):
         
         if self.menu is not None:
             return
         self.menu=QtWidgets.QMenu()
-        self.menu_action_list
 
 
 
@@ -1378,17 +1377,21 @@ if __name__ == "__main__":
     app=QtWidgets.QApplication()
 
     project_info=ProjectInfo('jpeg_1',os.path.abspath('../Projects/'))
+    person_list=project_info.GetPersonList()
     #project_info=ProjectInfo('jpeg_1','../Projects/')
 
     #exp_setting=project_info.exp_setting
 
     #exp_setting.SetProjectInfo(project_info)
 
-    project_display=ProjectDisplay(project_info)
-    project_display.resize(800,600)
+    #project_display=ProjectDisplay(project_info)
+    #project_display.resize(800,600)
 
-    project_display.show()
+    #project_display.show()
+    subject_display=SubjectsManagerWidget(person_list)
+    subject_display.resize(800,600)
 
+    subject_display.show()
 
     #exp_setting_display=ExpSettingWidget(exp_setting)
 
