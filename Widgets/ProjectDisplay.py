@@ -89,8 +89,8 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         else:
             start_index=0
 
-        for i in range(start_index,self.unit_num-start_index):
-            self.unit_list_labels.append(ImageUnit(None,self.unit_size,self.GetIconImg(i),icon_title=self.GetItemName(i),parent=self))
+        for i in range(self.unit_num-start_index):
+            self.unit_list_labels.append(ImageUnit(None,icon_img=self.GetIconImg(i),icon_title=self.GetItemName(i),parent=self))
     
     def UpdateLabelPos(self):
         self.MakeColRowIndex()
@@ -108,13 +108,19 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
 
     def SetClickFunc(self,index,func):
         self.unit_list_labels[index].clicked.connect(func)
-
+    
+    def resizeEvent(self, event):
+        self.need_update=True
+        self.UpdateLabelPos()
+        return super().resizeEvent(event)
 
 class SubjectsManagerWidget(ScrollUnitArea):
+    delete_subject_signal=QtCore.pyqtSignal(int)
     def __init__(self, subject_list: List[PersonInfo], *args, **kwargs):
         kwargs['use_add_icon'] = False
         super().__init__(item_list=subject_list, *args, **kwargs)
         self.use_add_icon=False
+        self.resize(800,600)
 
         self.icon_img=':/icons/res/subject.png'
         self.menu=None
@@ -122,17 +128,30 @@ class SubjectsManagerWidget(ScrollUnitArea):
         self.MakeUnitLabels()
         self.UpdateLabelPos()
 
-    def GetItemName(self,index):
-        return self.unit_list[index].name
+    #def GetItemName(self,index):
+    #    return self.unit_list[index].name
     
     #def
     
     def MakeMenu(self):
-        
+        unit_menu_text=['Show In Folder','Delete']
+        for unit_label in self.unit_list_labels:
+            unit_label=ImageUnit()
+            unit_label.MakeMenu(unit_menu_text)
+
         if self.menu is not None:
             return
         self.menu=QtWidgets.QMenu()
+    
+    def OpenSubjectResultFilePath(self,index):
+        cur_path=os.path.dirname(self.unit_list[index].result_file)
+        PathManager.OpenPath(cur_path)
 
+    def DeleteSubject(self,index):
+        target_subject=self.unit_list[index]
+
+        self.unit_list.pop(index)
+        self.unit_list_labels.pop(index)
 
 
 class ExpSettingWidget(QtWidgets.QScrollArea):
@@ -1376,8 +1395,8 @@ class ProjectDisplay(QtWidgets.QFrame):
 if __name__ == "__main__":
     app=QtWidgets.QApplication()
 
-    project_info=ProjectInfo('jpeg_1',os.path.abspath('../Projects/'))
-    person_list=project_info.GetPersonList()
+    #project_info=ProjectInfo('jpeg_1',os.path.abspath('../Projects/'))
+    #person_list=project_info.GetPersonList()
     #project_info=ProjectInfo('jpeg_1','../Projects/')
 
     #exp_setting=project_info.exp_setting
@@ -1388,7 +1407,9 @@ if __name__ == "__main__":
     #project_display.resize(800,600)
 
     #project_display.show()
-    subject_display=SubjectsManagerWidget(person_list)
+    subject_display=ScrollUnitArea(['item1','item2','item3','item4'])
+    subject_display.MakeUnitLabels()
+    subject_display.UpdateLabelPos()
     subject_display.resize(800,600)
 
     subject_display.show()

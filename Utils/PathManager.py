@@ -304,3 +304,7 @@ def OpenPath(path):
         else:
             os.system(f'open {path}')
         return True        
+
+def DeleteFile(path):
+    if os.path.exists(path):
+        os.remove(path)
