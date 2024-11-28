@@ -46,7 +46,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         self.unit_size=[100,100] # height x width
         self.h_space=10
         self.v_space=10
-        self.unit_list=item_list
+        self.unit_list=[x for x in item_list]
         self.unit_num=len(self.unit_list)
         if self.use_add_icon:
             self.unit_num+=1
@@ -59,6 +59,9 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         self.margin_bottom=10
         self.margin_left=10
         self.margin_right=10
+
+        self.unit_menu_funcs={}
+        self.unit_menu_text=[]
 
         # do not call the make function here, 
         # as some parameters are not ready.
@@ -98,6 +101,11 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
             self.need_update=False
             for i in range(self.unit_num):
                 self.unit_list_labels[i].setGeometry(self.item_pos[i][1],self.item_pos[i][0],self.unit_size[1],self.unit_size[0])
+    
+    def RefreshLabelPos(self):
+        self.force_update=True
+        self.UpdateLabelPos()
+        self.force_update=False
 
 
     def GetItemName(self,index):
@@ -113,9 +121,33 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         self.need_update=True
         self.UpdateLabelPos()
         return super().resizeEvent(event)
+    
+    def MakeUnitMenu(self):
+        if len(self.unit_menu_text) == 0:
+            logger.error("The menu text list is empty! Won't make image units menu.")
+            return
+        if len(self.unit_menu_funcs) != len(self.unit_menu_text):
+            logger.error("The menu function list is not match with the menu text list! Won't make image units menu.")
+            return
+        if len(self.unit_list_labels) == 0:
+            logger.error("The unit list labels is empty! Can not generate any menu.")
+            return
+        for unit_label in self.unit_list_labels:
+            unit_label.MakeMenu(self.unit_menu_text)
+            unit_label.menu_clicked.connect(self.RunUnitMenuFunc)
+    
+    def RunUnitMenuFunc(self,unit_index,menu_text):
+        if len(self.unit_menu_text) == 0:
+            logger.error("The menu text list is empty! Won't make image units menu.")
+            return
+        if len(self.unit_menu_funcs) != len(self.unit_menu_text):
+            logger.error("The menu function list is not match with the menu text list! Won't make image units menu.")
+            return
+        self.unit_menu_funcs[menu_text](unit_index)
+
 
 class SubjectsManagerWidget(ScrollUnitArea):
-    delete_subject_signal=QtCore.pyqtSignal(int)
+    delete_subject_signal=QtCore.Signal(int,str)
     def __init__(self, subject_list: List[PersonInfo], *args, **kwargs):
         kwargs['use_add_icon'] = False
         super().__init__(item_list=subject_list, *args, **kwargs)
@@ -125,34 +157,43 @@ class SubjectsManagerWidget(ScrollUnitArea):
         self.icon_img=':/icons/res/subject.png'
         self.menu=None
 
+        self.unit_menu_text=['Show In Folder','Delete']
+        self.unit_menu_funcs={
+            'Show In Folder':self.OpenSubjectResultFilePath,
+            'Delete':self.DeleteSubject
+        }
+
+
+        self.manager_menu_text=['Open Result Folder','Export MOS','Export SROCC','Put Everything Together']
         self.MakeUnitLabels()
         self.UpdateLabelPos()
 
-    #def GetItemName(self,index):
-    #    return self.unit_list[index].name
-    
-    #def
-    
-    def MakeMenu(self):
-        unit_menu_text=['Show In Folder','Delete']
-        for unit_label in self.unit_list_labels:
-            unit_label=ImageUnit()
-            unit_label.MakeMenu(unit_menu_text)
+        self.MakeMenu()
 
-        if self.menu is not None:
-            return
-        self.menu=QtWidgets.QMenu()
-    
+    # def GetItemName(self,index):
+    #    return self.unit_list[index].name
+
+    def MakeMenu(self):
+        self.MakeUnitMenu()
+
     def OpenSubjectResultFilePath(self,index):
         cur_path=os.path.dirname(self.unit_list[index].result_file)
         PathManager.OpenPath(cur_path)
+    
+    def GetItemName(self,index):
+        return self.unit_list[index].name
 
     def DeleteSubject(self,index):
         target_subject=self.unit_list[index]
+        target_name=target_subject.name
 
+        self.unit_num-=1
         self.unit_list.pop(index)
         self.unit_list_labels.pop(index)
 
+        self.RefreshLabelPos()
+
+        self.delete_subject_signal.emit(index,target_name)
 
 class ExpSettingWidget(QtWidgets.QScrollArea):
     def __init__(self, exp_setting: ExpSetting, has_subjects=False, *args, **kwargs):
@@ -707,9 +748,7 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         else:
             self.edit_save_button.show()
             self.edit_cancel_button.show()
-        
 
-        
 
 class NewLFISelector(QtWidgets.QDialog):
     on_cancel=QtCore.Signal()
@@ -880,7 +919,7 @@ class NewLFISelector(QtWidgets.QDialog):
 
 class ImageUnit(QtWidgets.QFrame):
     clicked=QtCore.Signal()
-    menu_clicked=QtCore.Signal(int,int)
+    menu_clicked=QtCore.Signal(int,str)
     def __init__(self,unit_info:ScoringExpLFIInfo=None, logo_size=[80,80], icon_img=':/icons/res/icon_add.png', icon_title='New One',unit_index=0, *args, **kwargs):
         super().__init__(*args,**kwargs)
         self.logo_size=logo_size
@@ -888,7 +927,8 @@ class ImageUnit(QtWidgets.QFrame):
         self.InitIconUI(icon_img, icon_title)
         self.index=unit_index
         self.open_menu=False
-        
+        self.menu_text=None
+
     def SetBasicParam(self, unit_info:ScoringExpLFIInfo=None):
         self.scoring_info=unit_info
         self.label_layout=QtWidgets.QVBoxLayout()
@@ -907,32 +947,47 @@ class ImageUnit(QtWidgets.QFrame):
         title_label_width=self.logo_title_label.width()
         title_label_height=self.logo_title_label.height()
         self.logo_title_label.setGeometry(QtCore.QRect((self.logo_size[1]-title_label_width)//2, self.logo_size[0], title_label_width, title_label_height))
-    
+
     def SetText(self, text):
         self.logo_title_label.setText(text)
-    
+
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
             self.clicked.emit()
             event.ignore()
         return super().mousePressEvent(event)
-    
+
     def MakeMenu(self, menu_text):
         self.open_menu=True
+        self.menu_text=menu_text
         self.menu=QtWidgets.QMenu(self)
         self.menu_action_list=[]
-        self.menu_dict={}
-        for index,text in enumerate(menu_text):
-            self.menu_action_list.append(self.menu.addAction(text))
-            self.menu_dict[text]=index
-            self.menu_action_list[-1].triggered.connect(lambda: self.menu_clicked.emit(self.index,self.menu_dict[text]))
+        for index,text in enumerate(self.menu_text):
+            cur_unit_action=UnitAction()
+            cur_unit_action.text=text
+            cur_unit_action.q_action=self.menu.addAction(text)
+            cur_unit_action.SetAction()
+            cur_unit_action.unit_action_clicked.connect(self.RunUnitAction)
+            self.menu_action_list.append(cur_unit_action)
 
     def contextMenuEvent(self, event):
         if not self.open_menu:
             return
-
         self.menu.exec(event.globalPos())
+    
+    def RunUnitAction(self,text):
+        self.menu_clicked.emit(self.index,text)
 
+class UnitAction(QtCore.QObject):
+    unit_action_clicked=QtCore.Signal(str)
+    def __init__(self):
+        super().__init__()
+        self.text=''
+        self.q_action=None
+    
+    def SetAction(self):
+        self.q_action.triggered.connect(lambda: self.unit_action_clicked.emit(self.text))
+    
 class ImageUnitInfoDisplay(QtWidgets.QFrame):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args,**kwargs)
@@ -1234,7 +1289,6 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         return super().mousePressEvent(event)
 
 
-
 class ProjectMenuLabel(QtWidgets.QFrame):
     '''
     A box containing an icon
@@ -1367,7 +1421,9 @@ class ProjectDisplay(QtWidgets.QFrame):
         
     def MakeSubjectsWidget(self):
         person_list=self.cur_project.GetPersonList()
-        self.right_stack.addWidget(SubjectsManagerWidget(person_list))
+        subject_manager_widget=SubjectsManagerWidget(person_list)
+        subject_manager_widget.delete_subject_signal.connect(self.DeleteSubject)
+        self.right_stack.addWidget(subject_manager_widget)
 
 
     def MakeMaterialWidget(self):
@@ -1390,6 +1446,9 @@ class ProjectDisplay(QtWidgets.QFrame):
                 continue
             else:
                 label.DeActive()
+    
+    def DeleteSubject(self,deleted_index,deleted_name):
+        self.cur_project.DeleteSubject(deleted_name)
 
 
 if __name__ == "__main__":

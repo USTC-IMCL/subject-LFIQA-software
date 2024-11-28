@@ -763,7 +763,8 @@ class ProjectInfo:
         if len(self.person_list) == 0 and len(self.subject_list) > 0:
             if self.BuildPersonList():
                 return self.person_list
-        return []
+        if len(self.person_list) == len(self.subject_list):
+            return self.person_list
 
     def ReadFromFile(self):
         with open(self.project_file,'rb') as fid:
@@ -945,6 +946,23 @@ class ProjectInfo:
 
     def GetExpSetting(self):
         return self.exp_setting
+    
+    def DeleteSubject(self,subject_name):
+        person_list=self.GetPersonList()
+        if subject_name in self.subject_list:
+            self.subject_list.remove(subject_name)
+            for person in person_list:
+                if person.name == subject_name:
+                    result_file=person.result_file
+                    PathManager.DeleteFile(result_file)
+                    person_list.remove(person)
+                    break
+        # update project file and the all subject results
+        self.SaveToFile()
+        all_result_file=PathManager.GetAllSubjectInfoFile(self.project_path)
+        PathManager.DeleteFile(all_result_file)
+        for person in person_list:
+            person.AppendToCSV(all_result_file)
 
 def ReadExpConfig(file_path):
     training_LFI_info=None
