@@ -81,7 +81,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
             row=list_index//self.unit_col_num
             col=list_index-row*self.unit_col_num
             self.item_index [list_index]=[row,col]
-            self.item_pos[list_index]=[row*(self.unit_size[0]+self.h_space),col*(self.unit_size[1]+self.h_space)]
+            self.item_pos[list_index]=[row*(self.unit_size[0]+self.h_space)+self.margin_top,col*(self.unit_size[1]+self.h_space)+self.margin_left]
     
     def MakeUnitLabels(self):
         if len(self.unit_list_labels) == self.unit_num:
@@ -148,14 +148,16 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
 
 class SubjectsManagerWidget(ScrollUnitArea):
     delete_subject_signal=QtCore.Signal(int,str)
-    def __init__(self, subject_list: List[PersonInfo], *args, **kwargs):
+    def __init__(self, subject_list: List[PersonInfo], all_path_result=None,*args, **kwargs):
         kwargs['use_add_icon'] = False
         super().__init__(item_list=subject_list, *args, **kwargs)
         self.use_add_icon=False
         self.resize(800,600)
+            
 
-        self.icon_img=':/icons/res/subject.png'
+        self.icon_img=':/icons/res/people.png'
         self.menu=None
+        self.menu_actions=None
 
         self.unit_menu_text=['Show In Folder','Delete']
         self.unit_menu_funcs={
@@ -164,7 +166,13 @@ class SubjectsManagerWidget(ScrollUnitArea):
         }
 
 
-        self.manager_menu_text=['Open Result Folder','Export MOS','Export SROCC','Put Everything Together']
+        self.manager_menu_text=['Export MOS','Export SROCC','Put Everything Together']
+        self.manager_menu_funcs={
+            'Export MOS':self.ExportMOS,
+            'Export SROCC':self.ExportSROCC,
+            'Put Everything Together':self.ExportAll
+        }
+
         self.MakeUnitLabels()
         self.UpdateLabelPos()
 
@@ -175,7 +183,43 @@ class SubjectsManagerWidget(ScrollUnitArea):
 
     def MakeMenu(self):
         self.MakeUnitMenu()
+        self.menu=QtWidgets.QMenu()
+        for menu_text in self.manager_menu_text:
+            unit_action=UnitAction()
+            unit_action.q_action=self.menu.addAction(menu_text)
+            unit_action.text=menu_text
+            unit_action.SetAction()
+            unit_action.unit_action_clicked.connect(self.RunMenuFuncs)
+    
+    def ReadAllResults(self):
+        all_files=[]
+        all_results={}
+        for subject in self.unit_list:
+            result_file=subject.result_file
+            if result_file is None:
+                continue
+            all_files.append(result_file)
+            all_results[subject.name]=PathManager.ReadSubjectResult(result_file)
+            
+        return all_files,all_results
 
+    def ExportMOS(self):
+        all_content=[]
+        _,all_results=self.ReadAllResults()
+        
+
+    def ExportSROCC(self):
+        pass
+
+    def ExportSROCC(self):
+        pass
+
+    def ExportAll(self):
+        pass
+
+    def RunMenuFuncs(self,menu_text):
+        self.manager_menu_funcs[menu_text]()
+    
     def OpenSubjectResultFilePath(self,index):
         cur_path=os.path.dirname(self.unit_list[index].result_file)
         PathManager.OpenPath(cur_path)
@@ -189,7 +233,8 @@ class SubjectsManagerWidget(ScrollUnitArea):
 
         self.unit_num-=1
         self.unit_list.pop(index)
-        self.unit_list_labels.pop(index)
+        del_label=self.unit_list_labels.pop(index)
+        del_label.deleteLater()
 
         self.RefreshLabelPos()
 
@@ -1421,7 +1466,8 @@ class ProjectDisplay(QtWidgets.QFrame):
         
     def MakeSubjectsWidget(self):
         person_list=self.cur_project.GetPersonList()
-        subject_manager_widget=SubjectsManagerWidget(person_list)
+        all_result_path=PathManager.GetSubjectResultFolder(self.cur_project.project_path)
+        subject_manager_widget=SubjectsManagerWidget(person_list,all_result_path)
         subject_manager_widget.delete_subject_signal.connect(self.DeleteSubject)
         self.right_stack.addWidget(subject_manager_widget)
 

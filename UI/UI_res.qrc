@@ -11,5 +11,6 @@
     <file>res/folder_open.svg</file>
     <file>res/image_add.png</file>
     <file>res/setting.svg</file>
+    <file>res/people.png</file>
   </qresource>
 </RCC>

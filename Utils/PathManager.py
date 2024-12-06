@@ -8,6 +8,7 @@ import sys
 sys.path.append('../Widgets')
 import logging
 logger=logging.getLogger("LogWindow")
+import openpyxl
 
 software_version='3.0'
 
@@ -308,3 +309,49 @@ def OpenPath(path):
 def DeleteFile(path):
     if os.path.exists(path):
         os.remove(path)
+
+def ReadSubjectResult_CSV(file_path):
+    if not os.path.exists(file_path):
+        logger.error(f"The file {file_path} does not exist!")
+        return None
+    all_content=[]
+    with open(file_path,'r') as fid:
+        for line in fid.readlines():
+            all_content.append(line.strip().split(','))
+    return all_content
+
+def ReadSubjectResult_Excel(file_path):
+    #actually, only 1 sheet for each
+    if not os.path.exists(file_path):
+        logger.error(f"The file {file_path} does not exist!")
+        return None
+    worksheet=openpyxl.load_workbook(file_path)
+    subject_sheet=worksheet.worksheets[0]
+    all_content=[]
+    for row in subject_sheet.rows:
+        all_content.append([cell.value for cell in row])
+    return all_content
+
+def ReadSubjectResult(project_file):
+    if not os.path.exists(project_file):
+        logger.error(f"The file {project_file} does not exist!")
+        return None
+    if '.csv' in project_file:
+        return ReadSubjectResult_CSV(project_file)
+    elif '.xlsx' in project_file:
+        return ReadSubjectResult_Excel(project_file)
+    else:
+        logger.error(f"The file {project_file} is not supported!")
+        return None
+
+# Do we need to save a backup file if the file exists?
+def SaveToCSV(file_path,all_content):
+    with open(file_path,'w') as fid:
+        for line in all_content:
+            fid.write(','.join(line))
+            fid.write('\n')
+
+def SaveToExcel(file_path,sheet_name,all_content):
+    workbook=openpyxl.Workbook()
+    work_sheet=workbook.create_sheet(sheet_name)
+    
