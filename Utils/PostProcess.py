@@ -103,13 +103,19 @@ def ReadSubjectScore(file_name):
     else:
         all_content=ReadExcelAllData(file_name)
     
+    img_num=len(all_content)-1
+    
     title_line=all_content[0]
     all_score_names=title_line[2:]
 
     ret_score={}
     for score_name in all_score_names:
         ret_score[score_name]=[]
-    
+
+    for line in all_content[1:]:
+        img_index = int(line[0])
+        
+
 
 def GetScore(file_name):
     all_cols,all_col_names=GetScoreCol(file_name)
