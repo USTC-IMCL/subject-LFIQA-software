@@ -16,7 +16,9 @@ import logging
 from ExpInfo import PersonInfo
 from LogWindow import QLogTextEditor
 from typing import List
+import PostProcess
 logger = logging.getLogger("LogWindow")
+import JPLMessageBox
 
 class ScrollUnitArea(QtWidgets.QScrollArea):
     def __init__(self, item_list=None, parent=None, *args, **kwargs):
@@ -204,9 +206,63 @@ class SubjectsManagerWidget(ScrollUnitArea):
         return all_files,all_results
 
     def ExportMOS(self):
-        all_content=[]
+        if len(self.unit_list) ==0:
+            JPLMessageBox.ShowWarningMessage("No subject to export! Currently you have 0 subjects.")
+            logger.warning("No subject to export! Currently you have 0 subjects.")
+            return
         _,all_results=self.ReadAllResults()
+
+        all_score_names=[]
+        all_img_results=[]
+
+        subject_num=len(all_results)
+
+        subject_0=all_results[0]
         
+        title_line=subject_0[0]
+
+        all_score_names=title_line[2:]
+        num_img=len(subject_0)-1
+
+        #init the dict
+        for i in range(num_img):
+            cur_element={
+                'index':i,
+                'name':''
+                }
+            for score_name in all_score_names:
+                cur_element[score_name]=0
+            all_img_results.append(cur_element)
+        
+        for subject in all_results:
+            for line in subject[1:]:
+                img_index=line[0]
+                img_name=line[1]
+                img_scores=line[2:]
+                all_img_results[img_index]['name']=img_name
+                for score_index in range(len(img_scores)):
+                    all_img_results[img_index][all_score_names[score_index]]+=img_scores[score_index]
+        
+        for img_result in all_img_results:
+            for score_name in all_score_names:
+                img_result[score_name]/=subject_num
+
+        all_content=[]
+        all_content.append(title_line)
+        for img_result in all_img_results:
+            cur_line=[img_result['index'],img_result['name']]
+            for score_name in all_score_names:
+                cur_line.append(img_result[score_name])
+            all_content.append(cur_line)
+
+        mos_folder=os.path.dirname(self.unit_list[0].result_file)
+        mos_file=PathManager.GetMOSFileName(mos_folder)
+        PathManager.SaveToCSV(mos_file,all_content)
+        logger.info(f"Export MOS to {mos_file}")
+    
+    def GetAllScores(self):
+        _,all_results=self.ReadAllResults()
+
 
     def ExportSROCC(self):
         pass
@@ -1495,6 +1551,7 @@ class ProjectDisplay(QtWidgets.QFrame):
     
     def DeleteSubject(self,deleted_index,deleted_name):
         self.cur_project.DeleteSubject(deleted_name)
+
 
 
 if __name__ == "__main__":

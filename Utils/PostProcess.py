@@ -1,6 +1,5 @@
 import os
 from ExpInfo import *
-import xlsxreader
 from openpyxl import load_workbook
 import xlsxwriter
 import numpy as np
@@ -94,28 +93,23 @@ def SaveCSVPLCC(all_subjects_plcc,all_score_names,save_file):
                 fid.write(',%f' %all_subjects_plcc[subject_name][j])
             fid.write('\n') 
     
-def GetScoreCol(file_name):
-    all_cols=[]
-    all_col_names=[]
-    if file_name.endswith("xlsx"):
-        wb=load_workbook(file_name)
-        sheets=wb.worksheets
-        sheet=sheets[0]
-        col_names=sheet[0]
-        col_names=[x.value for x in col_names]
-        for i in range(len(col_names)):
-            if "score" in col_names[i].lower():
-                all_cols.append(i)
-                all_col_names.append(col_names[i])
+def ReadSubjectScore(file_name):
+    if not os.path.exists(file_name):
+        logger.error(f"The file {file_name} does not exist!")
+        return None
+    all_content=None
+    if file_name.endswith(".csv"):
+        all_content=ReadCSVAllData(file_name)
     else:
-        with open(file_name,'r') as fid:
-            lines=fid.readlines()
-            col_names=lines[0].split(',')
-            for i in range(len(col_names)):
-                if "score" in col_names[i].lower():
-                    all_cols.append(i)
-                    all_col_names.append(col_names[i].strip())
-    return all_cols,all_col_names
+        all_content=ReadExcelAllData(file_name)
+    
+    title_line=all_content[0]
+    all_score_names=title_line[2:]
+
+    ret_score={}
+    for score_name in all_score_names:
+        ret_score[score_name]=[]
+    
 
 def GetScore(file_name):
     all_cols,all_col_names=GetScoreCol(file_name)

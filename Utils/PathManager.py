@@ -46,6 +46,7 @@ lambda_file="lambda.txt"
 # output folders
 subject_results_folder="SubjectResults"
 all_subject_info_file='all_subject_info.csv'
+mos_file='MOS.csv'
 
 # cache folders
 cache_folder="Cache"
@@ -325,11 +326,12 @@ def ReadSubjectResult_Excel(file_path):
     if not os.path.exists(file_path):
         logger.error(f"The file {file_path} does not exist!")
         return None
-    worksheet=openpyxl.load_workbook(file_path)
-    subject_sheet=worksheet.worksheets[0]
+    work_book=openpyxl.load_workbook(file_path)
+    subject_sheet=work_book.worksheets[0]
     all_content=[]
     for row in subject_sheet.rows:
         all_content.append([cell.value for cell in row])
+    work_book.close()
     return all_content
 
 def ReadSubjectResult(project_file):
@@ -348,10 +350,52 @@ def ReadSubjectResult(project_file):
 def SaveToCSV(file_path,all_content):
     with open(file_path,'w') as fid:
         for line in all_content:
+            line=[str(item) for item in line]
             fid.write(','.join(line))
             fid.write('\n')
 
 def SaveToExcel(file_path,sheet_name,all_content):
-    workbook=openpyxl.Workbook()
+    # Terrible lib
+    # here first check if the file exists,
+    # if not, create a new one
+    # if yes, make a blank one (remove default sheets), and then write
+    if os.path.exists(file_path):
+        workbook=openpyxl.load_workbook(file_path)
+    else:
+        workbook=openpyxl.Workbook()
+        for sheet in workbook.worksheets:
+            workbook.remove(sheet)
     work_sheet=workbook.create_sheet(sheet_name)
     
+    for row_index,line in enumerate(all_content,1):
+        for col_index, in_v in enumerate(line,1):
+            work_sheet.cell(row=row_index,column=col_index).value=in_v
+    
+    workbook.save(file_path)
+    workbook.close()
+
+def GetFileNameFromPath(file_path):
+    return os.path.basename(file_path)
+
+def GetFileNameWithoutExtension(file_path):
+    file_name=GetFileNameFromPath(file_path)
+    file_name_without_extension=file_name.split('.')[0]
+    return file_name_without_extension
+
+def GetExtension(file_path):
+    return os.path.basename(file_path).split('.')[-1]
+
+def GetMOSFileName(file_folder):
+    return os.path.join(file_folder,mos_file)
+
+if __name__ == "__main__":
+    all_content=[
+        ['img_index','img_name','mos'],
+        [1,'img1',5],
+        [2,'img2',6],
+        [0,'img3',7]
+    ]
+
+    SaveToCSV('test.csv',all_content)
+
+    SaveToExcel('test.xlsx','test',all_content)
