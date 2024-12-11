@@ -47,6 +47,9 @@ lambda_file="lambda.txt"
 subject_results_folder="SubjectResults"
 all_subject_info_file='all_subject_info.csv'
 mos_file='MOS.csv'
+srocc_file='SROCC.csv'
+plcc_file='PLCC.csv'
+all_results_file='AllResults.xlsx'
 
 # cache folders
 cache_folder="Cache"
@@ -294,7 +297,7 @@ def GetAllSubjectInfoFile(project_path):
 def GetSubjectResultFile(project_path,subject_file_name):
     return os.path.join(project_path,subject_results_folder,subject_file_name)
 
-def OpenPath(path):
+def _open_path(path):
     if not os.path.exists(path):
         logger.warning(f"The path {path} does not exist!")
         return False
@@ -306,6 +309,11 @@ def OpenPath(path):
         else:
             os.system(f'open {path}')
         return True        
+
+def OpenPath(path):
+    if os.path.isfile(path):
+        path=os.path.dirname(path)
+    _open_path(path)
 
 def DeleteFile(path):
     if os.path.exists(path):
@@ -354,7 +362,7 @@ def SaveToCSV(file_path,all_content):
             fid.write(','.join(line))
             fid.write('\n')
 
-def SaveToExcel(file_path,sheet_name,all_content):
+def SaveToExcel(file_path,all_content,sheet_name=None):
     # Terrible lib
     # here first check if the file exists,
     # if not, create a new one
@@ -365,6 +373,9 @@ def SaveToExcel(file_path,sheet_name,all_content):
         workbook=openpyxl.Workbook()
         for sheet in workbook.worksheets:
             workbook.remove(sheet)
+    
+    if sheet_name is None:
+        sheet_name=os.path.basename(file_path).split('.')[0]
     work_sheet=workbook.create_sheet(sheet_name)
     
     for row_index,line in enumerate(all_content,1):
@@ -373,6 +384,15 @@ def SaveToExcel(file_path,sheet_name,all_content):
     
     workbook.save(file_path)
     workbook.close()
+
+def SaveToFile(file_path,content):
+    # save to csv or excel
+    if '.csv' in file_path:
+        SaveToCSV(file_path,content)
+    elif '.xlsx' in file_path:
+        SaveToExcel(file_path,content)
+    else:
+        logger.error(f"The file {file_path} is not supported!")
 
 def GetFileNameFromPath(file_path):
     return os.path.basename(file_path)
@@ -387,6 +407,15 @@ def GetExtension(file_path):
 
 def GetMOSFileName(file_folder):
     return os.path.join(file_folder,mos_file)
+
+def GetSROCCFileName(file_folder):
+    return os.path.join(file_folder,srocc_file)
+
+def GetPLCCFileName(file_folder):
+    return os.path.join(file_folder,plcc_file)
+
+def GetAllResultFileName(file_folder):
+    return os.path.join(file_folder,all_results_file)
 
 if __name__ == "__main__":
     all_content=[

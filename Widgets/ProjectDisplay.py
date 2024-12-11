@@ -193,6 +193,9 @@ class SubjectsManagerWidget(ScrollUnitArea):
             unit_action.SetAction()
             unit_action.unit_action_clicked.connect(self.RunMenuFuncs)
     
+    def contextMenuEvent(self, event):
+        self.menu.exec(event.globalPos())
+    
     def ReadAllResults(self):
         all_files=[]
         all_results={}
@@ -206,72 +209,181 @@ class SubjectsManagerWidget(ScrollUnitArea):
         return all_files,all_results
 
     def ExportMOS(self):
-        if len(self.unit_list) ==0:
-            JPLMessageBox.ShowWarningMessage("No subject to export! Currently you have 0 subjects.")
-            logger.warning("No subject to export! Currently you have 0 subjects.")
+        if len(self.unit_list) == 0:
+            JPLMessageBox.ShowWarningMessage("The subject list is empty! Can not export MOS.")
+            logger.warning("The unit list is empty! Can not export MOS.")
             return
-        _,all_results=self.ReadAllResults()
+        ret_mos=PostProcess.ExportMOS(self.unit_list)
 
-        all_score_names=[]
-        all_img_results=[]
+        all_score_names=list(ret_mos.keys())
+        img_num=len(ret_mos[all_score_names[0]])
+        all_img_names=[None for i in range(img_num)]
 
-        subject_num=len(all_results)
+        subject_0=self.unit_list[0]
+        subject_0_content=PathManager.ReadSubjectResult(subject_0.result_file)
 
-        subject_0=all_results[0]
-        
-        title_line=subject_0[0]
-
-        all_score_names=title_line[2:]
-        num_img=len(subject_0)-1
-
-        #init the dict
-        for i in range(num_img):
-            cur_element={
-                'index':i,
-                'name':''
-                }
-            for score_name in all_score_names:
-                cur_element[score_name]=0
-            all_img_results.append(cur_element)
-        
-        for subject in all_results:
-            for line in subject[1:]:
-                img_index=line[0]
-                img_name=line[1]
-                img_scores=line[2:]
-                all_img_results[img_index]['name']=img_name
-                for score_index in range(len(img_scores)):
-                    all_img_results[img_index][all_score_names[score_index]]+=img_scores[score_index]
-        
-        for img_result in all_img_results:
-            for score_name in all_score_names:
-                img_result[score_name]/=subject_num
+        for line in subject_0_content[1:]:
+            all_img_names[int(line[0])]=line[1]
 
         all_content=[]
-        all_content.append(title_line)
-        for img_result in all_img_results:
-            cur_line=[img_result['index'],img_result['name']]
+        all_content.append(['img index','img name']+all_score_names)
+
+        mos_file=PathManager.GetMOSFileName(os.path.dirname(subject_0.result_file))
+        for i in range(img_num):
+            cur_line=[str(i), all_img_names[i]]
             for score_name in all_score_names:
-                cur_line.append(img_result[score_name])
+                cur_line.append(str(ret_mos[score_name][i]))
             all_content.append(cur_line)
-
-        mos_folder=os.path.dirname(self.unit_list[0].result_file)
-        mos_file=PathManager.GetMOSFileName(mos_folder)
-        PathManager.SaveToCSV(mos_file,all_content)
+        
+        PathManager.SaveToFile(mos_file,all_content)
         logger.info(f"Export MOS to {mos_file}")
+        PathManager.OpenPath(mos_file)
     
-    def GetAllScores(self):
-        _,all_results=self.ReadAllResults()
-
-
     def ExportSROCC(self):
-        pass
+        if len(self.unit_list) ==0:
+            JPLMessageBox.ShowWarningMessage("The subject list is empty! Can not export SROCC.")
+            logger.warning("The unit list is empty! Can not export SROCC.")
+            return
+        if len(self.unit_list) < 2:
+            JPLMessageBox.ShowWarningMessage("The subject list should have at least 2 subjects! Can not export SROCC.")
+            logger.warning("The unit list should have at least 2 subjects! Can not export SROCC.")
+            return
 
-    def ExportSROCC(self):
-        pass
+        all_srocc=PostProcess.ExportSROCC(self.unit_list)
+        all_score_names=list(all_srocc.keys())
+
+        all_subject_names=[]
+        for subject in self.unit_list:
+            all_subject_names.append(subject.name)
+
+        all_content=[]
+        head_title=['Subject Index','Subject Name'] + all_score_names
+        all_content.append(head_title)
+
+        for i,subject_name in enumerate(all_subject_names):
+            cur_line=[str(i),subject_name]
+            for score_name in all_score_names:
+                cur_line.append(str(all_srocc[score_name][i]))
+            all_content.append(cur_line)
+        srocc_file=PathManager.GetSROCCFileName(os.path.dirname(self.unit_list[0].result_file))
+
+        PathManager.SaveToFile(srocc_file,all_content)
+        logger.info(f"Export SROCC to {srocc_file}")
+        PathManager.OpenPath(srocc_file)
+
+    def ExportPLCC(self):
+        if len(self.unit_list) == 0:
+            JPLMessageBox.ShowWarningMessage("The subject list is empty! Can not export PLCC.")
+            logger.warning("The unit list is empty! Can not export PLCC.")
+            return
+        if len(self.unit_list) < 2:
+            JPLMessageBox.ShowWarningMessage("The subject list should have at least 2 subjects! Can not export PLCC.")
+            logger.warning("The unit list should have at least 2 subjects! Can not export PLCC.")
+            return
+        
+        all_plcc=PostProcess.ExportPLCC(self.unit_list)
+        all_score_names=list(all_plcc.keys())
+
+        all_subject_names=[]
+        for subject in self.unit_list:
+            all_subject_names.append(subject.name)
+
+        all_content=[]
+        all_content.append(['Subject Index','Subject Name'] + all_score_names)
+
+        for i,subject_name in enumerate(all_subject_names):
+            cur_line=[str(i),subject_name]
+            for score_name in all_score_names:
+                cur_line.append(str(all_plcc[score_name][i]))
+            all_content.append(cur_line)
+        plcc_file=PathManager.GetPLCCFileName(os.path.dirname(self.unit_list[0].result_file))
+
+        PathManager.SaveToFile(plcc_file,all_content)
+        logger.info(f"Export PLCC to {plcc_file}")
+        PathManager.OpenPath(plcc_file)
 
     def ExportAll(self):
-        pass
+        if len(self.unit_list) == 0:
+            JPLMessageBox.ShowWarningMessage("The subject list is empty! Can not export all.")
+            logger.warning("The unit list is empty! Can not export all.")
+            return
+        
+        all_subject_names=[]
+        
+        ret_mos=PostProcess.ExportMOS(self.unit_list)
+        ret_srocc=PostProcess.ExportSROCC(self.unit_list)
+        ret_plcc=PostProcess.ExportPLCC(self.unit_list)
+
+        subject_0=self.unit_list[0]
+        subject_content_0=PathManager.ReadSubjectResult(subject_0.result_file)
+        img_num=len(subject_content_0[1:])
+        all_img_names=[None for i in range(img_num)]
+        for line in subject_content_0[1:]:
+            img_index=int(line[0])
+            all_img_names[img_index]=line[1]
+
+        all_score_names=list(ret_mos.keys())
+
+        for subject in self.unit_list:
+            all_subject_names.append(subject.name)
+
+        # Make 4 talbes here
+        # All subjects, MOS, SROCC and PLCC
+
+        all_res_file_name=PathManager.GetAllResultFileName(os.path.dirname(self.unit_list[0].result_file))
+
+        # MOS
+        mos_all_content=[]
+        mos_all_content.append(['Image Index','Image Name'] + all_score_names)
+        for i, img_name in enumerate(all_img_names):
+            cur_line=[str(i),img_name]
+            for score_name in all_score_names:
+                cur_line.append(str(ret_mos[score_name][i]))
+            mos_all_content.append(cur_line)
+        PathManager.SaveToExcel(all_res_file_name,mos_all_content,'MOS')        
+
+        # SROCC & PLCC
+        if len(self.unit_list) > 1:
+            srocc_all_content=[]
+            srocc_all_content.append(['Subject Index','Subject Name']+all_score_names)
+            plcc_all_content=[]
+            plcc_all_content.append(['Subject Index','Subject Name']+all_score_names)
+
+            for i,subject_name in enumerate(all_subject_names):
+                cur_srocc_line=[str(i),subject_name]
+                cur_plcc_line=[str(i),subject_name]
+                for score_anme in all_score_names:
+                    cur_srocc_line.append(str(ret_srocc[score_anme][i]))
+                    cur_plcc_line.append(str(ret_plcc[score_anme][i]))
+            PathManager.SaveToExcel(all_res_file_name,srocc_all_content,'SROCC')
+            PathManager.SaveToExcel(all_res_file_name,plcc_all_content,'PLCC')
+        else:
+            JPLMessageBox.ShowWarningMessage("The subject list should have at least 2 subjects! Can not export SROCC and PLCC.")
+            logger.warning("The unit list should have at least 2 subjects! Can not export SROCC and PLCC.")
+
+        # All subjects' results
+        all_subjects_content=[]
+        for subject in self.unit_list:
+            subject_content=PathManager.ReadSubjectResult(subject.result_file)
+            all_subjects_content.append([subject.name])
+            all_subjects_content.append(subject_content)
+            all_subjects_content.append([''])
+        
+        PathManager.SaveToExcel(all_res_file_name,all_subjects_content,'All Subjects')
+
+        # All subjects' results, reorder
+        all_subjects_content=[]
+        for subject in self.unit_list:
+            subject_content=PathManager.ReadSubjectResult(subject.result_file)
+            all_subjects_content.append(subject.name)
+            all_subjects_content.append(subject_content[0])
+            subject_reorder_content=[None for i in range(img_num)]
+            for line in subject_content[1:]:
+                subject_reorder_content[int(line[0])]=line
+            all_subjects_content.append(subject_reorder_content)
+            all_subjects_content.append([''])
+        
+        PathManager.SaveToExcel(all_res_file_name,all_subjects_content,'All Subjects Reorder')
 
     def RunMenuFuncs(self,menu_text):
         self.manager_menu_funcs[menu_text]()
@@ -342,6 +454,7 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         self.MakeProjectInfoContainer()
         self.MakePlayerControlContainer()
         self.MakeScoringControlContainer()
+        self.SetEditable(self.b_editable)
 
     def GetAllInput(self):
         for set_method in self.set_method_set:
@@ -1020,6 +1133,7 @@ class NewLFISelector(QtWidgets.QDialog):
 
 class ImageUnit(QtWidgets.QFrame):
     clicked=QtCore.Signal()
+    double_clicked=QtCore.Signal()
     menu_clicked=QtCore.Signal(int,str)
     def __init__(self,unit_info:ScoringExpLFIInfo=None, logo_size=[80,80], icon_img=':/icons/res/icon_add.png', icon_title='New One',unit_index=0, *args, **kwargs):
         super().__init__(*args,**kwargs)
