@@ -2,6 +2,8 @@ import sys
 import copy
 from PySide6 import QtWidgets,QtCore, QtGui
 from PySide6.QtWidgets import QSizePolicy
+from PySide6.QtGui import QFontMetrics
+from PySide6.QtCore import Qt
 sys.path.append('../Utils')
 sys.path.append('../UI')
 import UI_res_rc
@@ -65,8 +67,19 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         self.unit_menu_funcs={}
         self.unit_menu_text=[]
 
+        self.active_index=None
         # do not call the make function here, 
         # as some parameters are not ready.
+    
+    def SetActiveUnit(self,index):
+        old_index=self.active_index
+        if old_index is not None:
+            self.unit_list_labels[old_index].SetDeActive()
+
+        self.active_index=index
+        self.unit_list_labels[index].SetActive()
+        self.unit_list_labels[index].raise_()
+        
 
     def MakeColRowIndex(self):
         old_unit_col_num=self.unit_col_num
@@ -89,13 +102,23 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         if len(self.unit_list_labels) == self.unit_num:
             return
         if self.use_add_icon:
-            self.unit_list_labels.append(ImageUnit(icon_img=self.add_icon,parent=self))
+            self.unit_list_labels.append(ImageUnit(icon_img=self.add_icon,parent=self,unit_index=0))
             start_index=1
         else:
             start_index=0
 
         for i in range(self.unit_num-start_index):
-            self.unit_list_labels.append(ImageUnit(None,icon_img=self.GetIconImg(i),icon_title=self.GetItemName(i),parent=self))
+            self.unit_list_labels.append(ImageUnit(None,icon_img=self.GetIconImg(i),icon_title=self.GetItemName(i),parent=self,unit_index=i+start_index))
+        
+        for unitlabel in self.unit_list_labels:
+            unitlabel.clicked.connect(self.SetActiveUnit)
+    
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            if self.active_index is not None:
+                self.unit_list_labels[self.active_index].SetDeActive()
+            self.active_index=None
+        event.ignore()
     
     def UpdateLabelPos(self):
         self.MakeColRowIndex()
@@ -109,9 +132,8 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         self.UpdateLabelPos()
         self.force_update=False
 
-
     def GetItemName(self,index):
-        return "Item"+str(index)
+        return "Item ok ok aasdf ilasdfj"+str(index)
 
     def GetIconImg(self,index):
         return self.icon_img
@@ -150,6 +172,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
 
 class SubjectsManagerWidget(ScrollUnitArea):
     delete_subject_signal=QtCore.Signal(int,str)
+    subject_num_changed_signal=QtCore.Signal(int)
     def __init__(self, subject_list: List[PersonInfo], all_path_result=None,*args, **kwargs):
         kwargs['use_add_icon'] = False
         super().__init__(item_list=subject_list, *args, **kwargs)
@@ -407,6 +430,7 @@ class SubjectsManagerWidget(ScrollUnitArea):
         self.RefreshLabelPos()
 
         self.delete_subject_signal.emit(index,target_name)
+        self.subject_num_changed_signal.emit(self.unit_num)
 
 class ExpSettingWidget(QtWidgets.QScrollArea):
     def __init__(self, exp_setting: ExpSetting, has_subjects=False, *args, **kwargs):
@@ -1132,12 +1156,15 @@ class NewLFISelector(QtWidgets.QDialog):
         self.deleteLater()
 
 class ImageUnit(QtWidgets.QFrame):
-    clicked=QtCore.Signal()
-    double_clicked=QtCore.Signal()
+    clicked=QtCore.Signal(int)
+    double_clicked=QtCore.Signal(int)
     menu_clicked=QtCore.Signal(int,str)
-    def __init__(self,unit_info:ScoringExpLFIInfo=None, logo_size=[80,80], icon_img=':/icons/res/icon_add.png', icon_title='New One',unit_index=0, *args, **kwargs):
+    def __init__(self,unit_info:ScoringExpLFIInfo=None, logo_size=[80,80], icon_img=':/icons/res/icon_add.png', icon_title='New',unit_index=0, b_active = False, *args, **kwargs):
         super().__init__(*args,**kwargs)
         self.logo_size=logo_size
+        self.active_title=icon_title
+        self.deactive_title=icon_title
+        self.b_active=b_active
         self.SetBasicParam(unit_info)
         self.InitIconUI(icon_img, icon_title)
         self.index=unit_index
@@ -1155,9 +1182,13 @@ class ImageUnit(QtWidgets.QFrame):
         self.logo_label.setPixmap(QtGui.QPixmap(icon_img).scaled(self.logo_size[1],self.logo_size[0]))
         self.logo_label.setGeometry(QtCore.QRect(0, 0, self.logo_size[1], self.logo_size[0]))
 
-        self.logo_title_label.setText(icon_title)
+        metrics=QFontMetrics(self.font())
+        self.deactive_title=metrics.elidedText(icon_title,QtCore.Qt.ElideRight, self.logo_size[1])
+
         self.logo_title_label.setFixedWidth(self.logo_size[1])
         self.logo_title_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.logo_title_label.setText(self.deactive_title)
+
         self.logo_title_label.adjustSize()
         title_label_width=self.logo_title_label.width()
         title_label_height=self.logo_title_label.height()
@@ -1168,9 +1199,15 @@ class ImageUnit(QtWidgets.QFrame):
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
-            self.clicked.emit()
+            self.clicked.emit(self.index)
             event.ignore()
         return super().mousePressEvent(event)
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            self.double_clicked.emit(self.index)
+            event.ignore()
+        return super().mouseDoubleClickEvent(event)
 
     def MakeMenu(self, menu_text):
         self.open_menu=True
@@ -1184,6 +1221,35 @@ class ImageUnit(QtWidgets.QFrame):
             cur_unit_action.SetAction()
             cur_unit_action.unit_action_clicked.connect(self.RunUnitAction)
             self.menu_action_list.append(cur_unit_action)
+
+    def SetActive(self):
+        self.b_active=True
+        self.logo_label.setStyleSheet('background-color: rgba(0,0,255,180);')
+        self.logo_title_label.setStyleSheet('background-color: rgba(0,0,255,180); color: white;')
+        self.logo_title_label.setFixedWidth(self.logo_size[1])
+        self.logo_title_label.setWordWrap(True)
+        self.logo_title_label.setText(self.active_title)
+
+        self.logo_title_label.adjustSize()
+        title_label_width=self.logo_title_label.width()
+        title_label_height=self.logo_title_label.height()
+        if self.logo_size[0] + title_label_height > self.height():
+            self.resize(self.width(), self.logo_size[0] + title_label_height)
+
+        self.logo_title_label.setGeometry(QtCore.QRect((self.logo_size[1]-title_label_width)//2, self.logo_size[0], title_label_width, title_label_height))
+
+    def SetDeActive(self):
+        self.b_active=False
+        self.logo_label.setStyleSheet('background-color: transparent;')
+        self.logo_title_label.setFixedWidth(self.logo_size[1])
+        self.logo_title_label.setWordWrap(False)
+        self.logo_title_label.setText(self.deactive_title)
+
+        self.logo_title_label.adjustSize()
+        title_label_width=self.logo_title_label.width()
+        title_label_height=self.logo_title_label.height()
+
+        self.logo_title_label.setGeometry(QtCore.QRect((self.logo_size[1]-title_label_width)//2, self.logo_size[0], title_label_width, title_label_height))
 
     def contextMenuEvent(self, event):
         if not self.open_menu:
@@ -1274,7 +1340,7 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         self.unit_list_labels.append(ImageUnit(parent=self))
         self.unit_list_labels[0].clicked.connect(self.AddNewLFI)
         for i in range(self.unit_list.exp_lfi_info_num):
-            self.unit_list_labels.append(ImageUnit(unit_info=self.unit_list.GetScoringExpLFIInfo(i),icon_img=':/icons/res/image.png',icon_title=f'LFI {i}',parent=self))
+            self.unit_list_labels.append(ImageUnit(unit_info=self.unit_list.GetScoringExpLFIInfo(i),icon_img=':/icons/res/image.png',icon_title=f'LFIal;sdfjal;ksdjfl;aj {i}',parent=self))
             self.unit_list_labels[-1].MakeMenu(self.menu_text)
             self.unit_list_labels[-1].menu_clicked.connect
     
@@ -1641,7 +1707,6 @@ class ProjectDisplay(QtWidgets.QFrame):
         subject_manager_widget.delete_subject_signal.connect(self.DeleteSubject)
         self.right_stack.addWidget(subject_manager_widget)
 
-
     def MakeMaterialWidget(self):
         right_stack_width=self.right_stack.width()
         right_stack_height=self.right_stack.height()
@@ -1683,7 +1748,7 @@ if __name__ == "__main__":
     #project_display.resize(800,600)
 
     #project_display.show()
-    subject_display=ScrollUnitArea(['item1','item2','item3','item4'])
+    subject_display=ScrollUnitArea(['item1','item2','item3','als;djf;lasdjf;lajsd;fkljasd;lfja;skldjf;l'])
     subject_display.MakeUnitLabels()
     subject_display.UpdateLabelPos()
     subject_display.resize(800,600)
