@@ -67,6 +67,10 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         self.unit_menu_funcs={}
         self.unit_menu_text=[]
 
+        self.menu=None
+        self.scroll_menu_funcs={}
+        self.scroll_menu_text=[]
+
         self.active_index=None
         # do not call the make function here, 
         # as some parameters are not ready.
@@ -168,6 +172,9 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
             logger.error("The menu function list is not match with the menu text list! Won't make image units menu.")
             return
         self.unit_menu_funcs[menu_text](unit_index)
+    
+    def MakeMenu(self):
+        pass
 
 
 class SubjectsManagerWidget(ScrollUnitArea):
@@ -178,7 +185,6 @@ class SubjectsManagerWidget(ScrollUnitArea):
         super().__init__(item_list=subject_list, *args, **kwargs)
         self.use_add_icon=False
         self.resize(800,600)
-            
 
         self.icon_img=':/icons/res/people.png'
         self.menu=None
@@ -1292,87 +1298,54 @@ class ImageUnitInfoDisplay(QtWidgets.QFrame):
     def UpdateUnitInfo(self, unit_info:ScoringExpLFIInfo):
         pass
 
-class MaterialFolderFrame(QtWidgets.QFrame):
-    def __init__(self, unit_list: AllScoringLFI, exp_setting: ExpSetting, *args,**kwargs) -> None:
-        super().__init__(*args,**kwargs)
+class MaterialFolderFrame(ScrollUnitArea):
+    def __init__(self, all_scoring_lfi: AllScoringLFI, exp_setting: ExpSetting, *args,**kwargs) -> None:
+        self.all_scoring_lfi=all_scoring_lfi
+        exp_list=self.all_scoring_lfi.all_exp_lfi_info
+        kwargs['use_add_icon']=True
+        super().__init__(item_list=exp_list,*args,**kwargs)
+        self.use_add_icon=True
         self.resize(800,600)
-        self.unit_size=[100,100] # height x width
-        self.unit_list=unit_list
-        self.unit_list_labels=[] # QLabels to show the LFI info
-        self.h_space=10
-        self.v_space=10
-        self.unit_col_num=0
 
+        self.icon_img=":/icons/res/image.png"
         self.exp_setting=exp_setting
-        self.force_update=False
-
-        self.item_index=[None]*(1+self.unit_list.exp_lfi_info_num) #[[row, col]]
-        self.item_pos=[None]*(1+self.unit_list.exp_lfi_info_num) #[height,width]
-        self.need_update=True
 
         self.project_path=None
         self.cache_root=None
         self.cache_desc_file=None
-        self.folder_mode=self.unit_list.mode
+        self.folder_mode=self.all_scoring_lfi.mode
         self.cache_folder=None
 
         self.unit_info_display=ImageUnitInfoDisplay(parent=self)
         self.add_form=None
 
-        self.is_editable=True
 
-        self.menu_text=['Show in folder','Delete']
-        self.menu_func={}
+        self.b_editable=True
+
+        self.unit_menu_text=['Show in folder','Delete']
+        self.unit_menu_funcs={
+            'Show in folder':self.ShowLFIFolder,
+            'Delete':self.DeleteLFI
+        }
 
         self.MakeUnitLabels()
         self.UpdateLabelPos()
-    
-    def SetEditable(self, is_editable):
-        self.is_editable=is_editable
 
-    def MakeColRowIndex(self):
-        old_unit_col_num=self.unit_col_num
-        self.unit_col_num=(self.width()+self.h_space)//(self.unit_size[1]+self.h_space)
-        if self.unit_col_num < 1:
-            self.unit_col_num=1
-        if old_unit_col_num == self.unit_col_num and (not self.force_update):
-            self.need_update=False
-            return
-        else:
-            self.need_update=True 
-        
-        for list_index in range(self.unit_list.exp_lfi_info_num+1):
-            row=list_index//self.unit_col_num
-            col=list_index-row*self.unit_col_num
-            self.item_index [list_index]=[row,col]
-            self.item_pos[list_index]=[row*(self.unit_size[0]+self.h_space),col*(self.unit_size[1]+self.h_space)]
-    
-    def MakeUnitLabels(self):
-        self.unit_list_labels.append(ImageUnit(parent=self))
-        self.unit_list_labels[0].clicked.connect(self.AddNewLFI)
-        for i in range(self.unit_list.exp_lfi_info_num):
-            self.unit_list_labels.append(ImageUnit(unit_info=self.unit_list.GetScoringExpLFIInfo(i),icon_img=':/icons/res/image.png',icon_title=f'LFI {i}',parent=self))
-            self.unit_list_labels[-1].MakeMenu(self.menu_text)
-            self.unit_list_labels[-1].menu_clicked.connect
-    
-    def ShowInFolder(self, index):
-        pass
-        #img_unit
-    def ImgUnitMenuClicked(self,unit_index,menu_index):
-        pass
+        self.MakeMenu()
 
-
-    def UpdateLabelPos(self):
-        self.MakeColRowIndex()
-        if self.need_update:
-            self.need_update=False
-            for i in range(self.unit_list.exp_lfi_info_num+1):
-                self.unit_list_labels[i].setGeometry(self.item_pos[i][1],self.item_pos[i][0],self.unit_size[1],self.unit_size[0])
+    def MakeMenu(self):
+        self.MakeUnitMenu()
     
-    def resizeEvent(self, event):
-        self.need_update=True
-        self.UpdateLabelPos()
+    def MakeUnitMenu(self):
+    
+    def ShowLFIFolder(self,index):
+        cur_v=self.unit_list[index].GetShowingFoldersAndFiles()
+        for v in cur_v:
+            PathManager.OpenPath(v)
 
+    def SetEditable(self, b_editable):
+        self.b_editable=b_editable
+    
     def MakeCache(self, project_path):
         self.project_path=project_path
         self.folder_mode=self.unit_list.mode # training or testing
@@ -1417,10 +1390,6 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         self.add_form.on_confirm.connect(self.ConfirmAddNewLFI)
         self.add_form.on_cancel.connect(self.CancleAddNewLFI)
     
-    def DeleteLFI(self,index):
-        self.unit_list.DeleteScoringLFI(index)
-    
-
     def ConfirmAddNewLFI(self,in_dict):
         '''
         in_dict:
@@ -1442,12 +1411,12 @@ class MaterialFolderFrame(QtWidgets.QFrame):
             logger.error('Invalid input! Adding terminates.')
             return
         else:
-            self.unit_list.AddScoringLFI(new_scoring_lfi)
-            self.unit_list_labels.append(ImageUnit(unit_info=self.unit_list.GetScoringExpLFIInfo(self.unit_list.exp_lfi_info_num-1),icon_img=':/icons/res/image.png',icon_title=f'LFI {self.unit_list.exp_lfi_info_num-1}',parent=self))
+            self.all_scoring_lfi.AddScoringLFI(new_scoring_lfi)
+            self.unit_list_labels.append(ImageUnit(unit_info=self.all_scoring_lfi.GetScoringExpLFIInfo(self.all_scoring_lfi.exp_lfi_info_num-1),icon_img=':/icons/res/image.png',icon_title=f'LFI {self.all_scoring_lfi.exp_lfi_info_num-1}',parent=self))
             self.unit_list_labels[-1].MakeMenu(['Open in folder','Delete'])
             self.unit_list_labels[-1].show()
-            self.item_index=[None]*(1+self.unit_list.exp_lfi_info_num) #[[row, col]]
-            self.item_pos=[None]*(1+self.unit_list.exp_lfi_info_num) #[height,width]
+            self.item_index=[None]*(1+self.all_scoring_lfi.exp_lfi_info_num) #[[row, col]]
+            self.item_pos=[None]*(1+self.all_scoring_lfi.exp_lfi_info_num) #[height,width]
             self.force_update=True
             self.UpdateLabelPos()
             self.force_update=False
@@ -1455,8 +1424,8 @@ class MaterialFolderFrame(QtWidgets.QFrame):
     def CancleAddNewLFI(self):
         self.add_form=None
 
-    def DeleteFLI(self,index):
-        self.unit_list.DeleteScoringLFI(index)
+    def DeleteLFI(self,index):
+        self.all_scoring_lfi.DeleteScoringLFI(index)
         self.unit_list_labels.pop(index).deleteLater()
         self.UpdateLabelText()
         self.force_update=True
@@ -1482,13 +1451,13 @@ class MaterialFolderFrame(QtWidgets.QFrame):
             self.MakeCache(project_path)
             return
         
-        if len(all_mapping) != self.unit_list.GetLFINum():
-            logger.warning('The number of cache files is not matched! The number of cache files is %d, but the number of LFI is %d.'%(len(all_mapping),self.unit_list.GetLFINum()))
+        if len(all_mapping) != self.all_scoring_lfi.GetLFINum():
+            logger.warning('The number of cache files is not matched! The number of cache files is %d, but the number of LFI is %d.'%(len(all_mapping),self.all_scoring_lfi.GetLFINum()))
             logger.warning("Rebuilding cache files...")
             self.UpdateCache(project_path)
             return
         
-        for i in range(self.unit_list.GetLFINum()):
+        for i in range(self.all_scoring_lfi.GetLFINum()):
             cur_mapping=all_mapping[i]
             cur_mapping_index=cur_mapping[0]
             cur_cache_folder=cur_mapping[1]
@@ -1500,8 +1469,8 @@ class MaterialFolderFrame(QtWidgets.QFrame):
                 self.UpdateCache(project_path)
                 return
             
-            if cur_mapping_index != i or cur_show_name != self.unit_list.GetScoringExpLFIInfo(i).show_name:
-                logger.warning(f"The cache folder '{cur_cache_folder}' is not matched! The cache folder index is {cur_mapping_index}, but the LFI index is {i}, the cache LFI name is {cur_show_name}, but the LFI name is {self.unit_list.GetScoringExpLFIInfo(i).show_name}.")
+            if cur_mapping_index != i or cur_show_name != self.all_scoring_lfi.GetScoringExpLFIInfo(i).show_name:
+                logger.warning(f"The cache folder '{cur_cache_folder}' is not matched! The cache folder index is {cur_mapping_index}, but the LFI index is {i}, the cache LFI name is {cur_show_name}, but the LFI name is {self.all_scoring_lfi.GetScoringExpLFIInfo(i).show_name}.")
                 logger.warning("Rebuilding cache files...")
                 self.UpdateCache(project_path)
                 return
@@ -1532,7 +1501,7 @@ class MaterialFolderFrame(QtWidgets.QFrame):
             local_cache_folder=local_mapping[1]
             local_show_name=local_mapping[2]
 
-            if local_mapping_index != i or local_show_name != self.unit_list.GetScoringExpLFIInfo(i).show_name or local_cache_folder != cur_cache_folder:
+            if local_mapping_index != i or local_show_name != self.all_scoring_lfi.GetScoringExpLFIInfo(i).show_name or local_cache_folder != cur_cache_folder:
                 logger.error('Something is wrong. The local description and global record does not matche!')
                 logger.warning("Rebuilding cache files...")
                 self.UpdateCache(project_path)
@@ -1541,9 +1510,9 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         with open(self.cache_desc_file,'rb') as fid:
             all_mapping=pickle.load(fid)
         
-        for i in range(self.unit_list.GetLFINum()):
+        for i in range(self.all_scoring_lfi.GetLFINum()):
             # check the cache one by one
-            cur_lfi=self.unit_list.GetScoringExpLFIInfo(i)
+            cur_lfi=self.all_scoring_lfi.GetScoringExpLFIInfo(i)
 
             correct_index=i
             correct_cache_folder=os.path.join(self.cache_folder,f'LFI_{i}')
@@ -1575,10 +1544,6 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         
         with open(self.cache_desc_file,'wb') as fid:
             pickle.dump(all_mapping,fid)
-
-    def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
-        event.ignore()
-        return super().mousePressEvent(event)
 
 
 class ProjectMenuLabel(QtWidgets.QFrame):

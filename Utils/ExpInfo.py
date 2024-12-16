@@ -1029,7 +1029,6 @@ class ScoringExpLFIInfo:
         self.cache_path=None
         self.cache_thumbnail_file=None
         self.show_name=None
-        self.show_name=None
 
         self.project_ref=None
 
@@ -1115,6 +1114,19 @@ class ScoringExpLFIInfo:
         else:
             self.show_name=self.passive_view_video_path
     
+    def GetShowingFoldersAndFiles(self):
+        ret_v=[]
+        if self.active_view_path is not None:
+            ret_v.append(self.active_view_path)
+        if self.passive_view_video_path is not None:
+            ret_v.append(self.passive_view_video_path)
+        if self.active_refocusing_path is not None:
+            ret_v.append(self.active_refocusing_path)
+        if self.passive_refocusing_video_path is not None:
+            ret_v.append(self.passive_refocusing_video_path)
+        ret_v=list(set(ret_v))
+        return ret_v
+
     def DetectPostfix(self,in_folder):
         all_files=os.listdir(in_folder)
         all_post_fix={}
