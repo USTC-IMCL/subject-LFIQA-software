@@ -9,6 +9,21 @@ def ShowWarningMessage(message_text):
     dlg.setText(message_text)
     dlg.exec()
 
+def ShowYesNoMessage(message_text):
+    dlg=QMessageBox()
+    dlg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+    dlg.setWindowTitle("Notice")
+    dlg.setIcon(QMessageBox.Question)
+    dlg.setText(message_text)
+    return dlg.exec()
+
+def ShowCheckMessage(message_text):
+    dlg=QMessageBox()
+    dlg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+    dlg.setWindowTitle("Notice")
+    dlg.setIcon(QMessageBox.Information)
+    dlg.setText(message_text)
+    return dlg.exec()
 
 if __name__ == "__main__":
     from PySide6 import QtWidgets

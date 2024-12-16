@@ -110,7 +110,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         for i in range(self.unit_num-start_index):
             self.unit_list_labels.append(ImageUnit(None,icon_img=self.GetIconImg(i),icon_title=self.GetItemName(i),parent=self,unit_index=i+start_index))
         
-        for unitlabel in self.unit_list_labels:
+        for unitlabel in self.unit_list_labels[start_index:]:
             unitlabel.clicked.connect(self.SetActiveUnit)
     
     def mousePressEvent(self, event):
@@ -195,6 +195,7 @@ class SubjectsManagerWidget(ScrollUnitArea):
         self.manager_menu_funcs={
             'Export MOS':self.ExportMOS,
             'Export SROCC':self.ExportSROCC,
+            'Export PLCC' : self.ExportPLCC,
             'Put Everything Together':self.ExportAll
         }
 
@@ -330,6 +331,13 @@ class SubjectsManagerWidget(ScrollUnitArea):
             JPLMessageBox.ShowWarningMessage("The subject list is empty! Can not export all.")
             logger.warning("The unit list is empty! Can not export all.")
             return
+
+        all_res_file_name=PathManager.GetAllResultFileName(os.path.dirname(self.unit_list[0].result_file))
+        if os.path.exists(all_res_file_name):
+            if JPLMessageBox.ShowYesNoMessage(f"The file result file already exist!\n Do you want to overwrite it?"):
+                PathManager.DeleteFile(all_res_file_name)
+
+        all_score_names=[]
         
         all_subject_names=[]
         
@@ -352,8 +360,6 @@ class SubjectsManagerWidget(ScrollUnitArea):
 
         # Make 4 talbes here
         # All subjects, MOS, SROCC and PLCC
-
-        all_res_file_name=PathManager.GetAllResultFileName(os.path.dirname(self.unit_list[0].result_file))
 
         # MOS
         mos_all_content=[]
@@ -378,6 +384,8 @@ class SubjectsManagerWidget(ScrollUnitArea):
                 for score_anme in all_score_names:
                     cur_srocc_line.append(str(ret_srocc[score_anme][i]))
                     cur_plcc_line.append(str(ret_plcc[score_anme][i]))
+                srocc_all_content.append(cur_srocc_line)
+                plcc_all_content.append(cur_plcc_line)
             PathManager.SaveToExcel(all_res_file_name,srocc_all_content,'SROCC')
             PathManager.SaveToExcel(all_res_file_name,plcc_all_content,'PLCC')
         else:
@@ -389,7 +397,7 @@ class SubjectsManagerWidget(ScrollUnitArea):
         for subject in self.unit_list:
             subject_content=PathManager.ReadSubjectResult(subject.result_file)
             all_subjects_content.append([subject.name])
-            all_subjects_content.append(subject_content)
+            all_subjects_content+=subject_content
             all_subjects_content.append([''])
         
         PathManager.SaveToExcel(all_res_file_name,all_subjects_content,'All Subjects')
@@ -398,15 +406,17 @@ class SubjectsManagerWidget(ScrollUnitArea):
         all_subjects_content=[]
         for subject in self.unit_list:
             subject_content=PathManager.ReadSubjectResult(subject.result_file)
-            all_subjects_content.append(subject.name)
+            all_subjects_content.append([subject.name])
             all_subjects_content.append(subject_content[0])
             subject_reorder_content=[None for i in range(img_num)]
             for line in subject_content[1:]:
                 subject_reorder_content[int(line[0])]=line
-            all_subjects_content.append(subject_reorder_content)
+            all_subjects_content+=subject_reorder_content
             all_subjects_content.append([''])
         
         PathManager.SaveToExcel(all_res_file_name,all_subjects_content,'All Subjects Reorder')
+
+        PathManager.OpenPath(all_res_file_name)
 
     def RunMenuFuncs(self,menu_text):
         self.manager_menu_funcs[menu_text]()
@@ -1241,6 +1251,7 @@ class ImageUnit(QtWidgets.QFrame):
     def SetDeActive(self):
         self.b_active=False
         self.logo_label.setStyleSheet('background-color: transparent;')
+        self.logo_title_label.setStyleSheet('background-color: transparent; color: black;')
         self.logo_title_label.setFixedWidth(self.logo_size[1])
         self.logo_title_label.setWordWrap(False)
         self.logo_title_label.setText(self.deactive_title)
@@ -1340,7 +1351,7 @@ class MaterialFolderFrame(QtWidgets.QFrame):
         self.unit_list_labels.append(ImageUnit(parent=self))
         self.unit_list_labels[0].clicked.connect(self.AddNewLFI)
         for i in range(self.unit_list.exp_lfi_info_num):
-            self.unit_list_labels.append(ImageUnit(unit_info=self.unit_list.GetScoringExpLFIInfo(i),icon_img=':/icons/res/image.png',icon_title=f'LFIal;sdfjal;ksdjfl;aj {i}',parent=self))
+            self.unit_list_labels.append(ImageUnit(unit_info=self.unit_list.GetScoringExpLFIInfo(i),icon_img=':/icons/res/image.png',icon_title=f'LFI {i}',parent=self))
             self.unit_list_labels[-1].MakeMenu(self.menu_text)
             self.unit_list_labels[-1].menu_clicked.connect
     
