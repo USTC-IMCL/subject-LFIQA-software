@@ -31,7 +31,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         if 'use_add_icon' in kwargs.keys():
             self.use_add_icon=kwargs['use_add_icon']
         else:
-            self.use_add_icon=True
+            self.use_add_icon=False
         self.add_icon=':/icons/res/icon_add.png'
 
         if 'icon' in kwargs.keys():
@@ -50,10 +50,11 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         self.unit_size=[100,100] # height x width
         self.h_space=10
         self.v_space=10
-        self.unit_list=[x for x in item_list]
-        self.unit_num=len(self.unit_list)
         if self.use_add_icon:
-            self.unit_num+=1
+            self.unit_list=[None]+item_list
+        else:
+            self.unit_list=[x for x in item_list]
+        self.unit_num=len(self.unit_list)
         self.unit_list_labels=[] # QLabels to show the LFI info
 
         self.item_index=[None]*self.unit_num #[[row, col]]
@@ -114,8 +115,8 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         for i in range(self.unit_num-start_index):
             self.unit_list_labels.append(ImageUnit(None,icon_img=self.GetIconImg(i),icon_title=self.GetItemName(i),parent=self,unit_index=i+start_index))
         
-        for unitlabel in self.unit_list_labels[start_index:]:
-            unitlabel.clicked.connect(self.SetActiveUnit)
+        for unit_label in self.unit_list_labels[start_index:]:
+            unit_label.clicked.connect(self.SetActiveUnit)
     
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -137,7 +138,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         self.force_update=False
 
     def GetItemName(self,index):
-        return "Item ok ok aasdf ilasdfj"+str(index)
+        return "Item "+str(index)
 
     def GetIconImg(self,index):
         return self.icon_img
@@ -158,7 +159,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
             logger.error("The menu function list is not match with the menu text list! Won't make image units menu.")
             return
         if len(self.unit_list_labels) == 0:
-            logger.error("The unit list labels is empty! Can not generate any menu.")
+            logger.warning("The unit list labels is empty! Can not generate any menu.")
             return
         for unit_label in self.unit_list_labels:
             unit_label.MakeMenu(self.unit_menu_text)
@@ -1241,10 +1242,12 @@ class ImageUnit(QtWidgets.QFrame):
     def SetActive(self):
         self.b_active=True
         self.logo_label.setStyleSheet('background-color: rgba(0,0,255,180);')
+        font_size=self.logo_title_label.font().pointSize()
         self.logo_title_label.setStyleSheet('background-color: rgba(0,0,255,180); color: white;')
         self.logo_title_label.setFixedWidth(self.logo_size[1])
         self.logo_title_label.setWordWrap(True)
         self.logo_title_label.setText(self.active_title)
+        self.logo_title_label.setFont(QtGui.QFont(self.font().family(), font_size))
 
         self.logo_title_label.adjustSize()
         title_label_width=self.logo_title_label.width()
@@ -1257,11 +1260,13 @@ class ImageUnit(QtWidgets.QFrame):
     def SetDeActive(self):
         self.b_active=False
         self.logo_label.setStyleSheet('background-color: transparent;')
+        font_size=self.logo_title_label.font().pointSize()
         self.logo_title_label.setStyleSheet('background-color: transparent; color: black;')
+
         self.logo_title_label.setFixedWidth(self.logo_size[1])
         self.logo_title_label.setWordWrap(False)
         self.logo_title_label.setText(self.deactive_title)
-
+        self.logo_title_label.setFont(QtGui.QFont(self.font().family(), font_size))
         self.logo_title_label.adjustSize()
         title_label_width=self.logo_title_label.width()
         title_label_height=self.logo_title_label.height()
@@ -1310,6 +1315,8 @@ class MaterialFolderFrame(ScrollUnitArea):
         self.icon_img=":/icons/res/image.png"
         self.exp_setting=exp_setting
 
+        self.weak_project=self.exp_setting.GetProjectInfo()
+
         self.project_path=None
         self.cache_root=None
         self.cache_desc_file=None
@@ -1319,8 +1326,10 @@ class MaterialFolderFrame(ScrollUnitArea):
         self.unit_info_display=ImageUnitInfoDisplay(parent=self)
         self.add_form=None
 
-
-        self.b_editable=True
+        if len(self.weak_project.subject_list) > 0:
+            self.b_editable=False
+        else:
+            self.b_editable=True
 
         self.unit_menu_text=['Show in folder','Delete']
         self.unit_menu_funcs={
@@ -1331,12 +1340,24 @@ class MaterialFolderFrame(ScrollUnitArea):
         self.MakeUnitLabels()
         self.UpdateLabelPos()
 
+        if self.b_editable:
+            self.unit_list_labels[0].clicked.connect(self.AddNewLFI)
+        else:
+            self.unit_list_labels[0].clicked.connect(lambda: JPLMessageBox.ShowWarningMessage("Subject list is not empty! Can not add new LFI."))
+
         self.MakeMenu()
 
     def MakeMenu(self):
         self.MakeUnitMenu()
     
     def MakeUnitMenu(self):
+        start_index=1
+        for i in range(start_index,self.unit_num):
+            self.unit_list_labels[i].MakeMenu(self.unit_menu_text)
+            self.unit_list_labels[i].menu_clicked.connect(self.RunUnitMenuFunc)
+    
+    def RunUnitMenuFunc(self,unit_index,menu_text):
+        self.unit_menu_funcs[menu_text](unit_index)
     
     def ShowLFIFolder(self,index):
         cur_v=self.unit_list[index].GetShowingFoldersAndFiles()
