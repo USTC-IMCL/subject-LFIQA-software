@@ -39,6 +39,12 @@ class ImageMask:
         self.screen_widget_x=self.screen_width//2-self.widget_width//2
         self.screen_widget_y=self.screen_height//2-self.widget_height//2
 
+class RefocusingMask:
+    def __init__(self, mask_file, img_height,img_width) -> None:
+        self.mask_file=mask_file
+        self.img_height=img_height
+        self.img_width=img_width
+
 
 class EventMask:
     def __init__(self,img_height=0,img_width=0,lfi_features=None,comparison_type=None) -> None:

@@ -1021,14 +1021,13 @@ class ScoringExpLFIInfo:
 
         self.view_dict={}
         self.all_depth_values=None
-        self.all_depth_values=None
 
-        # cache path, for project management display
-        # cache path, for project management display
         # cache path, for project management display
         self.cache_path=None
         self.cache_thumbnail_file=None
         self.show_name=None
+
+        self.refocusing_mask_file=None
 
         self.project_ref=None
 
@@ -1239,6 +1238,8 @@ class ScoringExpLFIInfo:
                 continue
             if os.path.isdir(os.path.join(folder_path,img_file)):
                 continue
+            if '_' not in img_file:
+                continue
             test_img_name=img_file
             temp_list=img_file.split('.')[0].split('_')
             if self.angular_format == AngularFormat.XY:
@@ -1269,6 +1270,21 @@ class ScoringExpLFIInfo:
         self.img_width=img_width 
 
         self.GetViewDict(all_files,self.img_post_fix)
+        return True
+    
+    def ParseFolderForRefocusing(self,in_folder):
+        if not os.path.exists(in_folder):
+            logger.error(f"Does not exist the folder {in_folder}!")
+            return False
+        
+        all_files=os.listdir(in_folder)
+        for file in all_files:
+            if PathManager.refocusing_mask_name in file:
+                self.refocusing_mask_file=os.path.join(in_folder,file)
+        
+        if self.refocusing_mask_file is None:
+            logger.error(f"Does not exist the refocusing mask file in the folder {in_folder}! Please read the document and generate a mask file.")
+            return False
         return True
 
     def GetActiveView(self,v_row,v_col):
@@ -1384,7 +1400,7 @@ class TwoFolderLFIInfo(AllScoringLFI):
         return random_order[0]
 
 class ActiveTwoFolderLFIInfo(AllScoringLFI):
-    def __init__(self, in_folder_path,in_mode="None"):
+    def __init__(self, in_folder_path,active_refocusing=False,in_mode="None"):
         super().__init__(in_mode)
         self.in_folder_path=in_folder_path
 
@@ -1395,7 +1411,10 @@ class ActiveTwoFolderLFIInfo(AllScoringLFI):
             cur_single_scoring_lfi_info.img_post_fix=img_post_fix
 
             cur_single_scoring_lfi_info.active_view_path=os.path.join(in_folder_path,folder_name)
-            cur_single_scoring_lfi_info.active_refocusing_path=None
+            if active_refocusing:
+                cur_single_scoring_lfi_info.active_refocusing_path=in_folder_path
+            else:
+                cur_single_scoring_lfi_info.active_refocusing_path=os.path.join(in_folder_path,folder_name)
 
             cur_single_scoring_lfi_info.ParseFolder(cur_single_scoring_lfi_info.active_view_path)
 
