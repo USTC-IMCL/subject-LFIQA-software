@@ -12,6 +12,7 @@ from ExpInfo import *
 import PathManager
 from ScoreTable_ui import Ui_ScoreTable as ScoreTable
 import cv2
+import numpy as np
 import time
 os.environ['PATH']+=';./'
 import mpv
@@ -39,12 +40,45 @@ class ImageMask:
         self.screen_widget_x=self.screen_width//2-self.widget_width//2
         self.screen_widget_y=self.screen_height//2-self.widget_height//2
 
-class RefocusingMask:
-    def __init__(self, mask_file, img_height,img_width) -> None:
+class RefocusingMask(ImageMask):
+    def __init__(self, mask_file, img_height,img_width,folder_name) -> None:
+        # current mask: a png image file
+        super().__init__(img_height,img_width)
         self.mask_file=mask_file
         self.img_height=img_height
         self.img_width=img_width
 
+        self.folder_name=folder_name
+        self.event_mask=None
+
+        self.screen_widget_x=self.screen_width//2-self.img_width//2
+        self.screen_widget_y=self.screen_height//2-self.img_height//2
+
+        self.widget_width=self.img_width
+        self.widget_height=self.img_height
+        self.MakeMask()
+    
+    def MakeMask(self):
+        # TODO: what if the mask is bigger?
+        # TODO: do it without numpy
+        event_mask=np.zeros(self.screen_height,self.screen_width)
+        event_mask-=1
+        img_x_in_mask=self.screen_width//2-self.img_width//2
+        img_y_in_mask=self.screen_height//2-self.img_height//2
+
+        img_mask=cv2.imread(self.mask_file)
+        if len(img_mask.shape)==3:
+            img_mask=img_mask[:,:,0]
+        event_mask[img_y_in_mask:img_y_in_mask+self.img_height,img_x_in_mask:img_x_in_mask+self.img_width]=img_mask
+        self.event_mask=event_mask
+
+    def GetRefocusingFile(self,h,w):
+        # from mouse position to image position
+        target_value=self.event_mask[h,w]
+        if target_value == 0:
+            return None
+        else:
+            return os.path.join(self.folder_name,str(target_value)+".png")
 
 class EventMask:
     def __init__(self,img_height=0,img_width=0,lfi_features=None,comparison_type=None) -> None:
@@ -599,7 +633,7 @@ class ImagePage(QtWidgets.QWidget):
         self.lfi_info=dist_lfi_info
         self.view_path=view_path
         self.refocusing_path=refocusing_path
-        self.depth_path=dist_lfi_info.depth_path
+        self.mask_file=dist_lfi_info.refocusing_mask_file
 
         self.max_angular_width=dist_lfi_info.max_width
         self.max_angular_height=dist_lfi_info.max_height
@@ -617,7 +651,9 @@ class ImagePage(QtWidgets.QWidget):
         self.hover_center_x=0
         self.hover_center_y=0
 
-        self.clicking_mask=EventMask(self.img_height,self.img_width,exp_setting.lfi_features,exp_setting.comparison_type)
+        #self.clicking_mask=EventMask(self.img_height,self.img_width,exp_setting.lfi_features,exp_setting.comparison_type)
+
+        self.clicking_mask=None
 
         self.img_label.setGeometry(self.clicking_mask.screen_widget_x,self.clicking_mask.screen_widget_y,self.clicking_mask.widget_width,self.clicking_mask.widget_height)
 
@@ -641,9 +677,9 @@ class ImagePage(QtWidgets.QWidget):
             center_view_path=self.MakeViewPath(center_x,center_y)
             self.SetImage(center_view_path)
         
+        
         if self.refocusing_path is not None:
-            self.depth_img=cv2.imread(self.depth_path,cv2.IMREAD_GRAYSCALE)
-            self.depth_img=cv2.resize(self.depth_img,(self.clicking_mask.img_width,self.clicking_mask.img_height))
+            self.clicking_mask=RefocusingMask(self.mask_file,self.img_height,self.img_width,self.refocusing_path)
         
         # now set the flags
         if LFIFeatures.Active_Refocusing in exp_setting.lfi_features:
@@ -656,7 +692,7 @@ class ImagePage(QtWidgets.QWidget):
         btn_pos_y=(self.clicking_mask.screen_height+self.clicking_mask.widget_height+self.clicking_mask.screen_widget_y)//2-btn_height//2
 
         if exp_setting.comparison_type == ComparisonType.PairComparison:
-            left_btn_pos_x=3*self.clicking_mask.screen_width//8 - btn_width//2
+            left_btn_pos_x=1*self.clicking_mask.screen_width//8 - btn_width//2
             right_btn_pos_x=5*self.clicking_mask.screen_width//8 - btn_width//2
 
             self.left_btn.setGeometry(left_btn_pos_x,btn_pos_y,btn_width,btn_height)

@@ -1412,9 +1412,12 @@ class ActiveTwoFolderLFIInfo(AllScoringLFI):
 
             cur_single_scoring_lfi_info.active_view_path=os.path.join(in_folder_path,folder_name)
             if active_refocusing:
-                cur_single_scoring_lfi_info.active_refocusing_path=in_folder_path
-            else:
                 cur_single_scoring_lfi_info.active_refocusing_path=os.path.join(in_folder_path,folder_name)
+                if not cur_single_scoring_lfi_info.ParseFolderForRefocusing(cur_single_scoring_lfi_info.active_refocusing_path):
+                    cur_single_scoring_lfi_info.active_refocusing_path=None
+            else:
+                cur_single_scoring_lfi_info.active_refocusing_path=None
+            
 
             cur_single_scoring_lfi_info.ParseFolder(cur_single_scoring_lfi_info.active_view_path)
 

@@ -372,10 +372,16 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
             logger.error("For the two folders configuration, the input should be a string!")
             return None
         
+        # does not consider the passive refocusing now.
         if self.exp_setting.view_changing_type == FeatureType.Active:
-            all_lfi_config=ActiveTwoFolderLFIInfo(all_lfi_config,in_mode)
+            refocusing_type=self.exp_setting.refocusing_type
+            if refocusing_type == FeatureType.Active:
+                use_refocusing=True
+            else:
+                use_refocusing=False
+            all_lfi_config=ActiveTwoFolderLFIInfo(all_lfi_config,active_refocusing=use_refocusing,in_mode=in_mode)
         elif self.exp_setting.view_changing_type == FeatureType.Passive:
-            all_lfi_config=TwoFolderLFIInfo(all_lfi_config,self.exp_setting.input_video_type_str,in_mode)
+            all_lfi_config=TwoFolderLFIInfo(all_lfi_config,self.exp_setting.input_video_type_str,in_mode=in_mode)
         else:
             logger.warning("For the two folders configuration, the view changing type should be active or passive! Active refocusing two-folder mode is not supported now.") 
             all_lfi_config=None
