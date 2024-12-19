@@ -41,7 +41,7 @@ class ImageMask:
         self.screen_widget_y=self.screen_height//2-self.widget_height//2
 
 class RefocusingMask(ImageMask):
-    def __init__(self, mask_file, img_height,img_width,folder_name) -> None:
+    def __init__(self, img_height,img_width,folder_name,mask_file=None) -> None:
         # current mask: a png image file
         super().__init__(img_height,img_width)
         self.mask_file=mask_file
@@ -59,8 +59,10 @@ class RefocusingMask(ImageMask):
         self.MakeMask()
     
     def MakeMask(self):
+        if self.mask_file is None:
+            return
         # TODO: what if the mask is bigger?
-        # TODO: do it without numpy
+        # TODO: do it without numpy ?
         event_mask=np.zeros(self.screen_height,self.screen_width)
         event_mask-=1
         img_x_in_mask=self.screen_width//2-self.img_width//2
@@ -73,6 +75,8 @@ class RefocusingMask(ImageMask):
         self.event_mask=event_mask
 
     def GetRefocusingFile(self,h,w):
+        if self.event_mask is None:
+            return None
         # from mouse position to image position
         target_value=self.event_mask[h,w]
         if target_value == 0:
@@ -653,7 +657,7 @@ class ImagePage(QtWidgets.QWidget):
 
         #self.clicking_mask=EventMask(self.img_height,self.img_width,exp_setting.lfi_features,exp_setting.comparison_type)
 
-        self.clicking_mask=None
+        self.clicking_mask=RefocusingMask(self.img_height,self.img_width,self.refocusing_path,self.mask_file)
 
         self.img_label.setGeometry(self.clicking_mask.screen_widget_x,self.clicking_mask.screen_widget_y,self.clicking_mask.widget_width,self.clicking_mask.widget_height)
 
@@ -676,10 +680,6 @@ class ImagePage(QtWidgets.QWidget):
         else:
             center_view_path=self.MakeViewPath(center_x,center_y)
             self.SetImage(center_view_path)
-        
-        
-        if self.refocusing_path is not None:
-            self.clicking_mask=RefocusingMask(self.mask_file,self.img_height,self.img_width,self.refocusing_path)
         
         # now set the flags
         if LFIFeatures.Active_Refocusing in exp_setting.lfi_features:
