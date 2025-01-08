@@ -720,11 +720,9 @@ class ImagePage(QtWidgets.QWidget):
             self.hover_open_flag=False
             if self.clicking_flag:
                 if self.clicking_mask is not None and self.refocusing_path is not None:
-                    ret=self.clicking_mask.IsInRect(event.x(),event.y())
-                    if ret[0]:
-                        depth_value=self.depth_img[ret[1][1],ret[1][0]]
-                        refocus_img_path=os.path.join(self.refocusing_path,f"{depth_value}.{self.post_fix}")
-                        self.SetImage(refocus_img_path)
+                    target_file=self.clicking_mask.GetRefocusingFile(event.y(),event.x())
+                    if target_file is not None:
+                        self.SetImage(target_file)
         return super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event) -> None:

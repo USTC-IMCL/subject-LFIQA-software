@@ -198,7 +198,7 @@ class SubjectsManagerWidget(ScrollUnitArea):
         }
 
 
-        self.manager_menu_text=['Export MOS','Export SROCC','Put Everything Together']
+        self.manager_menu_text=['Export MOS','Export SROCC','Export PLCC','Put Everything Together']
         self.manager_menu_funcs={
             'Export MOS':self.ExportMOS,
             'Export SROCC':self.ExportSROCC,
