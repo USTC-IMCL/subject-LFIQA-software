@@ -47,7 +47,8 @@ def CalDenseRefocusing(img_path):
         cv2.imwrite(output_name,output_img)
 
 if __name__ == "__main__":
-    view_root='/data_0/shengyang/Work/JPEG/LFIQA/examples/Bikes/Ori'
+    #view_root='/data_0/shengyang/Work/JPEG/LFIQA/examples/Bikes/Ori'
+    view_root='/data_0/Work/JPEG/LFIQA/examples/Bikes/Ori'
     lambda_file=os.path.join(view_root,'lambda.txt')
     meta_data=None
     angular_height=11
