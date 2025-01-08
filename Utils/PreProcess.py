@@ -9,8 +9,9 @@ from PySide6.QtCore import QObject,QThread,Signal
 import logging
 from multiprocessing import pool
 import subprocess
-from LogWindow import StreamToLogger
 import sys
+sys.path.append('../Widgets')
+from LogWindow import StreamToLogger
 import PathManager
 logger=logging.getLogger("LogWindow")
 sys.stdout=StreamToLogger(logger,logging.INFO)
