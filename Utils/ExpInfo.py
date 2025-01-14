@@ -1273,18 +1273,49 @@ class ScoringExpLFIInfo:
         return True
     
     def ParseFolderForRefocusing(self,in_folder):
+        # if not exist
         if not os.path.exists(in_folder):
             logger.error(f"Does not exist the folder {in_folder}!")
             return False
         
+        possible_refocusing_folder=None
+        self.refocusing_mask_file=None
+        # search for the mask file.
         all_files=os.listdir(in_folder)
+
+        for f_name in all_files:
+            if os.path.isdir(os.path.join(in_folder,f_name)):
+                if PathManager.active_refocusing_folder_key_word in f_name:
+                    possible_refocusing_folder=os.path.join(in_folder,f_name)
+                    break
+        
+        # Then search for mask file
+        possible_files=os.listdir(possible_refocusing_folder)
+
+        for f_name in possible_files:
+            if PathManager.refocusing_mask_key_word in f_name:
+                self.refocusing_mask_file=os.path.join(possible_refocusing_folder,f_name)
+                break 
+        
+        for f_name in all_files:
+            if PathManager.refocusing_mask_name in f_name:
+                self.refocusing_mask_file=os.path.join(in_folder,f_name)
+                break
+
+        if self.refocusing_mask_file is None:
+            logger.error(f"Can not find the refocusing mask file in the folder {in_folder}! Please read the document and generate a mask file first.")
+            return False
+
+        
         for file in all_files:
-            if PathManager.refocusing_mask_name in file:
+            if os.path.exists()
+            if PathManager.refocusing_mask_name in file :
                 self.refocusing_mask_file=os.path.join(in_folder,file)
         
         if self.refocusing_mask_file is None:
             logger.error(f"Does not exist the refocusing mask file in the folder {in_folder}! Please read the document and generate a mask file.")
             return False
+        
         return True
 
     def GetActiveView(self,v_row,v_col):
@@ -1412,8 +1443,10 @@ class ActiveTwoFolderLFIInfo(AllScoringLFI):
 
             cur_single_scoring_lfi_info.active_view_path=os.path.join(in_folder_path,folder_name)
             if active_refocusing:
-                cur_single_scoring_lfi_info.active_refocusing_path=os.path.join(in_folder_path,folder_name)
-                if not cur_single_scoring_lfi_info.ParseFolderForRefocusing(cur_single_scoring_lfi_info.active_refocusing_path):
+                # All things are in the active_view_path
+                # then the refocusing images may be in the folder, or in the refocusing folder
+                #cur_single_scoring_lfi_info.active_refocusing_path=os.path.join(in_folder_path,folder_name)
+                if not cur_single_scoring_lfi_info.ParseFolderForRefocusing(cur_single_scoring_lfi_info.active_view_path):
                     cur_single_scoring_lfi_info.active_refocusing_path=None
             else:
                 cur_single_scoring_lfi_info.active_refocusing_path=None

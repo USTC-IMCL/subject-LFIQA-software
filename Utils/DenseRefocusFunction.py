@@ -83,6 +83,9 @@ def lf_shift_sum(lf_image : np.ndarray,
     vvec = np.linspace(-0.5, 0.5, lf_size[0]) * tv_slope * lf_size[0]
     uvec = np.linspace(-0.5, 0.5, lf_size[1]) * su_slope * lf_size[1]
 
+    vvec = vvec.astype(np.float32)
+    uvec = uvec.astype(np.float32)
+
     for t_idx in range(lf_size[0]):
         v_offset = vvec[t_idx]
         for s_idx in range(lf_size[1]):
