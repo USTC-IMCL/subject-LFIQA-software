@@ -40,13 +40,14 @@ class ImageMask:
         self.screen_widget_x=self.screen_width//2-self.widget_width//2
         self.screen_widget_y=self.screen_height//2-self.widget_height//2
 
-class RefocusingMask(ImageMask):
-    def __init__(self, img_height,img_width,folder_name,mask_file=None) -> None:
+class RefocusingScoringMask(ImageMask):
+    def __init__(self, img_height,img_width,folder_name,mask_file=None,post_fix='png') -> None:
         # current mask: a png image file
         super().__init__(img_height,img_width)
         self.mask_file=mask_file
         self.img_height=img_height
         self.img_width=img_width
+        self.post_fix=post_fix
 
         self.folder_name=folder_name
         self.event_mask=None
@@ -63,7 +64,7 @@ class RefocusingMask(ImageMask):
             return
         # TODO: what if the mask is bigger?
         # TODO: do it without numpy ?
-        event_mask=np.zeros(self.screen_height,self.screen_width)
+        event_mask=np.zeros([self.screen_height,self.screen_width],dtype=np.uint8)
         event_mask-=1
         img_x_in_mask=self.screen_width//2-self.img_width//2
         img_y_in_mask=self.screen_height//2-self.img_height//2
@@ -79,10 +80,10 @@ class RefocusingMask(ImageMask):
             return None
         # from mouse position to image position
         target_value=self.event_mask[h,w]
-        if target_value == 0:
+        if target_value <= 0:
             return None
         else:
-            return os.path.join(self.folder_name,str(target_value)+".png")
+            return os.path.join(self.folder_name,f"{str(target_value)}.{self.post_fix}")
 
 class EventMask:
     def __init__(self,img_height=0,img_width=0,lfi_features=None,comparison_type=None) -> None:
@@ -300,13 +301,13 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
 
         if LFIFeatures.Active_ViewChanging in exp_setting.lfi_features and LFIFeatures.Active_Refocusing not in exp_setting.lfi_features:
             if init_flag:
-                page_showing=ImagePage(exp_setting,cur_lf_info,cur_lf_info.active_view_path,None)
+                page_showing=ImagePage(exp_setting,cur_lf_info,cur_lf_info.active_view_path,cur_lf_info.active_refocusing_path)
                 self.addWidget(page_showing)
                 page_showing.pair_finished.connect(lambda x: self.ShowingNext(x,self.all_view_scores,0))
                 self.max_page_num+=1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.active_view_path,None)
+                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.active_view_path,cur_lf_info.active_refocusing_path)
         
         if LFIFeatures.Passive_ViewChanging in exp_setting.lfi_features:
             if init_flag:
@@ -492,13 +493,13 @@ class ScoringWidget(QtWidgets.QStackedWidget):
 
         if LFIFeatures.Active_ViewChanging in exp_setting.lfi_features and LFIFeatures.Active_Refocusing not in exp_setting.lfi_features:
             if init_flag:
-                page_showing=ImagePage(exp_setting,cur_lf_info,cur_lf_info.active_view_path,None)
+                page_showing=ImagePage(exp_setting,cur_lf_info,cur_lf_info.active_view_path,cur_lf_info.active_refocusing_path)
                 self.addWidget(page_showing)
                 page_showing.eval_finished.connect(self.NextPage)
                 self.max_page_num+=1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.active_view_path,None)
+                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.active_view_path,cur_lf_info.active_refocusing_path)
         
         if LFIFeatures.Passive_ViewChanging in exp_setting.lfi_features:
             if init_flag:
@@ -657,7 +658,7 @@ class ImagePage(QtWidgets.QWidget):
 
         #self.clicking_mask=EventMask(self.img_height,self.img_width,exp_setting.lfi_features,exp_setting.comparison_type)
 
-        self.clicking_mask=RefocusingMask(self.img_height,self.img_width,self.refocusing_path,self.mask_file)
+        self.clicking_mask=RefocusingScoringMask(self.img_height,self.img_width,self.refocusing_path,self.mask_file)
 
         self.img_label.setGeometry(self.clicking_mask.screen_widget_x,self.clicking_mask.screen_widget_y,self.clicking_mask.widget_width,self.clicking_mask.widget_height)
 

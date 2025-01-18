@@ -1,6 +1,6 @@
 {
-    "Training":"Active_examples/SingleStimulus/foo_1",
-    "Test":"Active_examples/SingleStimulus/foo_2",
+    "Training":"/data_0/shengyang/Work/JPEG/LFIQA/Active_examples/Single_Stimulus/foo_1",
+    "Test":"/data_0/shengyang/Work/JPEG/LFIQA/Active_examples/Single_Stimulus/foo_2",
     "Exp_Info":{
         "Display_Type":"2D",
         "ThreeD_Type":"LeftRight",

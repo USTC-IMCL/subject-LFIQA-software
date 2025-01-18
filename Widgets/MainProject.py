@@ -660,14 +660,14 @@ class MainProject(QMainWindow,Ui_MainWindow):
                     logger.error("Can not find the video %s! Please check yor preprocessing carefully. The experiment will be cancelled. Quit now..." % show_view_video)
                     return False
             if ExpInfo.LFIFeatures.Active_Refocusing in exp_setting.lfi_features:
-                if not os.path.exists(cur_lfi_scoring_info.depth_path):
-                    logger.error(f"Can not find the depth map {cur_lfi_scoring_info.depth_path}! The active refocusing needs a depth image to map you clicking position to a certain refocusing depth. Please check your data carefully. Quit now...")
+                if not os.path.exists(cur_lfi_scoring_info.refocusing_mask_file):
+                    logger.error(f"Can not find the refocusing mask {cur_lfi_scoring_info.refocusing_mask_file}! The active refocusing needs a depth image to map your clicking position to a certain refocusing image. Please check your data carefully. Quit now...")
                     return False
-                all_depth_value=cur_lfi_scoring_info.GetAllPossibleDepthVal()
+                all_depth_value=cur_lfi_scoring_info.GetAllPossibleMaskVal()
                 for depth_value in all_depth_value:
                     image_name=os.path.join(show_refocus_path,f'{depth_value}.{cur_lfi_scoring_info.img_post_fix}')
                     if not os.path.exists(image_name):
-                        logger.error("Can not find the image %s! Please check yor preprocessing carefully. The experiment will be cancelled. Quit now..." % image_name)
+                        logger.error("Can not find the image %s! Please check yor files carefully. The experiment will be cancelled. Quit now..." % image_name)
                         return False
             if ExpInfo.LFIFeatures.Passive_Refocusing in exp_setting.lfi_features:
                 show_refocusing_video=cur_lfi_scoring_info.passive_refocusing_video_path

@@ -159,6 +159,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
             logger.error("The menu function list is not match with the menu text list! Won't make image units menu.")
             return
         if len(self.unit_list_labels) == 0:
+            # TODO: show the name of sub-class?
             logger.warning("The unit list labels is empty! Can not generate any menu.")
             return
         for unit_label in self.unit_list_labels:
@@ -1240,6 +1241,10 @@ class ImageUnit(QtWidgets.QFrame):
             self.menu_action_list.append(cur_unit_action)
 
     def SetActive(self):
+        # TODO
+        # The long word wrapping problem is not solved
+        # Best solution:
+        # https://stackoverflow.com/questions/12262123/how-to-customize-qlabel-word-wrap-mode
         self.b_active=True
         self.logo_label.setStyleSheet('background-color: rgba(0,0,255,180);')
         font_size=self.logo_title_label.font().pointSize()

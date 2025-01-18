@@ -14,6 +14,7 @@ sys.path.append('../Utils/')
 
 import PathManager
 import PlayList
+import RefocusingMask
 
 logger=logging.getLogger("LogWindow")
 
@@ -986,7 +987,7 @@ class ScoringExpLFIInfo:
         self.img_width=None
         self.angular_height=None
         self.angular_width=None
-        self.angular_format=None
+        self.angular_format=AngularFormat.XY
 
         self.lfi_name=None
         self.methodology=None
@@ -1010,6 +1011,7 @@ class ScoringExpLFIInfo:
         self.max_width=None
 
         self.depth_path=None
+        self.refocusing_mask_file=None
         self.img_post_fix=None
         self.video_post_fix=None
         self.cmp_index=None
@@ -1201,7 +1203,7 @@ class ScoringExpLFIInfo:
     
     def GetViewDict(self,all_files,img_post_fix):
         for file_name in all_files:
-            if img_post_fix in file_name and PathManager.thumbnail_name not in file_name:
+            if img_post_fix in file_name and PathManager.thumbnail_name not in file_name and '_' in file_name:
                 pure_file_name = file_name.split('.')[0]
                 if self.angular_format ==  AngularFormat.HW:
                     row,col=pure_file_name.split('_')
@@ -1290,15 +1292,16 @@ class ScoringExpLFIInfo:
                     break
         
         # Then search for mask file
-        possible_files=os.listdir(possible_refocusing_folder)
+        if possible_refocusing_folder is not None:
+            possible_files=os.listdir(possible_refocusing_folder)
 
-        for f_name in possible_files:
-            if PathManager.refocusing_mask_key_word in f_name:
-                self.refocusing_mask_file=os.path.join(possible_refocusing_folder,f_name)
-                break 
+            for f_name in possible_files:
+                if PathManager.refocusing_mask_key_word in f_name:
+                    self.refocusing_mask_file=os.path.join(possible_refocusing_folder,f_name)
+                    break 
         
         for f_name in all_files:
-            if PathManager.refocusing_mask_name in f_name:
+            if PathManager.refocusing_mask_key_word in f_name:
                 self.refocusing_mask_file=os.path.join(in_folder,f_name)
                 break
 
@@ -1306,16 +1309,35 @@ class ScoringExpLFIInfo:
             logger.error(f"Can not find the refocusing mask file in the folder {in_folder}! Please read the document and generate a mask file first.")
             return False
 
-        
-        for file in all_files:
-            if os.path.exists()
-            if PathManager.refocusing_mask_name in file :
-                self.refocusing_mask_file=os.path.join(in_folder,file)
-        
-        if self.refocusing_mask_file is None:
-            logger.error(f"Does not exist the refocusing mask file in the folder {in_folder}! Please read the document and generate a mask file.")
+        refocusing_mask=RefocusingMask.RefocusingMask(self.refocusing_mask_file)
+
+        all_depth_val=refocusing_mask.GetMaskSet()
+        in_possible_folder=False
+        in_in_folder=False
+
+        for depth_val in all_depth_val:
+            target_file=os.path.join(in_folder,f'{depth_val}.{self.img_post_fix}')
+            if os.path.exists(target_file):
+                in_in_folder=True
+                continue
+            else:
+                if possible_refocusing_folder is not None:
+                    target_file=os.path.join(possible_refocusing_folder,f'{depth_val}.{self.img_post_fix}')
+                    if os.path.exists(target_file):
+                        in_possible_folder=True
+                        continue
+                
+            logger.error(f"Can not find the refocusing image {depth_val}.{self.img_post_fix}! Please check your folder carefully.")
             return False
         
+        if in_in_folder and in_possible_folder:
+            logger.error(f"The refocusing images distributed in different folders! Please put them in the same folder ({in_folder} or {possible_refocusing_folder}). In this case I don't know which one to use. Please check your folder carefully.")
+            return False
+        
+        if in_in_folder:
+            self.active_refocusing_path=in_folder
+        else:
+            self.active_refocusing_path=possible_refocusing_folder
         return True
 
     def GetActiveView(self,v_row,v_col):
@@ -1337,7 +1359,16 @@ class ScoringExpLFIInfo:
     def GetActiveRefocusingPath(self):
         return self.active_refocusing_path
     
+    def GetAllPossibleMaskVal(self):
+        depth_map=cv2.imread(self.refocusing_mask_file,cv2.IMREAD_GRAYSCALE)
+        all_val=unique(depth_map)
+        all_val=[int(x) for x in all_val if x>0]
+        return all_val
+    
     def GetAllPossibleDepthVal(self):
+        '''
+        Deprecated
+        '''
         depth_map=cv2.imread(self.depth_path,cv2.IMREAD_GRAYSCALE)
         if depth_map.shape[0]!=self.img_height or depth_map.shape[1]!=self.img_width:
             depth_map=cv2.resize(depth_map,(self.img_width,self.img_height))

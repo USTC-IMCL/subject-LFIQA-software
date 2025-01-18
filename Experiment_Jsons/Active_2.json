@@ -1,6 +1,6 @@
 {
-    "Training":"Active_examples/DoubleStimuli/train",
-    "Test":"Active_examples/DoubleStimuli/test",
+    "Training":"/data_0/shengyang/Work/JPEG/LFIQA/Active_examples/Double_Stimuli/train",
+    "Test":"/data_0/shengyang/Work/JPEG/LFIQA/Active_examples/Double_Stimuli/test",
     "Exp_Info":{
         "Display_Type":"2D",
         "ThreeD_Type":"LeftRight",
@@ -16,7 +16,7 @@
             "1. Very Annoying"]
         ],
         "View_Changing":"Active",
-        "Refocusing":"None",
+        "Refocusing":"Active",
         "Comparison":"DoubleStimulus",
         "Save_Format":"Excel",
         "Skip_Preprocessing": true,
