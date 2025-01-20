@@ -1482,6 +1482,8 @@ class ActiveTwoFolderLFIInfo(AllScoringLFI):
             else:
                 cur_single_scoring_lfi_info.active_refocusing_path=None
             
+            if cur_single_scoring_lfi_info.active_refocusing_path is None and active_refocusing:
+                logger.error("Experiment initialization failed. active refocusing is chosen, but the software can not init the refocusing path. Please check the log carefully.")
 
             cur_single_scoring_lfi_info.ParseFolder(cur_single_scoring_lfi_info.active_view_path)
 

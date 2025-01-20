@@ -379,6 +379,7 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
                 use_refocusing=True
             else:
                 use_refocusing=False
+            # TODO: what should it do when something is wrong?
             all_lfi_config=ActiveTwoFolderLFIInfo(all_lfi_config,active_refocusing=use_refocusing,in_mode=in_mode)
         elif self.exp_setting.view_changing_type == FeatureType.Passive:
             all_lfi_config=TwoFolderLFIInfo(all_lfi_config,self.exp_setting.input_video_type_str,in_mode=in_mode)
