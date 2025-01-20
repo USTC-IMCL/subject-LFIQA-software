@@ -65,7 +65,7 @@ class RefocusingScoringMask(ImageMask):
         # TODO: what if the mask is bigger?
         # TODO: do it without numpy ?
         event_mask=np.zeros([self.screen_height,self.screen_width],dtype=np.uint8)
-        event_mask-=1
+        #event_mask-=1
         img_x_in_mask=self.screen_width//2-self.img_width//2
         img_y_in_mask=self.screen_height//2-self.img_height//2
 
