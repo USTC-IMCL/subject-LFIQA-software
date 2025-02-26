@@ -1,0 +1,14 @@
+{
+    "Training":"Active_examples/Pair_Comparison/train",
+    "Test":"Active_examples/Pair_Comparison/test",
+    "Exp_Info":{
+        "Display_Type":"2D",
+        "ThreeD_Type":"LeftRight",
+        "View_Changing":"Active",
+        "Refocusing":"Active",
+        "Comparison":"PairComparison",
+        "Save_Format":"Excel",
+        "Skip_Preprocessing": true,
+        "Two_Folder_Mode": true
+    }
+}

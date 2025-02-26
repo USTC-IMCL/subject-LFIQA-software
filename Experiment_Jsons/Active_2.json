@@ -1,6 +1,6 @@
 {
-    "Training":"Active_examples/SingleStimulus/foo_1",
-    "Test":"Active_examples/SingleStimulus/foo_2",
+    "Training":"Active_examples/DoubleStimuli/train",
+    "Test":"Active_examples/DoubleStimuli/test",
     "Exp_Info":{
         "Display_Type":"2D",
         "ThreeD_Type":"LeftRight",
@@ -17,11 +17,9 @@
         ],
         "View_Changing":"Active",
         "Refocusing":"None",
-        "Comparison":"SingleStimulus",
+        "Comparison":"DoubleStimulus",
         "Save_Format":"Excel",
         "Skip_Preprocessing": true,
-        "Two_Folder_Mode": true,
-        "Table_Font_Size": 20,
-        "Hint_Font_Size": 60
+        "Two_Folder_Mode": true
     }
 }
