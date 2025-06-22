@@ -23,7 +23,7 @@ logger = logging.getLogger("LogWindow")
 import JPLMessageBox
 
 class ScrollUnitArea(QtWidgets.QScrollArea):
-    def __init__(self, item_list=None, parent=None, *args, **kwargs):
+    def __init__(self, item_list=[], parent=None, *args, **kwargs):
         super().__init__(parent=parent)
         self.content_widget=QtWidgets.QFrame()
         self.setWidget(self.content_widget)
@@ -112,6 +112,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         else:
             start_index=0
 
+        # TODO: better design? not so elegant.
         for i in range(self.unit_num-start_index):
             self.unit_list_labels.append(ImageUnit(None,icon_img=self.GetIconImg(i),icon_title=self.GetItemName(i),parent=self,unit_index=i+start_index))
         
@@ -1368,6 +1369,9 @@ class MaterialFolderFrame(ScrollUnitArea):
         cur_v=self.unit_list[index].GetShowingFoldersAndFiles()
         for v in cur_v:
             PathManager.OpenPath(v)
+    
+    def GetItemName(self, index):
+        return self.unit_list[index+1].show_name
 
     def SetEditable(self, b_editable):
         self.b_editable=b_editable

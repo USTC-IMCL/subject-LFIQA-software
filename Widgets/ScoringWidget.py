@@ -276,7 +276,7 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
     def SetPageShowing(self,cur_lf_info:ScoringExpLFIInfo,init_flag=False):
         exp_setting=self.exp_setting
 
-        if exp_setting.two_folder_mode:
+        if exp_setting.two_folder_mode and LFIFeatures.Passive_ViewChanging in exp_setting.lfi_features:
             if init_flag:
                 page_showing=VideoPage(exp_setting,None,cur_lf_info.passive_view_video_path)
                 self.addWidget(page_showing)
@@ -693,8 +693,12 @@ class ImagePage(QtWidgets.QWidget):
         btn_pos_y=(self.clicking_mask.screen_height+self.clicking_mask.widget_height+self.clicking_mask.screen_widget_y)//2-btn_height//2
 
         if exp_setting.comparison_type == ComparisonType.PairComparison:
+            '''
             left_btn_pos_x=1*self.clicking_mask.screen_width//8 - btn_width//2
             right_btn_pos_x=5*self.clicking_mask.screen_width//8 - btn_width//2
+            '''
+            left_btn_pos_x=self.clicking_mask.screen_widget_x + (self.clicking_mask.widget_width//2-btn_width)//2
+            right_btn_pos_x=self.clicking_mask.screen_widget_x + (3*self.clicking_mask.widget_width//2-btn_width)//2
 
             self.left_btn.setGeometry(left_btn_pos_x,btn_pos_y,btn_width,btn_height)
             self.left_btn.show()
