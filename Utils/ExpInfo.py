@@ -1487,7 +1487,11 @@ class ActiveTwoFolderLFIInfo(AllScoringLFI):
 
             cur_single_scoring_lfi_info.ParseFolder(cur_single_scoring_lfi_info.active_view_path)
 
+            cur_single_scoring_lfi_info.exp_name=folder_name
+            cur_single_scoring_lfi_info.show_name=folder_name
+
             self.all_exp_lfi_info.append(cur_single_scoring_lfi_info)
+
         self.exp_lfi_info_num=len(self.all_exp_lfi_info)
 
 class PorjectPathManager():
