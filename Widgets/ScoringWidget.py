@@ -1191,6 +1191,7 @@ class VideoPage(QtWidgets.QWidget):
         self.auto_play=auto_play
         self.auto_play_delay_time=500
 
+
         self.loop_times=loop_times
 
         self.fps=fps
