@@ -22,6 +22,7 @@ import PathManager
 import FontSetting
 import SubjectInfo
 from ProjectDisplay import ProjectDisplay
+from PlayList import MakeDSCSPCList
 logger=logging.getLogger("LogWindow")
 
 class AboutJPEGForm(QWidget,Ui_About_JPEG_Form):
@@ -383,9 +384,19 @@ class MainProject(QMainWindow,Ui_MainWindow):
         # then make the DSCS PC refinement
         # now dscs with pc assumes only one score name
         all_scores=[]
+        lfi_names=[]
         for i, show_index in enumerate(all_show_index):
+            cur_scoring_lfi=all_scoring_lfi_info.GetScoringExpLFIInfo(show_index)
+            lfi_names.append(cur_scoring_lfi.passive_view_video_path)
+            all_scores.append(all_results[i][0])
+        
+        if self.exp_setting.dscs_pc_method == ExpInfo.ComparisonType.DSCS_PC_BASE:
+            dscs_pc_method="base"
+        elif self.exp_setting.dscs_pc_method == ExpInfo.ComparisonType.DSCS_PC_CCG:
+            dscs_pc_method="ccg"
+        
+        pc_list=MakeDSCSPCList(lfi_names,all_scores,group_num,grading_scales,dscs_pc_method)
 
-             pass
 
         
 

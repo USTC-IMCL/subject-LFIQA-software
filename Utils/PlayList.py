@@ -168,7 +168,7 @@ def MakeDSCSPCList(in_list,in_scores,group_num,grading_scales, method="base"):
             logger.error('The method is not supported!')
             return None
 
-    return class_dict,all_classes
+    return pc_list
 
 if __name__=="__main__":
     '''
