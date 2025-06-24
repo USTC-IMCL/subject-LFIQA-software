@@ -104,6 +104,72 @@ def MakeARandomScoringList(in_string_list):
     logger.debug([in_string_list[i] for i in out_list])
     return out_list,[in_dict[i] for i in out_list]
 
+def MakeDSCSPCList(in_list,in_scores,group_num,grading_scales, method="base"):
+    '''
+        input: a list of names in string
+        Note that all images are from high quality to low quality
+        So the grading scales should be in descending order
+    '''
+    #1. Get the file name
+    class_dict={}
+    all_classes=[]
+
+    pc_list={}
+
+    grading_scales.sort(reverse=True)
+    if len(grading_scales)!=group_num:
+        logger.error('The number of grading scales is not equal to the number of groups!')
+        logger.error('The program will exit now.')
+        return None
+    
+    gs_2_index={}
+    for i in range(len(grading_scales)):
+        gs_2_index[grading_scales[i]]=i
+
+
+    for in_index in range(len(in_list)):
+        file_name=in_list[in_index]
+        cur_score=in_scores[in_index]
+
+        class_name=file_name.split('_')[0]
+        all_classes.append(class_name)
+
+        if class_name not in class_dict.keys():
+            class_dict[class_name]=[]
+        class_dict[class_name].append([in_index,cur_score])
+
+    method=method.lower()
+    
+    for class_name in class_dict.keys():
+        cur_class_elements=class_dict[class_name]
+
+        # divide to K groups
+        pc_list[class_name]=[]
+        if method=="base":
+            for group_index in range(group_num):
+                pc_list[class_name].append([])
+            for element_index in range(len(cur_class_elements)):
+                cur_score=cur_class_elements[element_index][1]
+                cur_group_index=gs_2_index[cur_score]
+                pc_list[class_name][cur_group_index].append(cur_class_elements[element_index])
+        elif method=="ccg":
+            # biggest to smallest
+            cur_class_elements.sort(key=lambda x:x[1],reverse=True)
+            for i in range(group_num):
+                pc_list[class_name].append([])
+            element_num=len(cur_class_elements)
+            num_for_each_group=[element_num//group_num for i in range(group_num)]
+            for i in range(1,element_num%group_num+1):
+                num_for_each_group[-i]+=1
+            for i,ele_len in enumerate(num_for_each_group):
+                start_point=sum(num_for_each_group[:i])
+                pc_list[class_name][i].append(cur_class_elements[start_point:start_point+ele_len])
+        else:
+            logger.error('The method is not supported!')
+            return None
+
+    return class_dict,all_classes
+
 if __name__=="__main__":
     '''
     k=0

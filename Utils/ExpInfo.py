@@ -1435,6 +1435,9 @@ class AllScoringLFI:
     def AddScoringLFI(self,scoring_lfi_info:ScoringExpLFIInfo):
         self.exp_lfi_info_num+=1
         self.all_exp_lfi_info.append(scoring_lfi_info)
+    
+    def MakeDSCSPCList(self):
+        pass
 
     
 class TwoFolderLFIInfo(AllScoringLFI):

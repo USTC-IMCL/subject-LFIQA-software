@@ -202,7 +202,8 @@ class MainProject(QMainWindow,Ui_MainWindow):
         config_form.show()
         config_form.CancelClosed.connect(self.CreateCanceled)
         config_form.Finished.connect(self.CreateFinished)
-
+    
+    '''
     def make_dock_widget(self):
         self.log_dock = QDockWidget("Logs", self)
         self.log_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea | Qt.BottomDockWidgetArea)
@@ -211,6 +212,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.log_dock.setWidget(self.log_text_editor)
         self.addDockWidget(Qt.RightDockWidgetArea, self.log_dock)
         self.log_dock.hide()
+    '''
 
     def preprocess(self):
         if self.cur_project is None:
@@ -382,7 +384,8 @@ class MainProject(QMainWindow,Ui_MainWindow):
         # now dscs with pc assumes only one score name
         all_scores=[]
         for i, show_index in enumerate(all_show_index):
-            
+
+             pass
 
         
 
