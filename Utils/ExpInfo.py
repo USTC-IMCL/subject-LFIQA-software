@@ -66,6 +66,8 @@ class ComparisonType(IntEnum):
     SingleStimuli=0
     DoubleStimuli=1
     PairComparison=2
+    DSCS_PC_BASE=3
+    DSCS_PC_CCG=4
 
 class ViewSaveType(IntEnum):
     png=0

@@ -509,6 +509,11 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
             cmp_type=ComparisonType.SingleStimuli
         if "pair" in cmp_type_str:
             cmp_type=ComparisonType.PairComparison
+        if "dscs" in cmp_type_str:
+            if "base" in cmp_type_str:
+                cmp_type=ComparisonType.DSCS_PC_BASE
+            if "ccg" in cmp_type_str:
+                cmp_type=ComparisonType.DSCS_PC_CCG
             
         if LFIFeatures.Active_Refocusing in all_lfi_features or LFIFeatures.Passive_Refocusing in all_lfi_features:
             all_lfi_features.append(LFIFeatures.Refocusing)

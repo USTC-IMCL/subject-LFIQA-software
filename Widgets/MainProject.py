@@ -375,7 +375,19 @@ class MainProject(QMainWindow,Ui_MainWindow):
             score_page.scoring_finished.connect(lambda all_results: self.show())
         #del score_page
     
-    def GetAndSaveResult(self,all_results,subject_info,all_show_index,show_list:ExpInfo.AllScoringLFI):
+    def MakeDSCSPC(self,all_results,subject_info,all_show_index,all_scoring_lfi_info:ExpInfo.AllScoringLFI):
+        # first, save the results
+        self.GetAndSaveResult(all_results,subject_info,all_show_index,all_scoring_lfi_info,update_project=False)
+        # then make the DSCS PC refinement
+        # now dscs with pc assumes only one score name
+        all_scores=[]
+        for i, show_index in enumerate(all_show_index):
+            
+
+        
+
+    
+    def GetAndSaveResult(self,all_results,subject_info,all_show_index,show_list:ExpInfo.AllScoringLFI, update_project=True):
         subject_name=subject_info['name']
         self.output_folder=os.path.join(self.cur_project.project_path,PathManager.subject_results_folder)
         if not os.path.exists(self.output_folder):
@@ -398,10 +410,11 @@ class MainProject(QMainWindow,Ui_MainWindow):
         save_file=os.path.join(self.output_folder,PathManager.all_subject_info_file)
         person_id.AppendToCSV(save_file)
 
-        self.show()
-        self.cur_project.SaveToFile()
-        #self.ShowProjectSetting()
-        self.SetProject(self.cur_project_name)
+        if update_project:
+            self.show()
+            self.cur_project.SaveToFile()
+            #self.ShowProjectSetting()
+            self.SetProject(self.cur_project_name)
     
     def SaveExcel_TwoFolderMode(self,all_results,subject_name,all_show_index,show_list:ExpInfo.AllScoringLFI):
         save_file=os.path.join(self.output_folder,subject_name+'.xlsx')
