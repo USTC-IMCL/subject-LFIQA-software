@@ -52,6 +52,7 @@ mos_file='MOS.csv'
 srocc_file='SROCC.csv'
 plcc_file='PLCC.csv'
 all_results_file='AllResults.xlsx'
+dscs_folder="DSCS_PC"
 
 # cache folders
 cache_folder="Cache"

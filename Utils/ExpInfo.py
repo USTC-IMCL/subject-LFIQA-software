@@ -650,6 +650,10 @@ class ExpSetting:
         self.hint_text_font_size=PathManager.hint_text_font_size
         self.table_font_size=PathManager.scoring_table_point_size
         self.allow_undistinguishable=True
+
+        self.high_quality_only=False
+        self.grading_num=self.score_levels[0]
+        self.grading_scales=[]
     
     def AddInputVideoType(self,video_type):
         if isinstance(video_type,VideoSaveType):

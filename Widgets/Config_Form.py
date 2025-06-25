@@ -573,6 +573,12 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
                     exp_setting.score_definition=None
                     break
         
+        if "High_Quality_Only" in exp_keys:
+            exp_setting.high_quality_only=exp_config["High_Quality_Only"]
+        
+        exp_setting.grading_num=exp_setting.score_levels[0]
+        exp_setting.grading_scales=exp_setting.score_values[0]
+        
         if cmp_type==ComparisonType.PairComparison and (not exp_setting.two_folder_mode):
             if "PairWise_List" not in exp_keys:
                 logger.error("No PairWise_List in the configuration json file! Please check your file carefully!")

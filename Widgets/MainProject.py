@@ -22,7 +22,8 @@ import PathManager
 import FontSetting
 import SubjectInfo
 from ProjectDisplay import ProjectDisplay
-from PlayList import MakeDSCSPCList
+from PlayList import MakeDSCSPCList, MakePCPairs
+from PassiveTools import ConcatPCFilesCMD
 logger=logging.getLogger("LogWindow")
 
 class AboutJPEGForm(QWidget,Ui_About_JPEG_Form):
@@ -71,6 +72,11 @@ class MainProject(QMainWindow,Ui_MainWindow):
         sys.stdout=StreamToLogger(logger, logging.INFO)
         sys.stderr=StreamToLogger(logger, logging.ERROR)
 
+        # set a new processing to run PC content generation CMDs
+        self.back_thread=QThread()
+
+        
+        self.cur_exp_mode="training"
         self.InitTrigger()
     
     def InitTrigger(self):
@@ -306,6 +312,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         pass
 
     def StartExperiment(self,mode='training'):
+        self.cur_exp_mode=mode
         if self.cur_project is None:
             self.ShowMessage("Please select one project first!",1)
             logger.warning("Please select one project first!")
@@ -383,22 +390,47 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.GetAndSaveResult(all_results,subject_info,all_show_index,all_scoring_lfi_info,update_project=False)
         # then make the DSCS PC refinement
         # now dscs with pc assumes only one score name
-        all_scores=[]
+        all_scores=[0 for i in range(all_scoring_lfi_info.GetLFINum())]
         lfi_names=[]
         for i, show_index in enumerate(all_show_index):
-            cur_scoring_lfi=all_scoring_lfi_info.GetScoringExpLFIInfo(show_index)
-            lfi_names.append(cur_scoring_lfi.passive_view_video_path)
-            all_scores.append(all_results[i][0])
+            cur_scoring_lfi=all_scoring_lfi_info.GetScoringExpLFIInfo(i)
+            lfi_names.append(os.path.basename(cur_scoring_lfi.passive_view_video_path))
+            all_scores[show_index]=all_results[i][0]
         
         if self.exp_setting.dscs_pc_method == ExpInfo.ComparisonType.DSCS_PC_BASE:
             dscs_pc_method="base"
         elif self.exp_setting.dscs_pc_method == ExpInfo.ComparisonType.DSCS_PC_CCG:
             dscs_pc_method="ccg"
-        
+
+        group_num=self.exp_setting.grading_num
+        grading_scales=self.exp_setting.grading_scales
         pc_list=MakeDSCSPCList(lfi_names,all_scores,group_num,grading_scales,dscs_pc_method)
 
-
+        show_pairs={}
+        for class_name in pc_list.keys():
+            if class_name not in show_pairs.keys():
+                show_pairs[class_name]=[]
+                if self.exp_setting.high_quality_only:
+                    show_pairs[class_name].append(MakePCPairs(pc_list[class_name][0]))    
+                else:
+                    for i in range(len(pc_list[class_name])):
+                        show_pairs[class_name].append(MakePCPairs(pc_list[class_name][i]))
+         
+        # make another all_scoring_lfi_info
+        pc_root=os.path.join(self.cur_project.project_path,PathManager.dscs_folder,self.cur_exp_mode)
+        if not os.path.exists(pc_root):
+            os.makedirs(pc_root)
         
+        for class_name in show_pairs.keys():
+            cur_all_pairs=show_pairs[class_name]
+            for cur_pairs in cur_all_pairs:
+                scoring_lfi_1=all_scoring_lfi_info.GetScoringExpLFIInfo(cur_pairs[0])
+                scoring_lfi_2=all_scoring_lfi_info.GetScoringExpLFIInfo(cur_pairs[1])
+                file_1=scoring_lfi_1.passive_view_video_path
+                file_2=scoring_lfi_2.passive_view_video_path
+
+                
+
 
     
     def GetAndSaveResult(self,all_results,subject_info,all_show_index,show_list:ExpInfo.AllScoringLFI, update_project=True):
