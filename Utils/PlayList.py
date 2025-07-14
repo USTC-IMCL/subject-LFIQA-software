@@ -109,6 +109,10 @@ def MakeDSCSPCList(in_list,in_scores,group_num,grading_scales, method="base"):
         input: a list of names in string
         Note that all images are from high quality to low quality
         So the grading scales should be in descending order
+
+        output: pc_list, a dictionary.
+        pc_list[class_name][group_index]=[index1,index2,...]
+        the index are the index in the input list
     '''
     #1. Get the file name
     class_dict={}

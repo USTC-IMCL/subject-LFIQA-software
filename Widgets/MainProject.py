@@ -106,9 +106,14 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.log_level_group.addAction(self.actionError)
         self.log_level_group.addAction(self.actionWarning)
 
+        self.action_setting_interchange_data.triggered.connect(self.SetInterchangeData)
+
         self.log_level_group.triggered.connect(self.GroupSetLevel)
         self.SetLogActionTriggered()
     
+    def SetInterchangeData(self):
+        pass
+
     def SetLogActionTriggered(self):
         if logger.level == logging.DEBUG:
             self.actionDebug.setChecked(True)
