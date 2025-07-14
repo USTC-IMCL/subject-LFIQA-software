@@ -420,6 +420,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         pc_root=os.path.join(self.cur_project.project_path,PathManager.dscs_folder,self.cur_exp_mode)
         if not os.path.exists(pc_root):
             os.makedirs(pc_root)
+        video_
         
         for class_name in show_pairs.keys():
             cur_all_pairs=show_pairs[class_name]
@@ -427,7 +428,14 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 scoring_lfi_1=all_scoring_lfi_info.GetScoringExpLFIInfo(cur_pairs[0])
                 scoring_lfi_2=all_scoring_lfi_info.GetScoringExpLFIInfo(cur_pairs[1])
                 file_1=scoring_lfi_1.passive_view_video_path
+                file_part_1=os.path.basename(file_1)
                 file_2=scoring_lfi_2.passive_view_video_path
+                file_part_2=os.path.basename(file_2)
+
+                file_part_1=file_part_1.replace(".mp4","")[len(class_name):]
+                file_part_2=file_part_2.replace(".mp4","")[len(class_name):]
+                output_file=os.path.join(pc_root,f"{class_name}_{file_part_1}_vs_{file_part_2}.mp4"}")
+
 
                 
 
