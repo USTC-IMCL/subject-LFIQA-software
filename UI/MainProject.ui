@@ -84,7 +84,7 @@ color: rgb(255, 255, 255);</string>
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>23</height>
+     <height>24</height>
     </rect>
    </property>
    <property name="font">
@@ -96,14 +96,22 @@ color: rgb(255, 255, 255);</string>
     <property name="title">
      <string>Project</string>
     </property>
+    <widget class="QMenu" name="menuExport">
+     <property name="title">
+      <string>Export</string>
+     </property>
+     <addaction name="action_export_interchange_data"/>
+    </widget>
     <addaction name="action_new_project"/>
     <addaction name="action_load_project"/>
     <addaction name="action_save_project"/>
     <addaction name="action_close"/>
+    <addaction name="separator"/>
+    <addaction name="menuExport"/>
    </widget>
    <widget class="QMenu" name="menuSetting">
     <property name="title">
-     <string>Setting</string>
+     <string>Settings</string>
     </property>
     <widget class="QMenu" name="menuFont_Size">
      <property name="title">
@@ -123,6 +131,7 @@ color: rgb(255, 255, 255);</string>
     </widget>
     <addaction name="menuFont_Size"/>
     <addaction name="menuLog_Level"/>
+    <addaction name="action_setting_interchange_data"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -281,6 +290,16 @@ color: rgb(255, 255, 255);</string>
    </property>
    <property name="text">
     <string>Error</string>
+   </property>
+  </action>
+  <action name="action_setting_interchange_data">
+   <property name="text">
+    <string>Interchange Data</string>
+   </property>
+  </action>
+  <action name="action_export_interchange_data">
+   <property name="text">
+    <string>Interchange Data</string>
    </property>
   </action>
  </widget>

@@ -441,6 +441,9 @@ class ScoringWidget(QtWidgets.QStackedWidget):
         self.finish_page.key_pressed.connect(lambda: self.FinishAll())
         self.addWidget(self.finish_page)
 
+        if self.exp_setting.comparison_type == ComparisonType.DSCS_PC_BASE or self.exp_setting.comparison_type == ComparisonType.DSCS_PC_CCG:
+            self.finish_page.SetLabelContent("The double DSCS session has been finished.\n Please press ESC to escape.")
+
         self.setCurrentIndex(self.current_page_index)
         #self.setCurrentIndex(1)
         self.all_page_num=self.max_page_num+2
@@ -570,12 +573,21 @@ class FinishPage(QtWidgets.QWidget):
 
     def __init__(self,screen_x,screen_y) -> None:
         super().__init__()
+        self.screen_x=screen_x
+        self.screen_y=screen_y
         self.setGeometry(0,0,screen_x,screen_y)
-        self.show_label=QtWidgets.QLabel("The experiments are finished! Thank you!\n Please press Esc to escape.",self)
+        self.label_content="The experiments are finished! Thank you!\n Please press Esc to escape."
+        self.show_label=QtWidgets.QLabel(self.label_content,self)
 
         self.show_label.setGeometry(screen_x//2-400,screen_y//2-100,800,200)
         self.show_label.setFont(QtGui.QFont("Roman times",20,QtGui.QFont.Bold))
     
+    def SetLabelContent(self,content):
+        self.label_content=content
+        self.show_label.setText(self.label_content)
+        self.show_label.setGeometry(self.screen_x//2-400,self.screen_y//2-100,800,200)
+        self.show_label.setFont(QtGui.QFont("Roman times",20,QtGui.QFont.Bold))
+
     def handle_key_press(self, event) -> None:
         event.ignore()
         #if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Escape or event.key() == Qt.Key_Return:
@@ -1801,13 +1813,14 @@ if __name__ == "__main__":
     #scoring_widget.HasScored.connect(lambda x:print(x))
     #scoring_widget.show()
 
-    '''
     screen = QtWidgets.QApplication.primaryScreen()
     finish_widget=FinishPage(screen.size().width(),screen.size().height())
 
+    finish_widget.SetLabelContent("The DSCS session has been finished.\n Please press ESC to escape this session and have a rest.\n The next session will start after the rest.")
+    finish_widget.setGeometry(0,0,screen.size().width(),screen.size().height())
+
     finish_widget.show()
 
-    '''
     '''
     screen = QtWidgets.QApplication.primaryScreen()
     blank_widget=BlankScoringWidget(screen_height=screen.size().height(),screen_width=screen.size().width())
@@ -1821,6 +1834,7 @@ if __name__ == "__main__":
     score_page.HasScored.connect(PrintScores)
     score_page.show()
 
+    '''
     '''
     locale.setlocale(locale.LC_NUMERIC, 'C')
     exp_setting=ExpSetting()
@@ -1842,6 +1856,7 @@ if __name__ == "__main__":
     video_page.finish_video.connect(VideoFinishPage)
 
     video_page.show()
+    '''
 
     '''
     scoring_definition=[['Score: -3 ','Score: -2','Score: -1','Score: 0','Score: 1','Score: 2','Score: 3'],['Score: 5','Score: 4','Score: 3','Score: 2','Score: 1']]
@@ -1852,6 +1867,6 @@ if __name__ == "__main__":
     score_page.HasScored.connect(PrintScores)
     score_page.show()#FullScreen()
     '''
-    video_path='/home/heathcliff/Documents/1.mov'
+    #video_path='/home/heathcliff/Documents/1.mov'
 
     sys.exit(app.exec())

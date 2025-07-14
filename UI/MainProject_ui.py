@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'MainProject.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.0
+## Created by: Qt User Interface Compiler version 6.7.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -29,7 +29,7 @@ class Ui_MainWindow(object):
         font.setPointSize(14)
         MainWindow.setFont(font)
         icon = QIcon()
-        icon.addFile(u":/logo/res/jpegpleno-logo.png", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/logo/res/jpegpleno-logo.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         MainWindow.setWindowIcon(icon)
         MainWindow.setWindowOpacity(0.900000000000000)
         MainWindow.setStyleSheet(u"")
@@ -85,6 +85,10 @@ class Ui_MainWindow(object):
         self.actionError = QAction(MainWindow)
         self.actionError.setObjectName(u"actionError")
         self.actionError.setCheckable(True)
+        self.action_setting_interchange_data = QAction(MainWindow)
+        self.action_setting_interchange_data.setObjectName(u"action_setting_interchange_data")
+        self.action_export_interchange_data = QAction(MainWindow)
+        self.action_export_interchange_data.setObjectName(u"action_export_interchange_data")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.centralwidget.setFont(font)
@@ -106,12 +110,14 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 800, 23))
+        self.menubar.setGeometry(QRect(0, 0, 800, 24))
         font2 = QFont()
         font2.setPointSize(10)
         self.menubar.setFont(font2)
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
+        self.menuExport = QMenu(self.menuFile)
+        self.menuExport.setObjectName(u"menuExport")
         self.menuSetting = QMenu(self.menubar)
         self.menuSetting.setObjectName(u"menuSetting")
         self.menuFont_Size = QMenu(self.menuSetting)
@@ -135,8 +141,12 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.action_load_project)
         self.menuFile.addAction(self.action_save_project)
         self.menuFile.addAction(self.action_close)
+        self.menuFile.addSeparator()
+        self.menuFile.addAction(self.menuExport.menuAction())
+        self.menuExport.addAction(self.action_export_interchange_data)
         self.menuSetting.addAction(self.menuFont_Size.menuAction())
         self.menuSetting.addAction(self.menuLog_Level.menuAction())
+        self.menuSetting.addAction(self.action_setting_interchange_data)
         self.menuFont_Size.addAction(self.actionTable_Font_Size)
         self.menuFont_Size.addAction(self.actionHint_Text_Size)
         self.menuLog_Level.addAction(self.actionDebug)
@@ -178,10 +188,13 @@ class Ui_MainWindow(object):
         self.actionInfo.setText(QCoreApplication.translate("MainWindow", u"Info", None))
         self.actionWarning.setText(QCoreApplication.translate("MainWindow", u"Warning", None))
         self.actionError.setText(QCoreApplication.translate("MainWindow", u"Error", None))
+        self.action_setting_interchange_data.setText(QCoreApplication.translate("MainWindow", u"Interchange Data", None))
+        self.action_export_interchange_data.setText(QCoreApplication.translate("MainWindow", u"Interchange Data", None))
         self.logo_label.setText("")
         self.text_label.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\">Light Field Image </p><p align=\"center\">Quality Assessment </p><p align=\"center\">Software</p></body></html>", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"Project", None))
-        self.menuSetting.setTitle(QCoreApplication.translate("MainWindow", u"Setting", None))
+        self.menuExport.setTitle(QCoreApplication.translate("MainWindow", u"Export", None))
+        self.menuSetting.setTitle(QCoreApplication.translate("MainWindow", u"Settings", None))
         self.menuFont_Size.setTitle(QCoreApplication.translate("MainWindow", u"Font Size", None))
         self.menuLog_Level.setTitle(QCoreApplication.translate("MainWindow", u"Log Level", None))
         self.menuView.setTitle(QCoreApplication.translate("MainWindow", u"View", None))
