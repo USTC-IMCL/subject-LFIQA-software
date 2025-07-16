@@ -3,7 +3,7 @@ import cv2
 import subprocess
 from multiprocessing import Pool
 from dataclasses import dataclass
-from PySide6.QtCore import QThread, Signal, QThreadPool,QRunnable
+from PySide6.QtCore import QThread, Signal, QThreadPool,QRunnable, QMutex
 from PySide6.QtWidgets import QWidget, QPushButton,QApplication
 import sys
 import time
@@ -62,20 +62,22 @@ class WorkerManager:
         self.all_cmds = all_cmds
         self.logger = logging.getLogger("LogWindow")
         self.finished_work_num=0
+        self._mutex = QMutex()
     
     def SetCMDs(self,cmds):
         self.all_cmds = cmds
-    
 
     def RunTasks(self):
-        for i in range(self.worker_num):
-            worker = CMDWorker()
-            worker.SetCMD(self.all_cmds[i])
-            worker.start()
-            self.workers.append(worker)
-        for worker in self.workers:
-            worker.wait()
-            worker.deleteLater()
+        for idx,cmd in enumerate(self.all_cmds):
+            cur_worker=CMDWorker(idx,cmd)
+            cur_worker.on_finished.connect(self.OnWorkerFinished)
+        
+    def OnWorkerFinished(self,cmd_result:CMDResult):
+        with self._mutex:
+            self.finished_work_num+=1
+            self.logger.info(f"CMD {cmd_result.idx} finished, return code:{cmd_result.return_code}")
+            self.value_changed.emit(self.finished_work_num)
+
 
 '''
 class CMDWorker(QThread):
