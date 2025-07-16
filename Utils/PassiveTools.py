@@ -2,10 +2,12 @@ import os
 import cv2
 import subprocess
 from multiprocessing import Pool
-from PySide6.QtCore import QThread, Signal
+from dataclasses import dataclass
+from PySide6.QtCore import QThread, Signal, QThreadPool,QRunnable
 from PySide6.QtWidgets import QWidget, QPushButton,QApplication
 import sys
 import time
+import logging
 
 def GetVideoInfo(video_path):
     cap = cv2.VideoCapture(video_path)
@@ -28,6 +30,54 @@ def RunCMDs(all_cmd):
     results = [p.get() for p in cmd_pool._pool]
     return results
 
+@dataclass
+class CMDResult:
+    idx:int
+    cmd:str
+    return_code:int
+    stdout:str
+    stderr:str
+
+class CMDWorker(QRunnable):
+    on_finished = Signal(CMDResult)
+    def __init__(self,idx,cmd):
+        super().__init__()
+        self.idx = idx
+        self.cmd = cmd
+    
+    def run(self):
+        try:
+            cp = subprocess.run(self.cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+            res=CMDResult(self.idx,self.cmd,cp.returncode,cp.stdout.decode('utf-8'),cp.stderr.decode('utf-8'))
+        except subprocess.TimeoutExpired as e:
+            res=CMDResult(self.idx,self.cmd,-1,'','Timeout')
+        self.on_finished.emit(res)
+
+class WorkerManager:
+    value_changed = Signal(int)
+    def __init__(self,all_cmds=None,worker_num=4):
+        self.worker_num=worker_num
+        self.pool= QThreadPool()
+        self.pool.setMaxThreadCount(worker_num)
+        self.all_cmds = all_cmds
+        self.logger = logging.getLogger("LogWindow")
+        self.finished_work_num=0
+    
+    def SetCMDs(self,cmds):
+        self.all_cmds = cmds
+    
+
+    def RunTasks(self):
+        for i in range(self.worker_num):
+            worker = CMDWorker()
+            worker.SetCMD(self.all_cmds[i])
+            worker.start()
+            self.workers.append(worker)
+        for worker in self.workers:
+            worker.wait()
+            worker.deleteLater()
+
+'''
 class CMDWorker(QThread):
     run_finished = Signal()
     num_progress = Signal(int,str)
@@ -49,7 +99,7 @@ class CMDWorker(QThread):
         self.cmd_pool.close()
         self.cmd_pool.join()
         self.run_finished.emit()
-
+'''
 
 class WorkerTest(QWidget):
     def __init__(self):
