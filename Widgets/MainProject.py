@@ -23,7 +23,7 @@ import FontSetting
 import SubjectInfo
 from ProjectDisplay import ProjectDisplay
 from PlayList import MakeDSCSPCList, MakePCPairs
-from PassiveTools import ConcatPCFilesCMD, CMDWorker
+from PassiveTools import ConcatPCFilesCMD, WorkerManager
 logger=logging.getLogger("LogWindow")
 
 class AboutJPEGForm(QWidget,Ui_About_JPEG_Form):
@@ -73,9 +73,8 @@ class MainProject(QMainWindow,Ui_MainWindow):
         sys.stderr=StreamToLogger(logger, logging.ERROR)
 
         # set a new processing to run PC content generation CMDs
-        self.back_thread=None
+        self.back_thread= WorkerManager()  
 
-        
         self.cur_exp_mode="training"
         self.InitTrigger()
     
@@ -450,8 +449,12 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 all_pc_cmds.append(cur_cmd)
         
         if len(all_pc_cmds) > 0:
-            self.back_thread=CMDWorker(all_pc_cmds)
-            self.back_thread.run_finished.connect(self.MakeDSCSPCFinished)
+            logger.info("Now making DSCS PC refinement ...").
+            for cmd in all_pc_cmds:
+                logger.debug()
+            self.back_thread.Reset()
+            self.back_thread.SetCMDs(all_pc_cmds)
+            self.back_thread.
 
     def MakeDSCSPCFinished(self):
         self.back_thread.run_finished.disconnect()

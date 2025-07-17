@@ -3,7 +3,8 @@ import cv2
 import subprocess
 from multiprocessing import Pool
 from dataclasses import dataclass
-from PySide6.QtCore import QThread, Signal, QThreadPool,QRunnable, QMutex
+from PySide6.QtCore import QThread, Signal, QThreadPool,QRunnable, QMutex, QMutexLocker, QObject
+from PySide6.QtWidgets import QVBoxLayout,QProgressBar,QLabel
 from PySide6.QtWidgets import QWidget, QPushButton,QApplication
 import sys
 import time
@@ -38,12 +39,15 @@ class CMDResult:
     stdout:str
     stderr:str
 
+class CMDSignal(QObject):
+    cmd_finished = Signal(CMDResult)
 class CMDWorker(QRunnable):
-    on_finished = Signal(CMDResult)
     def __init__(self,idx,cmd):
         super().__init__()
+        self.setAutoDelete(True)
         self.idx = idx
         self.cmd = cmd
+        self.cmd_finished = CMDSignal()
     
     def run(self):
         try:
@@ -51,11 +55,12 @@ class CMDWorker(QRunnable):
             res=CMDResult(self.idx,self.cmd,cp.returncode,cp.stdout.decode('utf-8'),cp.stderr.decode('utf-8'))
         except subprocess.TimeoutExpired as e:
             res=CMDResult(self.idx,self.cmd,-1,'','Timeout')
-        self.on_finished.emit(res)
+        self.cmd_finished.cmd_finished.emit(res)
 
-class WorkerManager:
-    value_changed = Signal(int)
+class WorkerManager(QObject):
+    cmd_value_changed = Signal(int)
     def __init__(self,all_cmds=None,worker_num=4):
+        super().__init__()
         self.worker_num=worker_num
         self.pool= QThreadPool()
         self.pool.setMaxThreadCount(worker_num)
@@ -70,14 +75,20 @@ class WorkerManager:
     def RunTasks(self):
         for idx,cmd in enumerate(self.all_cmds):
             cur_worker=CMDWorker(idx,cmd)
-            cur_worker.on_finished.connect(self.OnWorkerFinished)
+            cur_worker.cmd_finished.cmd_finished.connect(self.OnWorkerFinished)
+            self.pool.start(cur_worker)
         
     def OnWorkerFinished(self,cmd_result:CMDResult):
-        with self._mutex:
+        with QMutexLocker(self._mutex):
             self.finished_work_num+=1
             self.logger.info(f"CMD {cmd_result.idx} finished, return code:{cmd_result.return_code}")
-            self.value_changed.emit(self.finished_work_num)
-
+        self.cmd_value_changed.emit(self.finished_work_num)
+    
+    def Reset(self):
+        self.finished_work_num=0
+        self.cmd_value_changed.emit(self.finished_work_num)
+        self.pool.clear()
+        self.all_cmds=[]
 
 '''
 class CMDWorker(QThread):
@@ -110,24 +121,43 @@ class WorkerTest(QWidget):
         self.worker=None
         self.btn.clicked.connect(self.RunCMD)
         self.already_done=0
+        self.resize(400,150)
+        
 
-    def UpdateDone(self,num,results):
-        self.already_done+=num
-        print(f"Already done {self.already_done}, results:{results}")
+        vbox = QVBoxLayout(self)
+
+        self.label=QLabel()
+        self.label.setText("Click to start")
+        vbox.addWidget(self.label)
+        vbox.addWidget(self.btn)
+
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 100)
+        self.all_cmds=[]
+        for i in range(100):
+            self.all_cmds.append(f"sleep 0.{i%5+1}")
+        vbox.addWidget(self.progress_bar)
+
+        self.worker_manager=WorkerManager(self.all_cmds)
+        self.worker_manager.cmd_value_changed.connect(self.UpdateProgress)
+
+    def UpdateProgress(self,num):
+        self.already_done=num
+        self.label.setText(f"Running... Already done: {self.already_done}/{len(self.all_cmds)}")
+        self.progress_bar.setValue(self.already_done)
+        if self.already_done>=100:
+            self.label.setText("Finished")
+            self.btn.setEnabled(True)
 
     def RunCMD(self):
         self.already_done=0
-        self.worker=CMDWorker(['ffmpeg -version'])
-        self.worker.run_finished.connect(self.RunFinished)
-        self.worker.num_progress.connect(self.UpdateDone)
-        self.worker.start()
+        self.worker_manager.Reset()
+        self.worker_manager.SetCMDs(self.all_cmds)
+        self.worker_manager.RunTasks()
+        self.progress_bar.setValue(0)
+        self.label.setText("Running...")
+        self.btn.setEnabled(False)
     
-    def RunFinished(self):
-        self.worker.wait()
-        self.worker.run_finished.disconnect(self.RunFinished)
-        self.worker.num_progress.disconnect(self.UpdateDone)
-        self.worker.deleteLater()
-        self.worker=None
 def square(n):
     return n * n
 
