@@ -68,6 +68,7 @@ class WorkerManager(QObject):
         self.logger = logging.getLogger("LogWindow")
         self.finished_work_num=0
         self._mutex = QMutex()
+        self.error_cmds=[]
     
     def SetCMDs(self,cmds):
         self.all_cmds = cmds
@@ -82,6 +83,8 @@ class WorkerManager(QObject):
         with QMutexLocker(self._mutex):
             self.finished_work_num+=1
             self.logger.info(f"CMD {cmd_result.idx} finished, return code:{cmd_result.return_code}")
+            if cmd_result.return_code!=0:
+                self.error_cmds.append(cmd_result)
         self.cmd_value_changed.emit(self.finished_work_num)
     
     def Reset(self):

@@ -24,6 +24,8 @@ import SubjectInfo
 from ProjectDisplay import ProjectDisplay
 from PlayList import MakeDSCSPCList, MakePCPairs
 from PassiveTools import ConcatPCFilesCMD, WorkerManager
+from SessionConnector import SessionConnector
+import JPLMessageBox
 logger=logging.getLogger("LogWindow")
 
 class AboutJPEGForm(QWidget,Ui_About_JPEG_Form):
@@ -74,6 +76,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
         # set a new processing to run PC content generation CMDs
         self.back_thread= WorkerManager()  
+        self.session_connector=None
 
         self.cur_exp_mode="training"
         self.InitTrigger()
@@ -426,6 +429,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
             os.makedirs(pc_root)
         
         all_pc_cmds=[]
+        self.pc_show_list=[]
         video_save_type_str=self.exp_setting.VideoSaveTypeStr 
         for class_name in show_pairs.keys():
             cur_all_pairs=show_pairs[class_name]
@@ -444,22 +448,47 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 file_part_2=file_part_2.replace(post_fix_2,"")[len(class_name):]
                 output_file=os.path.join(pc_root,f"{class_name}_{file_part_1}_vs_{file_part_2}.{video_save_type_str}")
 
+                target_scoring_lfi=ExpInfo.ScoringExpLFIInfo()
+                target_scoring_lfi.passive_view_video_path=output_file
+                target_scoring_lfi.passive_refocusing_folder=output_file
+                self.pc_show_list.append(target_scoring_lfi)
+
                 cur_cmd=ConcatPCFilesCMD(file_1,file_2,output_file)
                 
                 all_pc_cmds.append(cur_cmd)
         
         if len(all_pc_cmds) > 0:
-            logger.info("Now making DSCS PC refinement ...").
-            for cmd in all_pc_cmds:
-                logger.debug()
+            logger.debug("For debug print the cmds now")
+            for i, cmd in enumerate(all_pc_cmds):
+                logger.debug(f"index {i}, CMD: {cmd}")
+            logger.info("Now making DSCS PC refinement material ...")
             self.back_thread.Reset()
             self.back_thread.SetCMDs(all_pc_cmds)
-            self.back_thread.
+            self.session_connector=SessionConnector(len(all_pc_cmds))
+            self.back_thread.cmd_value_changed.connect(self.session_connector.UpdateProgress)
+            self.session_connector.task_finished.connect(self.MakeDSCSPCFinished)
+
+            self.session_connector.show()
 
     def MakeDSCSPCFinished(self):
-        self.back_thread.run_finished.disconnect()
+        logger.info("DSCS PC tasks are done. Checking....")
+        all_errors=self.back_thread.error_cmds
+        if len(all_errors) > 0:
+            logger.error("Some errors occured during generation.")
+            logger.error("=============================================")
+            for error_info in all_errors:
+                logger.error(f"CMD index {error_info.idx}, CMD: {error_info.cmd}, Error: {error_info.stderr}")
+            logger.error("=============================================")
+        self.back_thread.Reset() 
+        self.back_thread.SetCMDs([])
+        self.session_connector.hide()
+        self.session_connector.deleteLater()
 
-
+        if len(all_errors)>0:
+            JPLMessageBox.ShowErrorMessage(f"{len(all_errors)} errors occured during generation. Please check the log file.")
+        else:
+            JPLMessageBox.ShowInfoMessage("DSCS PC refinement material has been generated successfully. You can now go to the next session.")
+        
     
     def GetAndSaveResult(self,all_results,subject_info,all_show_index,show_list:ExpInfo.AllScoringLFI, update_project=True):
         subject_name=subject_info['name']

@@ -1440,10 +1440,6 @@ class AllScoringLFI:
         self.exp_lfi_info_num+=1
         self.all_exp_lfi_info.append(scoring_lfi_info)
     
-    def MakeDSCSPCList(self):
-        pass
-
-    
 class TwoFolderLFIInfo(AllScoringLFI):
     def __init__(self, in_folder_path,video_postfix_str,in_mode="None"):
         super().__init__(in_mode)
@@ -1458,6 +1454,7 @@ class TwoFolderLFIInfo(AllScoringLFI):
                 self.all_videos.append(file_name)
                 cur_single_scoring_lfi_info=ScoringExpLFIInfo()
                 cur_single_scoring_lfi_info.passive_view_video_path=os.path.join(in_folder_path,file_name)
+                # TODO: ??
                 cur_single_scoring_lfi_info.passive_refocusing_video_path=os.path.join(in_folder_path,file_name)
                 self.all_exp_lfi_info.append(cur_single_scoring_lfi_info)
         self.exp_lfi_info_num=len(self.all_exp_lfi_info)
