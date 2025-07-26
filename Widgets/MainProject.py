@@ -25,6 +25,8 @@ from ProjectDisplay import ProjectDisplay
 from PlayList import MakeDSCSPCList, MakePCPairs
 from PassiveTools import ConcatPCFilesCMD, WorkerManager
 from SessionConnector import SessionConnector
+from ExpSession import ExperimentSession
+import copy
 import JPLMessageBox
 logger=logging.getLogger("LogWindow")
 
@@ -76,7 +78,10 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
         # set a new processing to run PC content generation CMDs
         self.back_thread= WorkerManager()  
+        self.session_player=None
         self.session_connector=None
+        self.all_sessions=[]  # a list containing all sessions' mode
+        self.exp_screen_index=0
 
         self.cur_exp_mode="training"
         self.InitTrigger()
@@ -340,6 +345,8 @@ class MainProject(QMainWindow,Ui_MainWindow):
             return
 
         subject_info={}
+        self.cur_subject_info=subject_info
+        self.all_sessions=[]
         if mode == "training":
             all_scoring_lfi_info=self.cur_project.training_scoring_lfi_info
         else:
@@ -351,6 +358,13 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 logger.warning("Experiment cancelled.")
                 return
             
+        # TODO: divide the experiment into several sessions.
+        # Now only DSCSPC contains two sessions.
+        if self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_BASE or self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_CCG:
+            self.all_sessions=[ExpInfo.ComparisonType.DoubleStimuli, ExpInfo.ComparisonType.PairComparison]
+        else:
+            self.all_sessions=[ExpInfo.ComparisonType.DoubleStimuli]
+
         '''
         if mode == "training":
             show_list=ExpInfo.GetShowList(self.training_LFI_info,self.exp_setting,"training")
@@ -363,34 +377,41 @@ class MainProject(QMainWindow,Ui_MainWindow):
             show_index,new_show_list=self.GetRandomShowList(show_list)
         '''
 
-        show_lfi_num=all_scoring_lfi_info.GetLFINum()
-        if mode ==  "training":
-            all_show_index=list(range(show_lfi_num))
+        self.session_player=ExperimentSession(all_scoring_lfi_info,self.exp_setting,mode=mode)
+        self.session_player.SetScreenIndex(self.exp_screen_index)
+        self.session_player.exp_finished.connect(self.SessionConnector)
+        self.hide()
+        cur_session=self.all_sessions[0]
+        self.all_sessions.pop(0)
+        self.session_player.StartExperiment(cur_session)
+    
+    def StartSession(self):
+        self.session_player=ExperimentSession(self.cur_project.test_scoring_lfi_info,self.exp_setting,mode="test")
+        self.session_player.SetScreenIndex(self.exp_screen_index)
+        self.session_player.exp_finished.connect(self.SessionConnector)
+        self.hide()
+        cur_session=self.all_sessions[0]
+        self.all_sessions.pop(0)
+        self.session_player.StartExperiment(cur_session)
+
+    def SessionConnector(self):
+        logger.info("Session finished!")
+        self.show()
+        all_results=copy.deepcopy(self.session_player.GetResult())
+        all_show_index=copy.deepcopy(self.session_player.GetShowIndex())
+        self.session_player.disconnect()
+        self.session_player.deleteLater()
+        self.session_player=None
+
+        # only testing mode could have multiple sessions
+        # now we need to handle some jobs first. E.g. videos generation.
+        if len(self.all_sessions)>0:
+            JPLMessageBox.ShowInformationMessage("Session finished! Thank you and have a rest now.")
+            self.MakeDSCSPC(all_results,self.cur_subject_info,all_show_index,self.cur_project.test_scoring_lfi_info)
         else:
-            all_show_index=all_scoring_lfi_info.GetRandomShowOrder()
-        
-        if self.exp_setting.comparison_type ==  ExpInfo.ComparisonType.PairComparison:
-            score_page=PairWiseScoringWidget(all_scoring_lfi_info,self.exp_setting,all_show_index)
-        else:
-            score_page=ScoringWidget(all_scoring_lfi_info,self.exp_setting,all_show_index)
+            self.ShowMessage("Experiment finished!",0)
+            logger.info("Experiment finished!")
 
-        #self.hide()
-
-        app=QApplication.instance()
-        if app is None:
-            app = QApplication([])
-        score_page.setScreen(app.screens()[0])
-        cur_screen=score_page.screen()
-
-        score_page.move(cur_screen.geometry().topLeft())
-        score_page.showFullScreen()
-
-        #score_page.show()
-        if mode == "test":
-            score_page.scoring_finished.connect(lambda all_results: self.GetAndSaveResult(all_results,subject_info,all_show_index,all_scoring_lfi_info))
-        else:
-            score_page.scoring_finished.connect(lambda all_results: self.show())
-        #del score_page
     
     def MakeDSCSPC(self,all_results,subject_info,all_show_index,all_scoring_lfi_info:ExpInfo.AllScoringLFI):
         # first, save the results
@@ -487,7 +508,8 @@ class MainProject(QMainWindow,Ui_MainWindow):
         if len(all_errors)>0:
             JPLMessageBox.ShowErrorMessage(f"{len(all_errors)} errors occured during generation. Please check the log file.")
         else:
-            JPLMessageBox.ShowInfoMessage("DSCS PC refinement material has been generated successfully. You can now go to the next session.")
+            JPLMessageBox.ShowInformationMessage("DSCS PC refinement material has been generated successfully. You can now go to the next session.")
+            self.StartSession()
         
     
     def GetAndSaveResult(self,all_results,subject_info,all_show_index,show_list:ExpInfo.AllScoringLFI, update_project=True):

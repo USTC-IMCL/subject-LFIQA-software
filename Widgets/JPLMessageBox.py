@@ -32,11 +32,29 @@ def ShowYesNoMessage(message_text):
     dlg.setText(message_text)
     return dlg.exec()
 
+class TestWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Test")
+        vlayout= QtWidgets.QVBoxLayout(self)
+        btn=QtWidgets.QPushButton("information")
+        btn.clicked.connect(lambda:ShowInformationMessage("Information message"))
+        vlayout.addWidget(btn)
+        btn=QtWidgets.QPushButton("warning")
+        btn.clicked.connect(lambda:ShowWarningMessage("Warning message"))
+        vlayout.addWidget(btn)
+        btn=QtWidgets.QPushButton("yes no")
+        btn.clicked.connect(lambda:ShowYesNoMessage("Yes or No message"))
+        vlayout.addWidget(btn)
+    
+    def ShowInfo(self)
+
 
 if __name__ == "__main__":
     from PySide6 import QtWidgets
     app=QtWidgets.QApplication([])
 
+    '''
     window=QWidget()
     vlayout= QtWidgets.QVBoxLayout(window)
     btn=QtWidgets.QPushButton("information")
@@ -50,5 +68,8 @@ if __name__ == "__main__":
     vlayout.addWidget(btn)
 
     window.show()
+    '''
+    ShowInformationMessage("test")
+    print('aaaaaaaa')
 
     app.exec()

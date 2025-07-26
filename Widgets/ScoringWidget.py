@@ -447,6 +447,21 @@ class ScoringWidget(QtWidgets.QStackedWidget):
         self.setCurrentIndex(self.current_page_index)
         #self.setCurrentIndex(1)
         self.all_page_num=self.max_page_num+2
+    
+    def SetScoringScreen(self,screen_index):
+        app=QApplication.instance()
+        if app is None:
+            app=QApplication([])
+        self.setScreen(app.screens()[screen_index])
+        cur_scree=self.screen()
+        self.move(cur_scree.geometry().topLeft())
+        self.resize(cur_scree.geometry().size())
+        self.page_scoring.resize(cur_scree.geometry().size())
+        self.page_scoring.setGeometry(0,0,self.width(),self.height())
+        self.page_scoring.RefreshAllTables()
+        self.finish_page.resize(self.width(),self.height())
+        self.finish_page.setGeometry(0,0,self.width(),self.height())
+        
 
     def GetSingleLFIInfo(self,show_index)->ScoringExpLFIInfo:
         cur_index=self.all_show_index[show_index]
@@ -561,7 +576,7 @@ class ScoringWidget(QtWidgets.QStackedWidget):
             if page is not None:
                 if isinstance(page,VideoPage):
                     page.CloseVideoPlayer()
-        self.deleteLater()
+        #self.deleteLater()
     
     def keyPressEvent(self, event) -> None:
         cur_page=self.currentWidget()
@@ -1530,7 +1545,7 @@ class ScoringPage(QtWidgets.QWidget):
         for scoring_table in self.all_table:
             scoring_table.RefreshTable()
         self.SetSingleFocusedTable(0)
-
+    
     def GetScores(self):
         return [self.all_table[i].GetResult() for i in self.all_table_list]
     
