@@ -1451,12 +1451,13 @@ class TwoFolderLFIInfo(AllScoringLFI):
         for file_name in all_files:
             name_postfix=file_name.split('.')[-1]
             if name_postfix in video_postfix_str:
-                self.all_videos.append(file_name)
                 cur_single_scoring_lfi_info=ScoringExpLFIInfo()
                 cur_single_scoring_lfi_info.passive_view_video_path=os.path.join(in_folder_path,file_name)
                 # TODO: ??
                 cur_single_scoring_lfi_info.passive_refocusing_video_path=os.path.join(in_folder_path,file_name)
                 self.all_exp_lfi_info.append(cur_single_scoring_lfi_info)
+        for scoring_lfi_info in self.all_exp_lfi_info:
+            self.all_videos.append(scoring_lfi_info.passive_view_video_path)
         self.exp_lfi_info_num=len(self.all_exp_lfi_info)
     
     def GetRandomShowOrder(self):

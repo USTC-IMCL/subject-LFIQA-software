@@ -385,8 +385,8 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.all_sessions.pop(0)
         self.session_player.StartExperiment(cur_session)
     
-    def StartSession(self):
-        self.session_player=ExperimentSession(self.cur_project.test_scoring_lfi_info,self.exp_setting,mode="test")
+    def StartSession(self,all_scoring_lfi_info:ExpInfo.AllScoringLFI,mode):
+        self.session_player=ExperimentSession(all_scoring_lfi_info,self.exp_setting,mode)
         self.session_player.SetScreenIndex(self.exp_screen_index)
         self.session_player.exp_finished.connect(self.SessionConnector)
         self.hide()
@@ -409,7 +409,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
             JPLMessageBox.ShowInformationMessage("Session finished! Thank you and have a rest now.")
             self.MakeDSCSPC(all_results,self.cur_subject_info,all_show_index,self.cur_project.test_scoring_lfi_info)
         else:
-            self.ShowMessage("Experiment finished!",0)
+            JPLMessageBox.ShowInformationMessage("Experiment finished! Thank you!")
             logger.info("Experiment finished!")
 
     
@@ -450,8 +450,8 @@ class MainProject(QMainWindow,Ui_MainWindow):
             os.makedirs(pc_root)
         
         all_pc_cmds=[]
-        self.pc_show_list=[]
         video_save_type_str=self.exp_setting.VideoSaveTypeStr 
+        self.pc_show_list=ExpInfo.TwoFolderLFIInfo(None,video_save_type_str,in_mode="test")
         for class_name in show_pairs.keys():
             cur_all_pairs=show_pairs[class_name]
             for cur_pairs in cur_all_pairs:
@@ -473,6 +473,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 target_scoring_lfi.passive_view_video_path=output_file
                 target_scoring_lfi.passive_refocusing_folder=output_file
                 self.pc_show_list.append(target_scoring_lfi)
+                self.pc_show_list.AddScoringLFI(target_scoring_lfi)
 
                 cur_cmd=ConcatPCFilesCMD(file_1,file_2,output_file)
                 
@@ -509,7 +510,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
             JPLMessageBox.ShowErrorMessage(f"{len(all_errors)} errors occured during generation. Please check the log file.")
         else:
             JPLMessageBox.ShowInformationMessage("DSCS PC refinement material has been generated successfully. You can now go to the next session.")
-            self.StartSession()
+            self.StartSession(self.pc_show_list,"test")
         
     
     def GetAndSaveResult(self,all_results,subject_info,all_show_index,show_list:ExpInfo.AllScoringLFI, update_project=True):
@@ -541,14 +542,16 @@ class MainProject(QMainWindow,Ui_MainWindow):
             #self.ShowProjectSetting()
             self.SetProject(self.cur_project_name)
     
-    def SaveExcel_TwoFolderMode(self,all_results,subject_name,all_show_index,show_list:ExpInfo.AllScoringLFI):
+    def SaveExcel_TwoFolderMode(self,all_results,subject_name,all_show_index,show_list:ExpInfo.AllScoringLFI,cmp_type=None):
         save_file=os.path.join(self.output_folder,subject_name+'.xlsx')
         workbook=xlsxwriter.Workbook(save_file)
         worksheet=workbook.add_worksheet(subject_name)
         worksheet.write(0,0,'Image Index') 
         worksheet.write(0,1,'Image Path')
         all_score_names=self.exp_setting.score_names
-        if self.exp_setting.comparison_type != ExpInfo.ComparisonType.PairComparison:
+        if cmp_type is None:
+            cmp_type=self.exp_setting.comparison_type
+        if cmp_type != ExpInfo.ComparisonType.PairComparison:
             for i,score_name in enumerate(all_score_names):
                 worksheet.write(0,i+2,score_name)
             for i, scoring_index in enumerate(all_show_index):
@@ -625,12 +628,15 @@ class MainProject(QMainWindow,Ui_MainWindow):
                         current_col+=1
         workbook.close()
     
-    def SaveCSV_TwoFolderMode(self,all_results,subject_name,all_show_index,show_list:ExpInfo.AllScoringLFI):
-        save_file=os.path.join(self.output_folder,subject_name+'.csv')
+    def SaveCSV_TwoFolderMode(self,all_results,subject_name,all_show_index,show_list:ExpInfo.AllScoringLFI,cmp_type=None,save_file=None):
+        if save_file is None:
+            save_file=os.path.join(self.output_folder,subject_name+'.csv')
         with open(save_file,'w') as fid:
             fid.write("Image Index, Image Path")
             all_score_names=self.exp_setting.score_names
-            if self.exp_setting.comparison_type != ExpInfo.ComparisonType.PairComparison:
+            if cmp_type is None:
+                cmp_type=self.exp_setting.comparison_type
+            if cmp_type != ExpInfo.ComparisonType.PairComparison:
                 for i,score_name in enumerate(all_score_names):
                     fid.write(",%s" %score_name)
                 fid.write('\n')
