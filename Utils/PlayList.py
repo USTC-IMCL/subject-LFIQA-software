@@ -206,7 +206,6 @@ if __name__=="__main__":
         CheckList(in_dict,out_list)
     
     CheckAllLists(all_lists)
-    '''
 
     in_root='/home/heathcliff/Downloads/Serpentine_Left_Reference/two_folder/test'
     all_files=os.listdir(in_root)
@@ -215,6 +214,12 @@ if __name__=="__main__":
     out_list,out_class=MakeARandomScoringList(all_files)
     print(out_list)
     print(out_class)
+
+    '''
+    pass
+
+
+
 
     
 

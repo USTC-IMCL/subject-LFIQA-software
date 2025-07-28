@@ -421,9 +421,6 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
     
     def MakeDSCSPC(self,all_results,subject_info,all_show_index,all_scoring_lfi_info:ExpInfo.AllScoringLFI):
-        # first, save the results
-        self.GetAndSaveResult(all_results,subject_info,all_show_index,all_scoring_lfi_info,update_project=False)
-        # then make the DSCS PC refinement
         # now dscs with pc assumes only one score name
         all_scores=[0 for i in range(all_scoring_lfi_info.GetLFINum())]
         lfi_names=[]

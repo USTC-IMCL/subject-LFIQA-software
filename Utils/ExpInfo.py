@@ -18,6 +18,10 @@ import RefocusingMask
 
 logger=logging.getLogger("LogWindow")
 
+class ExpMode(IntEnum):
+    Training=0
+    Testing=1
+
 class CompTypes(IntEnum):
     '''compression types, not comparison'''
     Origin=0
