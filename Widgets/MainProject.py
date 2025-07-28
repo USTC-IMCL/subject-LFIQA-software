@@ -403,13 +403,20 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.session_player.deleteLater()
         self.session_player=None
 
+        # TODO: how to save the results?
+        # Not a good solution now. Only works for passive mode
+
         # only testing mode could have multiple sessions
         # now we need to handle some jobs first. E.g. videos generation.
         if len(self.all_sessions)>0:
             JPLMessageBox.ShowInformationMessage("Session finished! Thank you and have a rest now.")
+            save_file=os.path.join(self.cur_project.exp_path,f"{self.cur_subject_info['name']}_session_0")
+            self.GetAndSaveResult(all_results,self.cur_subject_info,all_show_index,self.cur_project.test_scoring_lfi_info,save_file=save_file)
             self.MakeDSCSPC(all_results,self.cur_subject_info,all_show_index,self.cur_project.test_scoring_lfi_info)
         else:
             JPLMessageBox.ShowInformationMessage("Experiment finished! Thank you!")
+            save_file=os.path.join(self.cur_project.exp_path,f"{self.cur_subject_info['name']}_session_1")
+            self.GetAndSaveResult(all_results,self.cur_subject_info,all_show_index,self.cur_project.test_scoring_lfi_info,cmp_type=ExpInfo.ComparisonType.PairComparison,save_file=save_file,update_project=True)
             logger.info("Experiment finished!")
 
     
@@ -513,7 +520,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
             self.StartSession(self.pc_show_list,"test")
         
     
-    def GetAndSaveResult(self,all_results,subject_info,all_show_index,show_list:ExpInfo.AllScoringLFI, update_project=True):
+    def GetAndSaveResult(self,all_results,subject_info,all_show_index,show_list:ExpInfo.AllScoringLFI, update_project=True,cmp_type=None,save_file=None):
         subject_name=subject_info['name']
         self.output_folder=os.path.join(self.cur_project.project_path,PathManager.subject_results_folder)
         if not os.path.exists(self.output_folder):
@@ -522,12 +529,18 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.cur_project.subject_list.append(subject_name)
         if self.exp_setting.save_format == ExpInfo.SaveFormat.CSV:
             if self.exp_setting.two_folder_mode:
-                self.SaveCSV_TwoFolderMode(all_results,subject_name,all_show_index,show_list)
+                if save_file is not None:
+                    if ".csv" not in save_file:
+                        save_file=save_file+".csv"
+                self.SaveCSV_TwoFolderMode(all_results,subject_name,all_show_index,show_list,cmp_type,save_file)
             else:
                 self.SaveCSV(all_results,subject_name,all_show_index,show_list)
         else:
             if self.exp_setting.two_folder_mode:
-                self.SaveExcel_TwoFolderMode(all_results,subject_name,all_show_index,show_list)
+                if save_file is not None:
+                    if ".xlsx" not in save_file:
+                        save_file=save_file+".xlsx"
+                self.SaveExcel_TwoFolderMode(all_results,subject_name,all_show_index,show_list,cmp_type,save_file)
             else:
                 self.SaveExcel(all_results,subject_name,all_show_index,show_list)
 
@@ -542,8 +555,9 @@ class MainProject(QMainWindow,Ui_MainWindow):
             #self.ShowProjectSetting()
             self.SetProject(self.cur_project_name)
     
-    def SaveExcel_TwoFolderMode(self,all_results,subject_name,all_show_index,show_list:ExpInfo.AllScoringLFI,cmp_type=None):
-        save_file=os.path.join(self.output_folder,subject_name+'.xlsx')
+    def SaveExcel_TwoFolderMode(self,all_results,subject_name,all_show_index,show_list:ExpInfo.AllScoringLFI,cmp_type=None,save_file=None):
+        if save_file is None:
+            save_file=os.path.join(self.output_folder,subject_name+'.xlsx')
         workbook=xlsxwriter.Workbook(save_file)
         worksheet=workbook.add_worksheet(subject_name)
         worksheet.write(0,0,'Image Index') 
