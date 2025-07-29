@@ -92,6 +92,7 @@ if __name__ == "__main__":
     exp_setting.score_levels=[5]
     exp_setting.score_values=[[5,4,3,2,1]]
     exp_setting.lfi_features=[ExpInfo.LFIFeatures.Passive_ViewChanging]
+    exp_setting.first_loop_skip=False
 
     all_scoring_lfi=ExpInfo.AllScoringLFI(in_mode="training")
     scoring_lfi=ExpInfo.ScoringExpLFIInfo()
@@ -99,7 +100,7 @@ if __name__ == "__main__":
     all_scoring_lfi.AddScoringLFI(scoring_lfi)
 
     exp_session = ExperimentSession(all_scoring_lfi,exp_setting=exp_setting,mode="training")
-    exp_session.SetScreenIndex(1)
+    exp_session.SetScreenIndex(0)
 
     from PySide6.QtWidgets import QWidget,QPushButton
     exp_window=QWidget()

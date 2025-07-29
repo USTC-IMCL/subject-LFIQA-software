@@ -47,7 +47,8 @@ class TestWindow(QWidget):
         btn.clicked.connect(lambda:ShowYesNoMessage("Yes or No message"))
         vlayout.addWidget(btn)
     
-    def ShowInfo(self)
+    def ShowInfo(self):
+        pass
 
 
 if __name__ == "__main__":

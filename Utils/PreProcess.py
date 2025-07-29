@@ -11,11 +11,9 @@ from multiprocessing import pool
 import subprocess
 import sys
 sys.path.append('../Widgets')
-from LogWindow import StreamToLogger
+#from LogWindow import StreamToLogger
 import PathManager
 logger=logging.getLogger("LogWindow")
-sys.stdout=StreamToLogger(logger,logging.INFO)
-sys.stderr=StreamToLogger(logger,logging.ERROR)
 
 gray_color=(128,128,128)
 

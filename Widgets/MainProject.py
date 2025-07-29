@@ -6,7 +6,7 @@ from datetime import date
 from PySide6.QtWidgets import QWidget, QDockWidget, QMainWindow, QTextBrowser, QApplication, QFileDialog, QMessageBox, QProgressDialog, QInputDialog, QErrorMessage, QDialog
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtCore import Qt, QThread
-from LogWindow import QLogTextEditor, StreamToLogger
+from LogWindow import QLogTextEditor #, StreamToLogger
 import ExpInfo
 from MainProject_ui import Ui_MainWindow
 import Log_Form
@@ -73,8 +73,10 @@ class MainProject(QMainWindow,Ui_MainWindow):
         logger.addHandler(self.file_handler)
         logger.setLevel(self.software_manager.log_level)
 
+        '''
         sys.stdout=StreamToLogger(logger, logging.INFO)
         sys.stderr=StreamToLogger(logger, logging.ERROR)
+        '''
 
         # set a new processing to run PC content generation CMDs
         self.back_thread= WorkerManager()  
@@ -91,7 +93,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         #self.menuView.addAction(self.action_log)
         self.action_new_project.triggered.connect(self.NewProject)
         self.action_load_project.triggered.connect(self.LoadProject)
-        self.action_preprocessing.triggered.connect(self.preprocess)
+        self.action_preprocessing.deleteLater()
         #self.action_preprocessing.triggered.connect(self.PreprosessingFinishedCallback)
         self.action_start_training.triggered.connect(lambda: self.StartExperiment('training'))
         self.action_start_test.triggered.connect(lambda: self.StartExperiment("test"))
@@ -211,6 +213,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.InitTrigger()
 
     def ShowProjectSetting(self):
+        return
         self.project_display=ProjectDisplay(self.cur_project)
         self.setCentralWidget(self.project_display)
     
@@ -232,71 +235,6 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, self.log_dock)
         self.log_dock.hide()
     '''
-
-    def preprocess(self):
-        if self.cur_project is None:
-            self.ShowMessage("Please select one project first!",1)
-            logger.warning("Please select one project first!")
-            return
-        
-        if self.action_skip_all.isChecked():
-            self.ShowMessage("Skip all is checked. All preprocessing is skipped!",1)
-            logger.warning("Skip all is checked. All preprocessing is skipped!")
-            return
-
-        training_LFI_info=self.cur_project.training_LFI_info
-        test_LFI_info=self.cur_project.test_LFI_info
-        exp_setting=self.cur_project.exp_setting
-
-        if exp_setting.skip_preprocessing:
-            self.ShowMessage("The skip preprocessing is used during the configuration. You must preprocess it manually!",1)
-            logger.warning("The skip preprocessing is used during the configuration. You must preprocess it manually!")
-            return
-
-        if exp_setting.has_preprocess:
-            b_preprocess=QMessageBox.question(self,"Preprocess","The experiment has been preprocessed, do you want to re-preprocess?",QMessageBox.Yes|QMessageBox.No)
-            if b_preprocess==QMessageBox.No:
-                logger.info("The experiment preprocessing is cancelled.")
-                return
-
-        exp_setting.has_preprocess=False
-        logger.info("Now we start preprocessing the experiment.")
-
-        self.preprocessing_dialog=QProgressDialog(self)
-        self.preprocessing_dialog.setWindowTitle('Now Preprocessing')
-        self.preprocessing_dialog.setValue(0)
-        self.preprocessing_dialog.setLabelText('It takes around 10 minuts, please wait...')
-        self.preprocessing_dialog.setCancelButton(None)
-        #self.preprocessing_dialog.setWindowModality(Qt.WindowModal)
-        self.preprocessing_dialog.show()
-
-        skip_refocusing=self.action_skip_refocusing.isChecked()
-        self.preprocessing_thread=QThread(self)
-        self.preprocessing_worker=PreProcess.PreProcessThread(training_LFI_info,test_LFI_info,exp_setting)
-        self.preprocessing_worker.skip_refocusing=skip_refocusing
-        self.preprocessing_worker.moveToThread(self.preprocessing_thread)
-        self.preprocessing_worker.sub_task_finished.connect(lambda i, s: self.SetPreprocessingDialog(self.preprocessing_dialog,i,s))
-        self.preprocessing_worker.total_finished.connect(self.PreprosessingFinishedCallback)
-        self.preprocessing_thread.started.connect(self.preprocessing_worker.run)
-
-        self.preprocessing_thread.start()
-        #self.preprocessing_worker.run()
-
-        return True
-    
-    def SetPreprocessingDialog(self,preprocessing_dialog:QProgressDialog,i:int,show_message:str): 
-        preprocessing_dialog.setLabelText(show_message)
-        preprocessing_dialog.setValue(i)
-    
-    def PreprosessingFinishedCallback(self):
-        self.cur_project.exp_setting.has_preprocess=True
-        self.cur_project.InitAllScoringLFIInfo()
-        self.cur_project.SaveToFile()
-
-        self.preprocessing_dialog.deleteLater()
-        #self.preprocessing_worker.deleteLater()
-        self.ShowProjectSetting()
-        #self.preprocessing_thread.deleteLater()
 
     def CreateFinished(self,b_preprocessing_now,target_config_file):
         #print(b_preprocessing_now)
@@ -323,7 +261,16 @@ class MainProject(QMainWindow,Ui_MainWindow):
     def CreateCanceled(self):
         pass
 
+    def sessiondebugfinished(self):
+        self.session_player.deleteLater()
+        self.session_player=None
+
     def StartExperiment(self,mode='training'):
+        self.session_player=ExperimentSession(self.cur_project.training_scoring_lfi_info,self.cur_project.exp_setting,mode)
+        self.session_player.exp_finished.connect(self.sessiondebugfinished)
+        self.session_player.StartExperiment(ExpInfo.ComparisonType.DoubleStimuli)
+        return
+
         self.cur_exp_mode=mode
         if self.cur_project is None:
             self.ShowMessage("Please select one project first!",1)
@@ -339,10 +286,17 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.test_LFI_info=self.cur_project.test_LFI_info
         self.exp_setting=self.cur_project.exp_setting
 
+        self.session_player=ExperimentSession(self.cur_project.training_scoring_lfi_info,self.cur_project.exp_setting,mode)
+        self.session_player.StartExperiment(ExpInfo.ComparisonType.DoubleStimuli)
+        return
+
         if not self.CheckLFIImages(mode) and (not self.exp_setting.two_folder_mode):
             self.ShowMessage("Something is wrong! Please Check your log carefully.",2)
             logger.error("Something is Wrong! Please check the logs above and fix it.")
             return
+        self.session_player=ExperimentSession(self.cur_project.training_scoring_lfi_info,self.cur_project.exp_setting,mode)
+        self.session_player.StartExperiment(ExpInfo.ComparisonType.DoubleStimuli)
+        return
 
         subject_info={}
         self.cur_subject_info=subject_info
@@ -357,25 +311,20 @@ class MainProject(QMainWindow,Ui_MainWindow):
             else:
                 logger.warning("Experiment cancelled.")
                 return
+        self.session_player=ExperimentSession(self.cur_project.training_scoring_lfi_info,self.cur_project.exp_setting,mode)
+        self.session_player.StartExperiment(ExpInfo.ComparisonType.DoubleStimuli)
+        return
             
         # TODO: divide the experiment into several sessions.
         # Now only DSCSPC contains two sessions.
-        if self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_BASE or self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_CCG:
+        if mode=="testing" and (self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_BASE or self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_CCG):
             self.all_sessions=[ExpInfo.ComparisonType.DoubleStimuli, ExpInfo.ComparisonType.PairComparison]
         else:
             self.all_sessions=[ExpInfo.ComparisonType.DoubleStimuli]
 
-        '''
-        if mode == "training":
-            show_list=ExpInfo.GetShowList(self.training_LFI_info,self.exp_setting,"training")
-            score_info=self.training_LFI_info
-            show_index=list(range(len(show_list)))
-            new_show_list=show_list
-        else:
-            show_list=ExpInfo.GetShowList(self.test_LFI_info,self.exp_setting,"test")
-            score_info=self.test_LFI_info
-            show_index,new_show_list=self.GetRandomShowList(show_list)
-        '''
+        self.session_player=ExperimentSession(self.cur_project.training_scoring_lfi_info,self.cur_project.exp_setting,mode)
+        self.session_player.StartExperiment(ExpInfo.ComparisonType.DoubleStimuli)
+        return
 
         self.session_player=ExperimentSession(all_scoring_lfi_info,self.exp_setting,mode=mode)
         self.session_player.SetScreenIndex(self.exp_screen_index)
@@ -399,7 +348,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.show()
         all_results=copy.deepcopy(self.session_player.GetResult())
         all_show_index=copy.deepcopy(self.session_player.GetShowIndex())
-        self.session_player.disconnect()
+        self.session_player.exp_finished.disconnect(self.SessionConnector)
         self.session_player.deleteLater()
         self.session_player=None
 

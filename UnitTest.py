@@ -23,4 +23,4 @@ if __name__ == '__main__':
 
     all_scores=[i%grading_num for i in range(scoring_num)]
 
-    PlayList.MakeDSCSPCList(all_scoring_lfi,)
+    pc_list=PlayList.MakeDSCSPCList(all_scoring_lfi,all_scores,grading_num,grading_scales,method="base")
