@@ -27,6 +27,9 @@ class QtLogTextEditorHandler(logging.Handler):
     def __init__(self, *args) -> None:
         super().__init__(*args)
         self.log_text_editor=None
+        format_str='%(asctime)s [%(levelname)s]: %(message)s'
+        self.log_format=logging.Formatter(fmt=format_str,datefmt='%Y-%m-%d-%H:%M')
+        self.setFormatter(self.log_format)
 
     def SetLogTextEditor(self,log_text_editor):
         self.log_text_editor=log_text_editor

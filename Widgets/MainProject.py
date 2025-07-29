@@ -6,7 +6,7 @@ from datetime import date
 from PySide6.QtWidgets import QWidget, QDockWidget, QMainWindow, QTextBrowser, QApplication, QFileDialog, QMessageBox, QProgressDialog, QInputDialog, QErrorMessage, QDialog
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtCore import Qt, QThread
-from LogWindow import QLogTextEditor #, StreamToLogger
+from LogWindow import QLogTextEditor , StreamToLogger
 import ExpInfo
 from MainProject_ui import Ui_MainWindow
 import Log_Form
@@ -61,7 +61,6 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
         self.software_manager.file_path=custom_init_path
         self.software_manager.SaveInfo()
-        #self.log_path='./Logs'
         self.log_path=self.software_manager.logs_path
         if not os.path.exists(self.log_path):
             os.mkdir(self.log_path)
@@ -73,10 +72,8 @@ class MainProject(QMainWindow,Ui_MainWindow):
         logger.addHandler(self.file_handler)
         logger.setLevel(self.software_manager.log_level)
 
-        '''
         sys.stdout=StreamToLogger(logger, logging.INFO)
         sys.stderr=StreamToLogger(logger, logging.ERROR)
-        '''
 
         # set a new processing to run PC content generation CMDs
         self.back_thread= WorkerManager()  
@@ -213,7 +210,6 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.InitTrigger()
 
     def ShowProjectSetting(self):
-        return
         self.project_display=ProjectDisplay(self.cur_project)
         self.setCentralWidget(self.project_display)
     
@@ -266,11 +262,6 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.session_player=None
 
     def StartExperiment(self,mode='training'):
-        self.session_player=ExperimentSession(self.cur_project.training_scoring_lfi_info,self.cur_project.exp_setting,mode)
-        self.session_player.exp_finished.connect(self.sessiondebugfinished)
-        self.session_player.StartExperiment(ExpInfo.ComparisonType.DoubleStimuli)
-        return
-
         self.cur_exp_mode=mode
         if self.cur_project is None:
             self.ShowMessage("Please select one project first!",1)
@@ -286,17 +277,10 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.test_LFI_info=self.cur_project.test_LFI_info
         self.exp_setting=self.cur_project.exp_setting
 
-        self.session_player=ExperimentSession(self.cur_project.training_scoring_lfi_info,self.cur_project.exp_setting,mode)
-        self.session_player.StartExperiment(ExpInfo.ComparisonType.DoubleStimuli)
-        return
-
         if not self.CheckLFIImages(mode) and (not self.exp_setting.two_folder_mode):
             self.ShowMessage("Something is wrong! Please Check your log carefully.",2)
             logger.error("Something is Wrong! Please check the logs above and fix it.")
             return
-        self.session_player=ExperimentSession(self.cur_project.training_scoring_lfi_info,self.cur_project.exp_setting,mode)
-        self.session_player.StartExperiment(ExpInfo.ComparisonType.DoubleStimuli)
-        return
 
         subject_info={}
         self.cur_subject_info=subject_info
@@ -311,9 +295,6 @@ class MainProject(QMainWindow,Ui_MainWindow):
             else:
                 logger.warning("Experiment cancelled.")
                 return
-        self.session_player=ExperimentSession(self.cur_project.training_scoring_lfi_info,self.cur_project.exp_setting,mode)
-        self.session_player.StartExperiment(ExpInfo.ComparisonType.DoubleStimuli)
-        return
             
         # TODO: divide the experiment into several sessions.
         # Now only DSCSPC contains two sessions.
@@ -321,10 +302,8 @@ class MainProject(QMainWindow,Ui_MainWindow):
             self.all_sessions=[ExpInfo.ComparisonType.DoubleStimuli, ExpInfo.ComparisonType.PairComparison]
         else:
             self.all_sessions=[ExpInfo.ComparisonType.DoubleStimuli]
-
-        self.session_player=ExperimentSession(self.cur_project.training_scoring_lfi_info,self.cur_project.exp_setting,mode)
-        self.session_player.StartExperiment(ExpInfo.ComparisonType.DoubleStimuli)
-        return
+        
+        self.sessions_num=len(self.all_sessions)
 
         self.session_player=ExperimentSession(all_scoring_lfi_info,self.exp_setting,mode=mode)
         self.session_player.SetScreenIndex(self.exp_screen_index)
@@ -335,6 +314,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.session_player.StartExperiment(cur_session)
     
     def StartSession(self,all_scoring_lfi_info:ExpInfo.AllScoringLFI,mode):
+        self.cur_scoring_lfi=all_scoring_lfi_info
         self.session_player=ExperimentSession(all_scoring_lfi_info,self.exp_setting,mode)
         self.session_player.SetScreenIndex(self.exp_screen_index)
         self.session_player.exp_finished.connect(self.SessionConnector)
@@ -352,6 +332,14 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.session_player.deleteLater()
         self.session_player=None
 
+        if self.cur_exp_mode == "training":
+            return
+        
+        result_session_index=self.sessions_num-len(self.all_sessions)-1
+
+        save_file=os.path.join(self.cur_project.project_path,f"{self.cur_subject_info['name']}_session_{result_session_index}")
+        self.GetAndSaveResult(all_results,self.cur_subject_info,all_show_index,self.cur_project.test_scoring_lfi_info,save_file=save_file)
+
         # TODO: how to save the results?
         # Not a good solution now. Only works for passive mode
 
@@ -359,16 +347,15 @@ class MainProject(QMainWindow,Ui_MainWindow):
         # now we need to handle some jobs first. E.g. videos generation.
         if len(self.all_sessions)>0:
             JPLMessageBox.ShowInformationMessage("Session finished! Thank you and have a rest now.")
-            save_file=os.path.join(self.cur_project.exp_path,f"{self.cur_subject_info['name']}_session_0")
+            save_file=os.path.join(self.cur_project.project_path,f"{self.cur_subject_info['name']}_session_0")
             self.GetAndSaveResult(all_results,self.cur_subject_info,all_show_index,self.cur_project.test_scoring_lfi_info,save_file=save_file)
             self.MakeDSCSPC(all_results,self.cur_subject_info,all_show_index,self.cur_project.test_scoring_lfi_info)
         else:
             JPLMessageBox.ShowInformationMessage("Experiment finished! Thank you!")
-            save_file=os.path.join(self.cur_project.exp_path,f"{self.cur_subject_info['name']}_session_1")
+            save_file=os.path.join(self.cur_project.project_path,f"{self.cur_subject_info['name']}_session_1")
             self.GetAndSaveResult(all_results,self.cur_subject_info,all_show_index,self.cur_project.test_scoring_lfi_info,cmp_type=ExpInfo.ComparisonType.PairComparison,save_file=save_file,update_project=True)
             logger.info("Experiment finished!")
 
-    
     def MakeDSCSPC(self,all_results,subject_info,all_show_index,all_scoring_lfi_info:ExpInfo.AllScoringLFI):
         # now dscs with pc assumes only one score name
         all_scores=[0 for i in range(all_scoring_lfi_info.GetLFINum())]

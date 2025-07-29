@@ -59,6 +59,7 @@ class ExperimentSession(QObject):
     
     def FinishExperiment(self,all_results):
         self.result=all_results
+        self.scoring_page.hide()
         self.scoring_page.deleteLater()
         self.scoring_page=None
         self.exp_finished.emit()

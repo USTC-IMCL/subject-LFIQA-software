@@ -168,30 +168,8 @@ class ExpShowPathManager:
     
 
 class SoftWarePathManager():
-    def __init__(self,file_path='./SoftwareConfig.json') -> None:
-        with open(file_path,'r') as fid:
-            self.config=json.load(fid)
-        self.file_path=file_path
-        self._software_path=self.config["Software_Path"]
-        self._software_version=self.config["Software_Version"]
-        self._logs_path=self.config["Logs_Path"]
-
-        self.config_keys=[
-            "Software_Path",
-            "Software_Version",
-            "Logs_Path",
-            "Log_Level"
-        ]
-
-        self.log_level_dict={
-            'INFO':logging.INFO,
-            "DEBUG":logging.DEBUG,
-            "WARNING":logging.WARNING,
-            "ERROR": logging.ERROR
-        }
-        self._log_level=self.log_level_dict[self.config['Log_Level']]
-    
     def __init__(self):
+        # TODO: set software description with input json file
         self._software_path=''
         self._software_version=''
         self._logs_path='./Logs'
@@ -212,7 +190,7 @@ class SoftWarePathManager():
         self.config['Software_Path']=self._software_path
         self.config['Software_Version']=self._software_version
         self.config['Logs_Path']=self._logs_path
-        self.config['Log_Level']=self.log_level
+        self.config['Log_Level']=self._log_level
 
     def CheckInnerPath(self,path):
         if not os.path.exists(path):

@@ -16,7 +16,7 @@ import shutil
 import pickle
 import logging
 from ExpInfo import PersonInfo
-from LogWindow import QLogTextEditor
+from LogWindow import QLogTextEditor, QtLogTextEditorHandler
 from typing import List
 import PostProcess
 logger = logging.getLogger("LogWindow")
@@ -1603,11 +1603,14 @@ class ProjectMenuLabel(QtWidgets.QFrame):
             self.animation=True
     
     def mousePressEvent(self, event):
+        self.Activate()
+        self.clicked.emit(self.index)
+    
+    def Activate(self):
         self.setStyleSheet("background-color: gray;")
         self.is_selected=True
         if self.animation:
             self.icon_label.setPixmap(QtGui.QPixmap(self.active_icon).scaled(self.icon_width,self.icon_height))
-        self.clicked.emit(self.index)
 
     def DeActive(self):
         self.is_selected=False
@@ -1644,7 +1647,11 @@ class ProjectDisplay(QtWidgets.QFrame):
         self.right_stack.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,QtWidgets.QSizePolicy.Policy.Expanding)
         #self.main_layout.addWidget(self.right_stack)
 
-        self.right_text_editor=QLogTextEditor()
+        self.right_text_editor=QtWidgets.QTextEdit()#QLogTextEditor()
+        self.right_text_editor.setReadOnly(True)
+        self.right_text_editor_handler=QtLogTextEditorHandler()
+        self.right_text_editor_handler.SetLogTextEditor(self.right_text_editor)
+        logger.addHandler(self.right_text_editor_handler)
         self.right_text_editor.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,QtWidgets.QSizePolicy.Policy.Expanding)
 
         self.right_stack_splitter.addWidget(self.right_stack)
@@ -1654,10 +1661,9 @@ class ProjectDisplay(QtWidgets.QFrame):
 
         self.main_layout.setStretch(1,1)
 
-        self.right_stack.addWidget(QtWidgets.QWidget())
-
         self.MakeRightPanel()
         self.MakeLeftPanel()
+        self.label_material.Activate()
 
     def MakeLeftPanel(self):
         self.left_panel_layout=QtWidgets.QVBoxLayout()
@@ -1727,7 +1733,7 @@ class ProjectDisplay(QtWidgets.QFrame):
         self.material_widget.addTab(MaterialFolderFrame(self.cur_project.test_scoring_lfi_info,exp_setting),u"Testing")
 
     def ActivateMenuLabel(self,index):
-        self.right_stack.setCurrentIndex(index+1)
+        self.right_stack.setCurrentIndex(index)
         for label in self.all_menu_labels:
             if label.index==index:
                 continue
