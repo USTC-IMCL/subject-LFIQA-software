@@ -37,14 +37,8 @@ class SessionConnector(QWidget):
 
     def UpdateProgress(self,num):
         self.already_done=num
-        self.progress_bar.setValue(self.already_done)
-        self.hint_label.setText(f"Already done {self.already_done}/{self.task_num}%")
+        self.progress_bar.setValue(int(self.already_done/self.task_num*100))
+        self.hint_label.setText(f"Already done {self.already_done}/{self.task_num}")
         if self.already_done>=self.task_num:
-            self.hint_label.setText(f"All tasks done! {self.already_done}/{self.task_num}%")
+            self.hint_label.setText(f"All tasks done! {self.already_done}/{self.task_num}")
             self.task_finished.emit()
-    
-    def StartTask(self):
-        self.already_done=0
-        self.progress_bar.setValue(0)
-        self.hint_label.setText(f"Already done {self.already_done}/{self.task_num}%")
-

@@ -1,6 +1,6 @@
 {
-    "Training":"Active_examples/SingleStimulus/foo_1",
-    "Test":"Active_examples/SingleStimulus/foo_2",
+    "Training":"/data_0/Work/JPEG/LFIQA/examples/two_folder/foo_1/",
+    "Test":"/data_0/Work/JPEG/LFIQA/examples/two_folder/foo_2/",
     "Exp_Info":{
         "Display_Type":"2D",
         "ThreeD_Type":"LeftRight",
@@ -15,13 +15,20 @@
             "2. Annoying",
             "1. Very Annoying"]
         ],
-        "View_Changing":"Active",
+        "View_Changing":"Passive",
         "Refocusing":"None",
         "Comparison":"DSCS_PC_base",
         "High_Quality_Only":false,
         "Save_Format":"Excel",
         "Skip_Preprocessing": true,
         "Two_Folder_Mode": true,
+        "Auto_Play":true,
+        "Loop_Times": 2,
+        "FPS": -1,
+        "Auto_Transition": true,
+        "Pause_Allowed": false,
+        "First_Loop_Skip_Allowed": true,
+        "Skip_Hint_Text": "Your hint here",
         "Table_Font_Size": 20,
         "Hint_Font_Size": 60
     }

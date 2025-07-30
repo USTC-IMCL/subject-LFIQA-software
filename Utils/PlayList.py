@@ -177,6 +177,8 @@ def MakeDSCSPCList(in_list,in_scores,group_num,grading_scales, method="base"):
 def MakePCPairs(in_list):
     ret_list=[]
     list_len=len(in_list)
+    if list_len<2:
+        return ret_list
 
     for start_index in range(list_len):
         for end_index in range(start_index+1,list_len):

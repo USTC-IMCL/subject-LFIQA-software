@@ -7,6 +7,8 @@ from ScoringWidget import PairWiseScoringWidget, ScoringWidget
 from ExpInfo import ComparisonType
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QApplication
+import logging
+logger=logging.getLogger("LogWindow")
 
 class ExperimentSession(QObject):
     '''
@@ -19,6 +21,7 @@ class ExperimentSession(QObject):
         self.exp_setting = exp_setting
         self.exp_mode=mode
         self.all_scoring_lfi = show_list
+        self.cur_cmp_type=None # be careful
         self.subject_info=None
         self.scoring_page=None
         self.screen_index = 0
@@ -32,6 +35,7 @@ class ExperimentSession(QObject):
         self.screen_index = screen_index
 
     def StartExperiment(self, scoring_mode:ComparisonType=ComparisonType.DoubleStimuli):
+        self.cur_cmp_type=scoring_mode
         show_lfi_num=self.all_scoring_lfi.GetLFINum()
         self.show_index=None
         if self.exp_mode.lower() == "training":
@@ -44,6 +48,12 @@ class ExperimentSession(QObject):
             self.scoring_page = PairWiseScoringWidget(self.all_scoring_lfi,self.exp_setting,all_show_index)
         else:
             self.scoring_page = ScoringWidget(self.all_scoring_lfi,self.exp_setting,all_show_index)
+
+        logger.debug("=========Playing List=========")
+        for i in all_show_index:
+            tmp_scoring_lfi=self.all_scoring_lfi.GetScoringExpLFIInfo(i)
+            logger.debug(f"Index: {i}, Path: {tmp_scoring_lfi.passive_view_video_path}")
+        logger.debug("=========    End    =========")
         
         app=QApplication.instance()
         if app is None:

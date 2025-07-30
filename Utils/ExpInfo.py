@@ -770,6 +770,7 @@ class ProjectInfo:
                 self.person_list.append(cur_person)
         return True
             
+    # TODO: a unit label for each subject is needed!
     def GetPersonList(self):
         if len(self.person_list) == 0 and len(self.subject_list) > 0:
             if self.BuildPersonList():
@@ -1137,7 +1138,7 @@ class ScoringExpLFIInfo:
             ret_v.append(self.passive_refocusing_video_path)
         ret_v=list(set(ret_v))
         return ret_v
-
+    
     def DetectPostfix(self,in_folder):
         all_files=os.listdir(in_folder)
         all_post_fix={}

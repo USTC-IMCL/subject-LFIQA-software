@@ -243,6 +243,19 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
         self.addWidget(self.finish_page)
 
         self.all_page_num=self.max_page_num+2
+    
+    def SetScoringScreen(self,screen_index):
+        app=QApplication.instance()
+        if app is None:
+            app=QApplication([])
+        self.setScreen(app.screens()[screen_index])
+        cur_scree=self.screen()
+        self.move(cur_scree.geometry().topLeft())
+        self.resize(cur_scree.geometry().size())
+        self.blank_page.resize(self.width(),self.height())
+        self.blank_page.setGeometry(0,0,self.width(),self.height())
+        self.finish_page.resize(self.width(),self.height())
+        self.finish_page.setGeometry(0,0,self.width(),self.height())
 
     def GetSingleLFIInfo(self,show_index)->ScoringExpLFIInfo:
         cur_index=self.all_show_index[show_index]
@@ -278,13 +291,13 @@ class PairWiseScoringWidget(QtWidgets.QStackedWidget):
 
         if exp_setting.two_folder_mode and LFIFeatures.Passive_ViewChanging in exp_setting.lfi_features:
             if init_flag:
-                page_showing=VideoPage(exp_setting,None,cur_lf_info.passive_view_video_path)
+                page_showing=VideoPage(exp_setting,None,cur_lf_info.passive_view_video_path,cmp_type=ComparisonType.PairComparison)
                 self.addWidget(page_showing)
                 page_showing.pair_finished.connect(lambda x: self.ShowingNext(x,self.all_view_scores,0))
                 self.max_page_num+=1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[0].SetNewLFI(exp_setting,None,cur_lf_info.passive_view_video_path)
+                self.show_page_list[0].SetNewLFI(exp_setting,None,cur_lf_info.passive_view_video_path,cmp_type=ComparisonType.PairComparison)
             return
 
         if LFIFeatures.Active_Refocusing in exp_setting.lfi_features and LFIFeatures.Active_ViewChanging in exp_setting.lfi_features:
@@ -487,13 +500,14 @@ class ScoringWidget(QtWidgets.QStackedWidget):
         exp_setting=self.exp_setting
         if exp_setting.two_folder_mode and LFIFeatures.Passive_ViewChanging in exp_setting.lfi_features:
             if init_flag:
-                page_showing=VideoPage(exp_setting,None,cur_lf_info.passive_view_video_path)
+                #TODO: but it is not true!!!
+                page_showing=VideoPage(exp_setting,None,cur_lf_info.passive_view_video_path,cmp_type=ComparisonType.DoubleStimuli)
                 self.addWidget(page_showing)
                 page_showing.finish_video.connect(self.NextPage)
                 self.max_page_num+=1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[0].SetNewLFI(exp_setting,None,cur_lf_info.passive_view_video_path)
+                self.show_page_list[0].SetNewLFI(exp_setting,None,cur_lf_info.passive_view_video_path,cmp_type=ComparisonType.DoubleStimuli)
             return
 
         if LFIFeatures.Active_Refocusing in exp_setting.lfi_features and LFIFeatures.Active_ViewChanging in exp_setting.lfi_features:
@@ -1201,7 +1215,7 @@ class VideoPage(QtWidgets.QWidget):
     finish_video=QtCore.Signal()
     pair_finished=QtCore.Signal(int)
 
-    def __init__(self, exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, video_path):
+    def __init__(self, exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, video_path,cmp_type=None):
         '''
         loop_times: the loop times of the video. We do not need a loop play flag to indicate whether the video will loop. The loop_times =1 means just playing once.
 
@@ -1212,6 +1226,11 @@ class VideoPage(QtWidgets.QWidget):
         auto_play=exp_setting.auto_play
         loop_times=exp_setting.loop_times
         fps=exp_setting.fps
+
+        if cmp_type is None:
+            self.comparison_type=exp_setting.comparison_type
+        else:
+            self.comparison_type=cmp_type
 
         self.pause_allowed=exp_setting.pause_allowed
 
@@ -1228,7 +1247,7 @@ class VideoPage(QtWidgets.QWidget):
             self.evaluate_enable=True
         else:
             self.evaluate_enable=False
-        if exp_setting.comparison_type == ComparisonType.PairComparison:
+        if self.comparison_type == ComparisonType.PairComparison:
             self.auto_transition=False
     
         #self.video_player=LFIVideoPlayer(video_path,fps=self.fps,loop_times=self.loop_times)
@@ -1287,7 +1306,7 @@ class VideoPage(QtWidgets.QWidget):
         if self.use_hint_text:
             self.SetSkipHintText(exp_setting.screen_width,exp_setting.skip_hint_text,exp_setting.hint_text_font_size)
 
-        self.SetNewLFI(exp_setting,dist_lfi_info,video_path)
+        self.SetNewLFI(exp_setting,dist_lfi_info,video_path,self.comparison_type)
     
     def FinishVideo(self):
         if self.use_hint_text:
@@ -1317,9 +1336,13 @@ class VideoPage(QtWidgets.QWidget):
         self.hint_label_window.setFocusPolicy(Qt.NoFocus)
         self.hint_label_window.hide()
 
-        
-    def SetNewLFI(self,exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, video_path):
+    # TODO: Need a new class to describe the session   
+    def SetNewLFI(self,exp_setting:ExpSetting,dist_lfi_info:ScoringExpLFIInfo, video_path,cmp_type=None):
         self.exp_setting=exp_setting
+        if cmp_type is None:
+            self.comparison_type=exp_setting.comparison_type
+        else:
+            self.comparison_type=cmp_type
         self.dist_lfi_info=dist_lfi_info
         self.video_path=video_path
         if self.use_hint_text:
@@ -1356,7 +1379,7 @@ class VideoPage(QtWidgets.QWidget):
         btn_pos_y=(self.event_mask.screen_widget_y+video_height+self.event_mask.screen_height)//2 - btn_height//2
 
         if not exp_setting.two_folder_mode:
-            if exp_setting.comparison_type == ComparisonType.PairComparison:
+            if self.comparison_type == ComparisonType.PairComparison:
                 left_btn_pos_x=3*self.event_mask.screen_width//8 - btn_width//2
                 right_btn_pos_x=5*self.event_mask.screen_width//8 - btn_width//2
 
@@ -1374,7 +1397,7 @@ class VideoPage(QtWidgets.QWidget):
                     self.next_btn.hide()
 
         self.video_player.show()
-        if exp_setting.comparison_type == ComparisonType.PairComparison:
+        if self.comparison_type == ComparisonType.PairComparison:
             self.arrow_key_flag=True
         
         if self.auto_play:
@@ -1422,7 +1445,7 @@ class VideoPage(QtWidgets.QWidget):
     def handle_key_press(self, event) -> None:
     #def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
         event.ignore()
-        if self.exp_setting.comparison_type == ComparisonType.PairComparison:
+        if self.comparison_type == ComparisonType.PairComparison:
             '''
             if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
                 if self.left_btn.hasFocus():
