@@ -1452,7 +1452,11 @@ class TwoFolderLFIInfo(AllScoringLFI):
         self.video_post_fix=video_postfix_str
         self.all_videos=[]
 
-        all_files=os.listdir(in_folder_path)
+        # TODO: surprising!
+        if in_folder_path is None:
+            all_files=[]
+        else:
+            all_files=os.listdir(in_folder_path)
         for file_name in all_files:
             name_postfix=file_name.split('.')[-1]
             if name_postfix in video_postfix_str:

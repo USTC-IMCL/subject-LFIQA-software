@@ -486,7 +486,6 @@ class MainProject(QMainWindow,Ui_MainWindow):
         if not os.path.exists(self.output_folder):
             os.makedirs(self.output_folder)
         logger.info("The evaluation has been finished. Now saving results to %s ..." % self.output_folder)
-        self.cur_project.subject_list.append(subject_name)
         if self.exp_setting.save_format == ExpInfo.SaveFormat.CSV:
             if self.exp_setting.two_folder_mode:
                 if save_file is not None:
@@ -506,6 +505,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
         if update_project:
             self.show()
+            self.cur_project.subject_list.append(subject_name)
             save_file=os.path.join(self.output_folder,PathManager.all_subject_info_file)
             person_info.AppendToCSV(save_file)
             self.cur_project.SaveToFile()

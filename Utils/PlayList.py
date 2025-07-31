@@ -47,6 +47,7 @@ def GetRandomShowList(in_dict):
         else:
             show_index=list(range(all_num))
             output_list=[]
+            logger.debug("false to get the random element. re-generate the list now...")
     return output_list
 
 def CheckList(in_dict,in_list):
@@ -167,7 +168,7 @@ def MakeDSCSPCList(in_list,in_scores,group_num,grading_scales, method="base"):
                 num_for_each_group[-i]+=1
             for i,ele_len in enumerate(num_for_each_group):
                 start_point=sum(num_for_each_group[:i])
-                pc_list[class_name][i].append(cur_class_elements[start_point:start_point+ele_len])
+                pc_list[class_name][i]+=cur_class_elements[start_point:start_point+ele_len]
         else:
             logger.error('The method is not supported!')
             return None
