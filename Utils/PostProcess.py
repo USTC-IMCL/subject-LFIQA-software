@@ -7,6 +7,7 @@ import numpy as np
 import logging
 logger=logging.getLogger("LogWindow")
 import PathManager
+import scipy
 from scipy.stats import pearsonr, spearmanr
 
 def PostProcess(exp_setting:ExpSetting,output_folder):
@@ -30,7 +31,7 @@ def PostProcess(exp_setting:ExpSetting,output_folder):
         if file_name in  output_file:
             continue
         subject_name = file_name.split('.')[0]
-        subject_scores = GetScore(os.path.join(output_folder,file_name))
+        subject_scores = ReadSubjectScore(os.path.join(output_folder,file_name))
         all_subjects_scores[subject_name]=subject_scores
         all_subjects.append(subject_name)
     
@@ -50,7 +51,7 @@ def PostProcess(exp_setting:ExpSetting,output_folder):
     for subject_index,subject_name in enumerate(all_subjects):
         all_subjects_plcc[subject_name]=[]
         for score_name in all_score_names:
-            all_subjects_plcc[subject_name].append(CalSingleSROCC(type_scores[score_name],subject_index))
+            all_subjects_plcc[subject_name].append(ScipyCalPLCC(type_scores[score_name],subject_index))
     
     # save the plcc
     if post_fix == 'csv':
