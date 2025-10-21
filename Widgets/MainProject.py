@@ -323,6 +323,8 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.session_player.StartExperiment(cur_session)
     
     def StartSession(self,all_scoring_lfi_info:ExpInfo.AllScoringLFI,mode):
+        if all_scoring_lfi_info.GetLFINum() ==0:
+            logger.warning("No LFI for current session.")
         self.session_player=ExperimentSession(all_scoring_lfi_info,self.exp_setting,mode)
         self.session_player.SetScreenIndex(self.exp_screen_index)
         self.session_player.exp_finished.connect(self.SessionConnector)
@@ -358,6 +360,9 @@ class MainProject(QMainWindow,Ui_MainWindow):
         # Not a good solution now. Only works for passive mode
 
         if len(self.all_sessions)>0:
+            '''
+                Need updating
+            '''
             JPLMessageBox.ShowInformationMessage("Session finished! Thank you and have a rest now.")
             update_project=False
             self.GetAndSaveResult(all_results,self.cur_person_info,all_show_index,cur_all_scoring_lfi,cmp_type=res_session_cmp_type,save_file=save_file,update_project=update_project)
@@ -384,14 +389,39 @@ class MainProject(QMainWindow,Ui_MainWindow):
         elif self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_CCG:
             dscs_pc_method="ccg"
 
-        group_num=self.exp_setting.grading_num
+        group_num=self.exp_setting.group_num
         grading_scales=self.exp_setting.grading_scales
+
+        logger.debug("Now make the Pair-Comparison list.")
+        logger.debug(f"The group number is {group_num}.")
         pc_list=MakeDSCSPCList(lfi_names,all_scores,group_num,grading_scales,dscs_pc_method)
+        logger.debug("Done!")
+        logger.debug("===================PC List Print===================")
+        for class_name in pc_list.keys():
+            logger.debug(f"{class_name}:")
+            logger.debug(pc_list[class_name])
+        logger.debug("===================================================")
+        logger.debug("Now make the Pair-Comparison pairs.")
+        if self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_BASE:
+            logger.debug(f"The pair comparison method is: DSCS_PC_BASE ")
+        elif self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_CCG:
+            logger.debug(f"The pair comparison method is: DSCS_PC_CCG ")
+
+        logger.debug(f"{len(self.exp_setting.pc_group_index)} groups are selected. Group index: {self.exp_setting.pc_group_index} (Start from 0).")
+
 
         show_pairs={}
+        pc_group_index=self.exp_setting.pc_group_index
         for class_name in pc_list.keys():
             if class_name not in show_pairs.keys():
                 show_pairs[class_name]=[]
+            for group_index in pc_group_index:
+                cur_group=pc_list[class_name][group_index]
+                cur_group_pairs=MakePCPairs(cur_group)
+                if len(cur_group_pairs)> 0:
+                    show_pairs[class_name]+=cur_group_pairs
+                logger.debug(f"Class {class_name}, group {group_index}, input index {cur_group}, output pairs {cur_group_pairs}")
+            '''
                 if self.exp_setting.high_quality_only:
                     cur_group_pairs=MakePCPairs(pc_list[class_name][0])
                     if len(cur_group_pairs)> 0:
@@ -402,6 +432,14 @@ class MainProject(QMainWindow,Ui_MainWindow):
                         cur_group_pairs=MakePCPairs(cur_group)
                         if len(cur_group_pairs)> 0:
                             show_pairs[class_name]+=cur_group_pairs
+            '''
+        
+        logger.debug("Done!")
+        logger.debug("===================PC Pairs Print===================")
+        for class_name in show_pairs.keys():
+            logger.debug(f"{class_name}:")
+            logger.debug(show_pairs[class_name])
+        logger.debug("===================================================")
          
         # make another all_scoring_lfi_info
         pc_root=os.path.join(self.cur_project.project_path,PathManager.dscs_folder,self.cur_exp_mode)
@@ -442,9 +480,10 @@ class MainProject(QMainWindow,Ui_MainWindow):
                     all_pc_cmds.append(cur_cmd)
         
         if len(all_pc_cmds) > 0:
-            logger.debug("Print the cmds now")
+            logger.debug("===================Print the cmds now====================")
             for i, cmd in enumerate(all_pc_cmds):
                 logger.debug(f"index {i}, CMD: {cmd}")
+            logger.debug("=========================================================")
             logger.info("Now making DSCS PC refinement material ...")
             self.back_thread.Reset()
             self.back_thread.SetCMDs(all_pc_cmds)
@@ -485,23 +524,24 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.output_folder=os.path.join(self.cur_project.project_path,PathManager.subject_results_folder)
         if not os.path.exists(self.output_folder):
             os.makedirs(self.output_folder)
-        logger.info("The evaluation has been finished. Now saving results to %s ..." % self.output_folder)
-        if self.exp_setting.save_format == ExpInfo.SaveFormat.CSV:
-            if self.exp_setting.two_folder_mode:
-                if save_file is not None:
-                    if ".csv" not in save_file:
-                        save_file=save_file+".csv"
-                self.SaveCSV_TwoFolderMode(all_results,subject_name,all_show_index,show_list,cmp_type,save_file)
+        logger.info("The evaluation has been finished. Now save results to %s ..." % self.output_folder)
+        if all_results is not None:
+            if self.exp_setting.save_format == ExpInfo.SaveFormat.CSV:
+                if self.exp_setting.two_folder_mode:
+                    if save_file is not None:
+                        if ".csv" not in save_file:
+                            save_file=save_file+".csv"
+                    self.SaveCSV_TwoFolderMode(all_results,subject_name,all_show_index,show_list,cmp_type,save_file)
+                else:
+                    self.SaveCSV(all_results,subject_name,all_show_index,show_list)
             else:
-                self.SaveCSV(all_results,subject_name,all_show_index,show_list)
-        else:
-            if self.exp_setting.two_folder_mode:
-                if save_file is not None:
-                    if ".xlsx" not in save_file:
-                        save_file=save_file+".xlsx"
-                self.SaveExcel_TwoFolderMode(all_results,subject_name,all_show_index,show_list,cmp_type,save_file)
-            else:
-                self.SaveExcel(all_results,subject_name,all_show_index,show_list)
+                if self.exp_setting.two_folder_mode:
+                    if save_file is not None:
+                        if ".xlsx" not in save_file:
+                            save_file=save_file+".xlsx"
+                    self.SaveExcel_TwoFolderMode(all_results,subject_name,all_show_index,show_list,cmp_type,save_file)
+                else:
+                    self.SaveExcel(all_results,subject_name,all_show_index,show_list)
 
         if update_project:
             self.show()

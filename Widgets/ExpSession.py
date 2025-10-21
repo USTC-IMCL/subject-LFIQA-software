@@ -37,41 +37,45 @@ class ExperimentSession(QObject):
     def StartExperiment(self, scoring_mode:ComparisonType=ComparisonType.DoubleStimuli):
         self.cur_cmp_type=scoring_mode
         show_lfi_num=self.all_scoring_lfi.GetLFINum()
-        self.show_index=None
-        if self.exp_mode.lower() == "training":
-            all_show_index=list(range(show_lfi_num))
+        if show_lfi_num == 0:
+            self.FinishExperiment(self.result)
         else:
-            all_show_index = self.all_scoring_lfi.GetRandomShowOrder()
-        self.show_index=all_show_index
-        
-        if scoring_mode == ComparisonType.PairComparison:
-            self.scoring_page = PairWiseScoringWidget(self.all_scoring_lfi,self.exp_setting,all_show_index)
-        else:
-            self.scoring_page = ScoringWidget(self.all_scoring_lfi,self.exp_setting,all_show_index)
+            self.show_index=None
+            if self.exp_mode.lower() == "training":
+                all_show_index=list(range(show_lfi_num))
+            else:
+                all_show_index = self.all_scoring_lfi.GetRandomShowOrder()
+            self.show_index=all_show_index
+            
+            if scoring_mode == ComparisonType.PairComparison:
+                self.scoring_page = PairWiseScoringWidget(self.all_scoring_lfi,self.exp_setting,all_show_index)
+            else:
+                self.scoring_page = ScoringWidget(self.all_scoring_lfi,self.exp_setting,all_show_index)
 
-        logger.debug("=========Playing List=========")
-        for i in all_show_index:
-            tmp_scoring_lfi=self.all_scoring_lfi.GetScoringExpLFIInfo(i)
-            logger.debug(f"Index: {i}, Path: {tmp_scoring_lfi.passive_view_video_path}")
-        logger.debug("=========    End    =========")
-        
-        app=QApplication.instance()
-        if app is None:
-            app = QApplication([])
-        self.scoring_page.setScreen(app.screens()[self.screen_index])
-        cur_screen=self.scoring_page.screen()
+            logger.debug("=========Playing List=========")
+            for i in all_show_index:
+                tmp_scoring_lfi=self.all_scoring_lfi.GetScoringExpLFIInfo(i)
+                logger.debug(f"Index: {i}, Path: {tmp_scoring_lfi.passive_view_video_path}")
+            logger.debug("=========    End    =========")
+            
+            app=QApplication.instance()
+            if app is None:
+                app = QApplication([])
+            self.scoring_page.setScreen(app.screens()[self.screen_index])
+            cur_screen=self.scoring_page.screen()
 
-        self.scoring_page.move(cur_screen.geometry().topLeft())
-        self.scoring_page.SetScoringScreen(self.screen_index)
-        self.scoring_page.showFullScreen()
+            self.scoring_page.move(cur_screen.geometry().topLeft())
+            self.scoring_page.SetScoringScreen(self.screen_index)
+            self.scoring_page.showFullScreen()
 
-        self.scoring_page.scoring_finished.connect(self.FinishExperiment)
+            self.scoring_page.scoring_finished.connect(self.FinishExperiment)
     
     def FinishExperiment(self,all_results):
         self.result=all_results
-        self.scoring_page.hide()
-        self.scoring_page.deleteLater()
-        self.scoring_page=None
+        if self.scoring_page is not None:
+            self.scoring_page.hide()
+            self.scoring_page.deleteLater()
+            self.scoring_page=None
         self.exp_finished.emit()
     
     def GetResult(self):

@@ -50,6 +50,8 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         self.unit_size=[100,100] # height x width
         self.h_space=10
         self.v_space=10
+        if item_list is None:
+            item_list=[]
         if self.use_add_icon:
             self.unit_list=[None]+item_list
         else:
@@ -134,6 +136,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
                 self.unit_list_labels[i].setGeometry(self.item_pos[i][1],self.item_pos[i][0],self.unit_size[1],self.unit_size[0])
     
     def RefreshLabelPos(self):
+        self.active_index=None
         self.force_update=True
         self.UpdateLabelPos()
         self.force_update=False
@@ -491,7 +494,9 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
             self.SetPauseAllowed,
             self.SetFirstLoopSkip,
             self.SetSkipHint,
-            self.SetAllowUndistinguishable
+            self.SetAllowUndistinguishable,
+            self.SetGroupNum,
+            self.SetPCIndex
         ]
         self.MakeEditToogle()
         self.MakeProjectInfoContainer()
@@ -502,6 +507,9 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
     def GetAllInput(self):
         for set_method in self.set_method_set:
             set_method()
+    
+    def CheckSubjectNum(self,subject_num):
+        pass
 
     def MakeEditToogle(self):
         edit_toogle_layout=QtWidgets.QHBoxLayout()
@@ -543,7 +551,9 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         logger.info("Now try to update the project information.")
 
         self.GetAllInput()
-        self.project_info=copy.deepcopy(self.temp_project_info)
+        self.project_info.__dict__=copy.copy(self.temp_project_info.__dict__)
+        self.temp_project_info=copy.deepcopy(self.project_info)
+
         self.project_info.SaveToFile()
         self.edit_toogle.ManualShutDown()
 
@@ -603,7 +613,7 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         project_layout.addWidget(view_changing_type_label,3,0)
         project_layout.addWidget(self.view_changing_type,3,1)
 
-        comparison_list=[ExpInfo.ComparisonType.SingleStimuli, ExpInfo.ComparisonType.DoubleStimuli, ExpInfo.ComparisonType.PairComparison]
+        comparison_list=[ExpInfo.ComparisonType.SingleStimuli, ExpInfo.ComparisonType.DoubleStimuli, ExpInfo.ComparisonType.PairComparison, ExpInfo.ComparisonType.DSCS_PC_BASE, ExpInfo.ComparisonType.DSCS_PC_CCG]
         self.comparison_type=QtWidgets.QComboBox()
         self.project_list.append(self.comparison_type)
         for comparison in comparison_list:
@@ -613,6 +623,10 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
                 cur_name='Pair-Comparison'
             if 'double' in comparison.name.lower():
                 cur_name='Double-Stimuli'
+            if 'base' in comparison.name.lower():
+                cur_name='DSCS-PC-Base'
+            if 'ccg' in comparison.name.lower():
+                cur_name='DSCS-PC-CCG'
             self.comparison_type.addItem(cur_name)
         self.comparison_type.setCurrentIndex(self.exp_setting.comparison_type.value)
         comparison_type_label=QtWidgets.QLabel()
@@ -642,6 +656,45 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         save_format_label.setText("Save Format")
         project_layout.addWidget(save_format_label,6,0)
         project_layout.addWidget(self.save_format,6,1)
+
+        current_row=7
+        self.grading_num_text=QtWidgets.QLabel()
+        self.grading_num_value=QtWidgets.QLabel()
+        self.grading_num_text.setText("Grading Number")
+        self.grading_num_value.setText(str(self.exp_setting.grading_num))
+        project_layout.addWidget(self.grading_num_text,current_row,0)
+        project_layout.addWidget(self.grading_num_value,current_row,1)
+        current_row+=1
+        
+        if self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_BASE or self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_CCG:
+            self.pc_group_num_text=QtWidgets.QLabel()
+            self.pc_group_num_value=QtWidgets.QSpinBox()
+            self.pc_group_num_value.setRange(1, self.exp_setting.grading_num)
+            self.pc_group_num_text.setText("Pair-Comparison Group Number")
+            self.pc_group_num_value.setValue(self.exp_setting.group_num)
+            project_layout.addWidget(self.pc_group_num_text,current_row,0)
+            project_layout.addWidget(self.pc_group_num_value,current_row,1)
+            self.project_list.append(self.pc_group_num_value)
+            current_row+=1
+
+            self.pc_index_text=QtWidgets.QLabel()
+            self.pc_index_value=QtWidgets.QHBoxLayout()
+            self.pc_index_text.setText("Pair-Comparison Index")
+            for pc_index_value in range(self.exp_setting.group_num):
+                tmp_checkbox=QtWidgets.QCheckBox(str(pc_index_value))
+                if pc_index_value in self.exp_setting.pc_group_index:
+                    tmp_checkbox.setChecked(True)
+                self.pc_index_value.addWidget(tmp_checkbox)
+            
+            self.pc_index_value_widget=QtWidgets.QWidget()
+            self.pc_index_value_widget.setLayout(self.pc_index_value)
+            self.project_list.append(self.pc_index_value_widget)
+
+            self.pc_group_num_value.valueChanged.connect(self.OnGroupNumberChanged)
+
+            project_layout.addWidget(self.pc_index_text,current_row,0)
+            project_layout.addWidget(self.pc_index_value_widget,current_row,1)
+            current_row+=1
 
         self.project_container.content_clicked.connect(self.ProjectReturn)
         self.widget_layout.addWidget(self.project_container)
@@ -691,6 +744,35 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
             lfi_features.append(LFIFeatures.Passive_Refocusing)
         if refocusing_type == FeatureType.None_Type:
             lfi_features.append(LFIFeatures.None_Refocusing)
+
+    def OnGroupNumberChanged(self,new_num):
+        # old num is checkbox number
+        old_num=self.pc_index_value_widget.findChildren(QtWidgets.QCheckBox).__len__()
+        new_num=self.pc_group_num_value.value()
+        if old_num==new_num:
+            return
+        # do not save but redraw the checkboxes
+        # if new_num>old_num, add new checkboxes
+        # if new_num<old_num, remove the last checkbox
+        if new_num>old_num:
+            for i in range(old_num,new_num):
+                tmp_checkbox=QtWidgets.QCheckBox(str(i))
+                self.pc_index_value.addWidget(tmp_checkbox)
+        if new_num<old_num:
+            for i in range(old_num,new_num, -1):
+                tmp_checkbox=self.pc_index_value.itemAt(i-1).widget()
+                self.pc_index_value.removeWidget(tmp_checkbox)
+                tmp_checkbox.deleteLater()
+
+    def SetGroupNum(self,group_num=None):
+        if group_num is None:
+            group_num=self.pc_group_num_value.value()
+        self.temp_project_info.exp_setting.group_num=group_num
+    
+    def SetPCIndex(self, pc_index=None):
+        if pc_index is None:
+            pc_index=[int(x.text()) for x in self.pc_index_value_widget.findChildren(QtWidgets.QCheckBox) if x.isChecked()]
+        self.temp_project_info.exp_setting.pc_group_index=pc_index
 
     def SetComparisonType(self, index=None):
         if index is None:
@@ -925,6 +1007,7 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         self.temp_project_info.exp_setting.skip_hint_text=text
     
     def RefreshAll(self):
+        # TODO: a list like project list is needed. To automatically update the UI
         self.refocusing_type.setCurrentIndex(self.project_info.exp_setting.refocusing_type.value)
         self.view_changing_type.setCurrentIndex(self.project_info.exp_setting.view_changing_type.value)
         self.comparison_type.setCurrentIndex(self.project_info.exp_setting.comparison_type.value)
@@ -939,6 +1022,13 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         self.pause_allowed_box.setCurrentIndex(1 if self.project_info.exp_setting.pause_allowed else 0)
         self.first_loop_skip_box.setCurrentIndex(1 if self.project_info.exp_setting.first_loop_skip else 0)
         self.skip_hint_box.setText(self.project_info.exp_setting.skip_hint_text)
+
+        self.pc_group_num_value.setValue(self.project_info.exp_setting.group_num)
+        for pc_checkbox in self.pc_index_value_widget.findChildren(QtWidgets.QCheckBox):
+            if int(pc_checkbox.text()) in self.project_info.exp_setting.pc_group_index:
+                pc_checkbox.setChecked(True)
+            else:
+                pc_checkbox.setChecked(False)
 
 
     def ProjectReturn(self):
@@ -1005,6 +1095,16 @@ class ExpSettingWidget(QtWidgets.QScrollArea):
         else:
             self.edit_save_button.show()
             self.edit_cancel_button.show()
+    
+    def ReOpenEditToogle(self):
+        self.temp_project_info=copy.deepcopy(self.project_info)
+        self.edit_toogle.setEnabled(True)
+        self.edit_toogle.setText(self.editable_text)
+        self.SetEditable(True)
+        if self.b_editable:
+            self.edit_save_button.show()
+            self.edit_cancel_button.show()
+        self.edit_toogle.setToolTip("Edit the project parameters.")
 
 
 class NewLFISelector(QtWidgets.QDialog):
@@ -1618,7 +1718,11 @@ class ProjectMenuLabel(QtWidgets.QFrame):
         if self.animation:
             self.icon_label.setPixmap(QtGui.QPixmap(self.deactive_icon).scaled(self.icon_width,self.icon_height))
 
+# the project sync is a big big big problem!
+# solved! But not totally.
+# TODO: solve it!
 class ProjectDisplay(QtWidgets.QFrame):
+    project_changed=QtCore.Signal()
     def __init__(self,cur_project: ProjectInfo=None, parent=None):
         super(ProjectDisplay,self).__init__(parent=parent)
 
@@ -1710,14 +1814,21 @@ class ProjectDisplay(QtWidgets.QFrame):
             has_subjects=True
         else:
             has_subjects=False
-        self.right_stack.addWidget(ExpSettingWidget(self.cur_project.exp_setting,has_subjects=has_subjects))
+        self.exp_setting_widget=ExpSettingWidget(self.cur_project.exp_setting,has_subjects=has_subjects)
+        self.right_stack.addWidget(self.exp_setting_widget)
         
     def MakeSubjectsWidget(self):
         person_list=self.cur_project.GetPersonList()
         all_result_path=PathManager.GetSubjectResultFolder(self.cur_project.project_path)
         subject_manager_widget=SubjectsManagerWidget(person_list,all_result_path)
         subject_manager_widget.delete_subject_signal.connect(self.DeleteSubject)
+        subject_manager_widget.subject_num_changed_signal.connect(self.OnSubjectNumberChanged)
         self.right_stack.addWidget(subject_manager_widget)
+    
+    def OnSubjectNumberChanged(self,cur_subject_num):
+        if cur_subject_num == 0:
+            self.exp_setting_widget.has_subjects=False
+            self.exp_setting_widget.ReOpenEditToogle()
 
     def MakeMaterialWidget(self):
         right_stack_width=self.right_stack.width()

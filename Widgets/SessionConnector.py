@@ -1,5 +1,6 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar
+from PySide6.QtWidgets import QWidget, QVBoxLayout,QHBoxLayout, QLabel, QProgressBar
 from PySide6.QtCore import Signal
+from PySide6.QtGui import QMovie
 import sys
 sys.path.append("../Utils")
 from PassiveTools import *
@@ -7,6 +8,7 @@ import logging
 logger=logging.getLogger("LogWindow")
 from SofwareConfig import LFIWindowSize, session_connector_size
 from JPLMessageBox import ShowWarningMessage
+from PySide6.QtCore import QTimer
 
 class SessionConnector(QWidget):
     '''
@@ -24,13 +26,34 @@ class SessionConnector(QWidget):
         self.has_error=False
 
         self.v_layout= QVBoxLayout(self)
+        self.hint_widget= QWidget()
+        self.hint_widget.setLayout(QHBoxLayout())
+
         self.hint_label= QLabel()
-        self.v_layout.addWidget(self.hint_label)
+        self.hint_label.setText(f"Already done {self.already_done}/{self.task_num}")
+
+        self.animation_label= QLabel()
+        self.dot_count=0
+        self.dot_timer= QTimer()
+        self.dot_timer.timeout.connect(self.TickDot)
+        self.dot_timer.start(500)
+
+        self.hint_widget.layout().addWidget(self.hint_label)
+        self.hint_widget.layout().addWidget(self.animation_label)
+
+        self.v_layout.addWidget(self.hint_widget)
 
         self.progress_bar= QProgressBar()
         self.progress_bar.setValue(0)
         self.progress_bar.setRange(0,100)
         self.v_layout.addWidget(self.progress_bar)
+
+    def TickDot(self):
+        if self.dot_count>=6:
+            self.dot_count=0
+        else:
+            self.dot_count+=1
+        self.animation_label.setText(f" Processing{'.'*self.dot_count}")
     
     def SetTaskNum(self,num):
         self.task_num=num

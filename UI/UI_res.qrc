@@ -12,5 +12,6 @@
     <file>res/image_add.png</file>
     <file>res/setting.svg</file>
     <file>res/people.png</file>
+    <file>res/sandglass.gif</file>
   </qresource>
 </RCC>

@@ -655,9 +655,14 @@ class ExpSetting:
         self.table_font_size=PathManager.scoring_table_point_size
         self.allow_undistinguishable=True
 
-        self.high_quality_only=False
+        self.pc_group_index=[]
         self.grading_num=self.score_levels[0]
         self.grading_scales=[]
+        # default gropu numger is 4, but only for ccg mode.
+        # for base mode, the group number equals to the grading scales numbers
+        self.group_num=4
+        self.maximum_pairs=None # None means no limit
+        
     
     def AddInputVideoType(self,video_type):
         if isinstance(video_type,VideoSaveType):
@@ -961,12 +966,15 @@ class ProjectInfo:
     
     def DeleteSubject(self,subject_name):
         person_list=self.GetPersonList()
+        save_file_postfix=SaveFormatDict[self.exp_setting.save_format]
         if subject_name in self.subject_list:
             self.subject_list.remove(subject_name)
             for person in person_list:
                 if person.name == subject_name:
-                    result_file=person.result_file
-                    PathManager.DeleteFile(result_file)
+                    result_file=person.GetResultFiles(save_file_postfix)
+                    for result_file_name in result_file:
+                        result_file_name=PathManager.GetSubjectResultFile(self.project_path,result_file_name)
+                        PathManager.DeleteFile(result_file_name)
                     person_list.remove(person)
                     break
         # update project file and the all subject results
@@ -1470,7 +1478,7 @@ class TwoFolderLFIInfo(AllScoringLFI):
         self.exp_lfi_info_num=len(self.all_exp_lfi_info)
     
     def GetRandomShowOrder(self):
-        logger.debug("Use the tow-folder mode random order generation now.")
+        logger.debug("Use the two-folder mode random order generation now.")
         all_string_list=[]
         for i in range(self.exp_lfi_info_num):
             all_string_list.append(self.all_exp_lfi_info[i].passive_view_video_path)
@@ -1680,7 +1688,6 @@ class PersonInfo:
         self.age=None
         self.job=None
         self.gender=None
-        self.result_file=None
 
         self.subject_info={
             'name':self.name,
@@ -1700,6 +1707,16 @@ class PersonInfo:
     
     def GetGender(self):
         return self.gender
+    
+    def GetResultFiles(self,post_fix):
+        if self.name is None:
+            return None
+        
+        else:
+            ret=[]
+            ret.append(f"{self.name}_session_0.{post_fix}")
+            ret.append(f"{self.name}_session_1.{post_fix}")
+            return ret
     
     def InitWithSubjectInfo(self,subject_info):
         self.subject_info=subject_info

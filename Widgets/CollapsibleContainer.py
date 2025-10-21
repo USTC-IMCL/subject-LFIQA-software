@@ -442,6 +442,10 @@ class QToggle(QCheckBox):
         self.setChecked(True)
         self._user_checked = True
         self.start_transition(True)
+    
+    def ReOpen(self):
+        self.setEnabled(True)
+        self.setChecked(True)
 
     def mousePressEvent(self, event):
         self._user_checked = True  # Set flag when user manually clicks the toggle
@@ -543,7 +547,9 @@ if __name__ == "__main__":
                             "qproperty-disabled_color:#777;"
                             "qproperty-text_color:#A0F;}")
     checkbox2.setDuration(2000)
-    checkbox2.setChecked(True)
+    checkbox2.setChecked(False)
+
+    checkbox2.clicked.connect(lambda: checkbox1.ReOpen())
     layout.addWidget(checkbox2)
 
     window.setLayout(layout)

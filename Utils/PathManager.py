@@ -77,6 +77,7 @@ def VersionCMP(v1,v2):
             return -1
     return 0
 
+'''
 def OpenPath(path):
     if os.path.isfile(path):
         path=os.path.dirname(path)
@@ -85,6 +86,7 @@ def OpenPath(path):
     else:
         opener = 'open' if sys.platform == 'darwin' else 'xdg-open'
         os.system([opener, path])
+'''
 
 '''
 Maybe a class to derive and manage the IO paths?
@@ -284,6 +286,7 @@ def _open_path(path):
         return False
     else:
         if sys.platform == "win32":
+            path = path.replace('/', '\\')
             os.system(f'explorer {path}')
         elif sys.platform == "linux":
             os.system(f'xdg-open {path}')

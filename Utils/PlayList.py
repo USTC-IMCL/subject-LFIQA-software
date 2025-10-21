@@ -122,10 +122,18 @@ def MakeDSCSPCList(in_list,in_scores,group_num,grading_scales, method="base"):
     pc_list={}
 
     grading_scales.sort(reverse=True)
-    if len(grading_scales)!=group_num:
-        logger.error('The number of grading scales is not equal to the number of groups!')
-        logger.error('The program will exit now.')
-        return None
+    # base method, the group num must be the grading scales
+    if method == 'base':
+        logger.debug("Base mode is used. The group number is set to the number of grading scales.")
+        group_num = len(grading_scales)
+        '''
+        if len(grading_scales)!=group_num:
+            logger.error('The number of grading scales is not equal to the number of groups!')
+            logger.error('The program will exit now.')
+            return None
+        '''
+    else:
+        logger.debug(f"CCG mode is used. Currently the group number is {group_num}")
     
     gs_2_index={}
     for i in range(len(grading_scales)):
@@ -185,6 +193,15 @@ def MakePCPairs(in_list):
         for end_index in range(start_index+1,list_len):
             ret_list.append([in_list[start_index],in_list[end_index]])
     return ret_list
+
+def SingleBinPairsReduction(bin_pairs, bin_threshold):
+    # if the bin pairs number is less than threshold, no reduction is needed
+    if len(bin_pairs) < bin_threshold:
+        return bin_pairs
+    
+    # if the bin pairs number is more than threshold, reduce the number
+    half_pair_num=len(bin_pairs)//2
+
 
 if __name__=="__main__":
     '''

@@ -573,11 +573,31 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
                     exp_setting.score_definition=None
                     break
         
-        if "High_Quality_Only" in exp_keys:
-            exp_setting.high_quality_only=exp_config["High_Quality_Only"]
-        
         exp_setting.grading_num=exp_setting.score_levels[0]
         exp_setting.grading_scales=exp_setting.score_values[0]
+
+        if exp_setting.comparison_type == ComparisonType.DSCS_PC_CCG:
+            if "PC_Group_Num" in exp_keys:
+                exp_setting.group_num=exp_config["PC_Group_Num"]
+            else:
+                exp_setting.group_num=4
+        else:
+            exp_setting.group_num=exp_setting.grading_num
+        
+        if exp_setting.comparison_type == ComparisonType.DSCS_PC_BASE or exp_setting.comparison_type == ComparisonType.DSCS_PC_CCG:
+            if "PC_Group_Index" in exp_keys:
+                exp_setting.pc_group_index=exp_config["PC_Group_Index"]
+                exp_setting.pc_group_index.sort()
+                if exp_setting.pc_group_index[0] < 0 or exp_setting.pc_group_index[-1] >= exp_setting.group_num:
+                    logger.error("The PC_Group_Index is out of range! The default PC_Group_Index will be used (thus, all the groups will be used).")
+                    exp_setting.pc_group_index=list(range(exp_setting.group_num))
+            else:
+                exp_setting.pc_group_index=list(range(exp_setting.group_num))
+
+        if "Maximum_Pairs" in exp_keys:
+            exp_setting.maximum_pairs = exp_config["Maximum_Pairs"]
+        else:
+            exp_setting.maximum_pairs = None
         
         if cmp_type==ComparisonType.PairComparison and (not exp_setting.two_folder_mode):
             if "PairWise_List" not in exp_keys:
