@@ -22,7 +22,7 @@ import PathManager
 import FontSetting
 import SubjectInfo
 from ProjectDisplay import ProjectDisplay
-from PlayList import MakeDSCSPCList, MakePCPairs
+from PlayList import MakeDSCSPCList, FromPCListToPairs
 from PassiveTools import ConcatPCFilesCMD, WorkerManager
 from SessionConnector import SessionConnector
 from ExpSession import ExperimentSession
@@ -412,6 +412,13 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
         show_pairs={}
         pc_group_index=self.exp_setting.pc_group_index
+        total_threshold=self.exp_setting.maximum_pairs
+
+        show_pairs=FromPCListToPairs(pc_list,pc_group_index,total_threshold)
+
+        
+
+        '''
         for class_name in pc_list.keys():
             if class_name not in show_pairs.keys():
                 show_pairs[class_name]=[]
@@ -421,7 +428,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 if len(cur_group_pairs)> 0:
                     show_pairs[class_name]+=cur_group_pairs
                 logger.debug(f"Class {class_name}, group {group_index}, input index {cur_group}, output pairs {cur_group_pairs}")
-            '''
+                ========
                 if self.exp_setting.high_quality_only:
                     cur_group_pairs=MakePCPairs(pc_list[class_name][0])
                     if len(cur_group_pairs)> 0:

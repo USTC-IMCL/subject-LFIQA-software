@@ -4,6 +4,41 @@ import logging
 from random import shuffle
 
 logger=logging.getLogger("LogWindow")
+
+def GetRound(in_num):
+    ret_num=int(in_num)
+    if in_num-ret_num>=0.5:
+        ret_num+=1
+    return ret_num
+
+def AllocateToBins(in_bins,in_num):
+    bin_num=len(in_bins)
+
+    bins_sum=sum(in_bins)
+    ret_list=[in_num*in_bins[i]/bins_sum for i in range(bin_num)]
+
+    ret_int=[GetRound(i) for i in ret_list]
+
+    ret_sum=sum(ret_int)
+    if ret_sum<in_num:
+        error_sum=in_num-ret_sum
+        error_bins=[in_bins[i]-ret_int[i] for i in range(bin_num)]
+        while(error_sum>0):
+            max_index=error_bins.index(max(error_bins))
+            error_bins[max_index]-=1
+            ret_int[max_index]+=1
+            error_sum-=1
+    '''???'''
+    if ret_sum>in_num:
+        error_sum=ret_sum-in_num
+        error_bins=[ret_int[i]-in_bins[i] for i in range(bin_num)]
+        while(error_sum>0):
+            max_index=error_bins.index(max(error_bins))
+            error_bins[max_index]-=1
+            ret_int[max_index]-=1
+            error_sum-=1
+    return ret_int
+
 '''
     To make sure the ajacent elements are not the same.
     Not a general solution.
@@ -195,8 +230,48 @@ def MakePCPairs(in_list):
             ret_list.append([in_list[start_index],in_list[end_index]])
     return ret_list
 
+def AllocateThresholds(pc_list,pc_group_index, max_num,mode="percent"):
+    all_keys=list(pc_list.keys())
+    all_thresholds={}
+
+    scenes_num={}
+    bin_num=[0 for i in range(max(pc_index))]
+    pairs_sum=0
+
+    for class_name in all_keys:
+        logger.debug(f"Class name: {class_name}")
+        if class_name not in scenes_num.keys():
+            scenes_num[class_name]=[None for i in range(max(pc_group_index))]
+            all_thresholds[class_name]=[None for i in range(max(pc_group_index))]
+        for pc_index in pc_group_index:
+            bin_len=len(pc_list[class_name][pc_index])
+            bin_len=bin_len*(bin_len-1)//2
+            scenes_num[class_name][pc_index]=bin_len
+            bin_num[pc_index]+=bin_len
+            pairs_sum+=bin_len
+            logger.debug(f"bin index {pc_index} has {bin_len} pairs")
+    for pc_index in pc_group_index:
+        logger.debug(f"bin index {pc_index} has {bin_num[pc_index]} pairs")
+    
+    if mode=="uniform":
+        pass
+    else:
+        all_bins=[]
+        for class_name in all_keys:
+            for pc_index in pc_group_index:
+                all_bins.append(scenes_num[class_name][pc_index])
+        bin_threashold=AllocateToBins(all_bins, max_num)
+
+        for class_name in all_keys:
+            for pc_index in pc_group_index:
+                all_thresholds[class_name][pc_index]=bin_threashold[pc_index]
+    return all_thresholds
+
 def MakePCPairsWithThreshold(in_list, bin_threshold):
     # if the bin pairs number is less than threshold, no reduction is needed
+    if bin_threshold <=0:
+        logger.debug("Warning! One bin has a threshold less than 0. This means an unbalanced bin usually.")
+        return []
     all_bin_pairs=MakePCPairs(in_list)
 
     if len(all_bin_pairs) <= bin_threshold:
@@ -217,7 +292,63 @@ def MakePCPairsWithThreshold(in_list, bin_threshold):
         basic_set.append([in_list[pair_index[first]],in_list[pair_index[second]]])
     
     if len(pair_index)%2==1:
-        circle_set.append(in_list[pair_index[-1]])
+        first=pair_index[-2]
+        second=pair_index[-1]
+        basic_set.append([in_list[pair_index[first]],in_list[pair_index[second]]])
+
+    for i in range(1,len(pair_index)//2*2-1,2):
+        circle_set.append([in_list[pair_index[i]],in_list[pair_index[i+1]]])
+    
+    for first in range(len(pair_index)-1):
+        for second in range(first+2,len(pair_index)):
+            completed_set.append([in_list[pair_index[first]],in_list[pair_index[second]]])
+    
+    # so we have three sets now : a basic set, and an circle set, then completed connected set
+    basic_num=len(basic_set)
+    circle_num=len(circle_set)
+    completed_num=len(completed_set)
+
+    ret_pairs=[]
+    basic_sample_num=min(basic_num,bin_threshold)
+    basic_sample_pairs=SampleRandomly(basic_set,basic_sample_num)
+
+    circle_threshold=bin_threshold-basic_sample_num
+    circle_sample_num=min(circle_num,circle_threshold)
+    circle_sample_num=max(circle_sample_num,0)
+    circle_sample_pairs=SampleRandomly(circle_set,circle_sample_num)
+
+    completed_threshold=circle_threshold-circle_sample_num
+    completed_sample_num=min(completed_num,completed_threshold)
+    completed_sample_num=max(completed_sample_num,0)
+    completed_sample_pairs=SampleRandomly(completed_set,completed_sample_num)
+
+    ret_pairs=basic_sample_pairs+circle_sample_pairs+completed_sample_pairs
+    return ret_pairs
+
+def FromPCListToPairs(pc_list,pc_group_index,max_num):
+    all_keys=list(pc_list.keys())
+    all_threasholds=AllocateThresholds(pc_list,pc_group_index, max_num)
+
+    ret_pairs={}
+    for class_name in all_keys:
+        if class_name not in ret_pairs.keys():
+            ret_pairs[class_name]=[None for i in range(max(pc_group_index))]
+        for pc_index in pc_group_index:
+            ret_pairs[class_name][pc_index]=MakePCPairsWithThreshold(pc_list[class_name][pc_index],all_threasholds[class_name][pc_index])
+    return ret_pairs
+
+def SampleRandomly(in_list,sample_num):
+    ret_list=[]
+    if sample_num<=0:
+        return ret_list
+    if sample_num>=len(in_list):
+        return in_list
+    
+    sample_index=random.sample(range(len(in_list)),sample_num)
+    ret_list=[in_list[i] for i in sample_index]
+    return ret_list
+        
+
 
 
 
@@ -255,7 +386,15 @@ if __name__=="__main__":
     print(out_class)
 
     '''
-    pass
+    from datetime import date
+    log_path='../../Logs'
+    today_str=date.today().strftime("%Y-%m-%d")
+    log_file=os.path.join(log_path,today_str+'.log')
+    file_handler=logging.FileHandler(log_file)
+    format_str='%(asctime)s [%(levelname)s]: %(message)s'
+    file_handler.setFormatter(logging.Formatter(fmt=format_str,datefmt='%Y-%m-%d-%H:%M'))
+    logger.addHandler(file_handler)
+    logger.setLevel('debug')
 
 
 
