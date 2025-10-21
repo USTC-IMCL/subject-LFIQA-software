@@ -1,6 +1,7 @@
 import random
 import os
 import logging
+from random import shuffle
 
 logger=logging.getLogger("LogWindow")
 '''
@@ -194,13 +195,31 @@ def MakePCPairs(in_list):
             ret_list.append([in_list[start_index],in_list[end_index]])
     return ret_list
 
-def SingleBinPairsReduction(bin_pairs, bin_threshold):
+def MakePCPairsWithThreshold(in_list, bin_threshold):
     # if the bin pairs number is less than threshold, no reduction is needed
-    if len(bin_pairs) < bin_threshold:
-        return bin_pairs
-    
+    all_bin_pairs=MakePCPairs(in_list)
+
+    if len(all_bin_pairs) <= bin_threshold:
+        return all_bin_pairs
+
     # if the bin pairs number is more than threshold, reduce the number
-    half_pair_num=len(bin_pairs)//2
+    # so we have three sets now : a basic set, and an circle set, then completed connected set
+
+    pair_index=list(range(len(in_list)))
+    shuffle(pair_index)
+    basic_set=[]
+    circle_set=[]
+    completed_set=[]
+
+    for i in range(len(pair_index)//2):
+        first=i*2
+        second=i*2+1
+        basic_set.append([in_list[pair_index[first]],in_list[pair_index[second]]])
+    
+    if len(pair_index)%2==1:
+        circle_set.append(in_list[pair_index[-1]])
+
+
 
 
 if __name__=="__main__":
