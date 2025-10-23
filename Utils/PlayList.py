@@ -16,28 +16,31 @@ def AllocateToBins(in_bins,in_num):
 
     bins_sum=sum(in_bins)
     ret_list=[in_num*in_bins[i]/bins_sum for i in range(bin_num)]
+    #print(ret_list)
 
     ret_int=[GetRound(i) for i in ret_list]
-
     ret_sum=sum(ret_int)
-    if ret_sum<in_num:
-        error_sum=in_num-ret_sum
-        error_bins=[in_bins[i]-ret_int[i] for i in range(bin_num)]
-        while(error_sum>0):
-            max_index=error_bins.index(max(error_bins))
-            error_bins[max_index]-=1
-            ret_int[max_index]+=1
-            error_sum-=1
-    '''???'''
-    if ret_sum>in_num:
-        error_sum=ret_sum-in_num
-        error_bins=[ret_int[i]-in_bins[i] for i in range(bin_num)]
-        while(error_sum>0):
-            max_index=error_bins.index(max(error_bins))
-            error_bins[max_index]-=1
-            ret_int[max_index]-=1
-            error_sum-=1
+
+    error_sum=in_num-ret_sum
+
+    if error_sum !=0:
+        bins_error=[ret_list[i]-ret_int[i] for i in range(bin_num)]
+        order=sorted(list(range(bin_num)),key=lambda i: bins_error[i],reverse=error_sum>0)
+        for i in range(abs(error_sum)):
+            if error_sum>0:
+                ret_int[order[i]]+=1
+            else:
+                ret_int[order[i]]-=1
     return ret_int
+
+def UniformlyDivided(in_num, bin_num):
+    ret_list=[in_num//bin_num for i in range(bin_num)]
+    if in_num%bin_num!=0:
+        k_up_index=random.sample(range(bin_num),in_num%bin_num)
+        for i in k_up_index:
+            ret_list[i]+=1
+    return ret_list
+
 
 '''
     To make sure the ajacent elements are not the same.
@@ -230,47 +233,95 @@ def MakePCPairs(in_list):
             ret_list.append([in_list[start_index],in_list[end_index]])
     return ret_list
 
-def AllocateThresholds(pc_list,pc_group_index, max_num,mode="percent"):
+def AllocateThresholds(pc_list,pc_group_index, max_num,mode="uniform"):
     all_keys=list(pc_list.keys())
     all_thresholds={}
 
+    max_index_range=max(pc_group_index)+1
+
     scenes_num={}
-    bin_num=[0 for i in range(max(pc_index))]
+    bin_num=[0 for i in range(max_index_range)]
     pairs_sum=0
 
     for class_name in all_keys:
         logger.debug(f"Class name: {class_name}")
         if class_name not in scenes_num.keys():
-            scenes_num[class_name]=[None for i in range(max(pc_group_index))]
-            all_thresholds[class_name]=[None for i in range(max(pc_group_index))]
+            scenes_num[class_name]=[0 for i in range(max_index_range)]
+            all_thresholds[class_name]=[None for i in range(max_index_range)]
         for pc_index in pc_group_index:
+            logger.debug(f"bin index {pc_index}")
             bin_len=len(pc_list[class_name][pc_index])
             bin_len=bin_len*(bin_len-1)//2
             scenes_num[class_name][pc_index]=bin_len
             bin_num[pc_index]+=bin_len
             pairs_sum+=bin_len
-            logger.debug(f"bin index {pc_index} has {bin_len} pairs")
+            logger.debug(f"input bin is {pc_list[class_name][pc_index]}, it has {len(pc_list[class_name][pc_index])} elements")
+            logger.debug(f"bin index {pc_index} should have {bin_len} pairs")
+            logger.debug(f"bin index {pc_index} end")
+        logger.debug(f"Class name {class_name} end")
+
+    logger.debug(f"==================Total number of each bin==================")
     for pc_index in pc_group_index:
-        logger.debug(f"bin index {pc_index} has {bin_num[pc_index]} pairs")
+        logger.debug(f"bin index {pc_index} has total {bin_num[pc_index]} pairs")
+    logger.debug(f"==================End==================")
+
+    logger.debug(f"==================Total number of each scene==================")
+    for class_name in all_keys:
+        logger.debug(f"Class {class_name} has {sum(scenes_num[class_name])} pairs")
+    logger.debug(f"==================End==================")
     
     if mode=="uniform":
-        pass
+        if pairs_sum <= max_num:
+            logger.debug("No need to reduce.")
+            return all_thresholds
+        else:
+            class_num=len(all_keys)
+            all_bins=[]
+            logger.debug(f"==================bin threashold==================")
+            for pc_index in pc_group_index:
+                all_bins.append(bin_num[pc_index])
+
+            logger.debug(f"Total Threshold: {max_num}")
+            logger.debug(f"input bins: {all_bins}")
+
+            bin_threshold=AllocateToBins(all_bins, max_num)
+            logger.debug(f"Allocated bins: {bin_threshold}")
+            bin_count=0
+            for pc_index in pc_group_index:
+                current_bin_reduction = bin_num[pc_index] - bin_threshold[bin_count]
+                bin_count+=1
+                all_class_reduction=UniformlyDivided(current_bin_reduction,class_num)
+                logger.debug(f"bin index {pc_index}, reductio for all class is {all_class_reduction}.")
+                for i,class_name in enumerate(all_keys):
+                    all_thresholds[class_name][pc_index]=scenes_num[class_name][pc_index]-all_class_reduction[i]
+            logger.debug(f"output bins: {all_thresholds}")
+            logger.debug(f"==================End==================")
     else:
         all_bins=[]
         for class_name in all_keys:
             for pc_index in pc_group_index:
                 all_bins.append(scenes_num[class_name][pc_index])
         bin_threashold=AllocateToBins(all_bins, max_num)
-
+        bin_count=0
         for class_name in all_keys:
             for pc_index in pc_group_index:
-                all_thresholds[class_name][pc_index]=bin_threashold[pc_index]
+                all_thresholds[class_name][pc_index]=bin_threashold[bin_count]
+                bin_count+=1
+
+        logger.debug(f"==================bin threashold==================")
+        logger.debug(f"Total Threshold: {max_num}")
+        logger.debug(f"input bins: {all_bins}")
+        logger.debug(f"output bins: {bin_threashold}")
+        logger.debug(f"==================End==================")
+
     return all_thresholds
 
 def MakePCPairsWithThreshold(in_list, bin_threshold):
     # if the bin pairs number is less than threshold, no reduction is needed
     if bin_threshold <=0:
         logger.debug("Warning! One bin has a threshold less than 0. This means an unbalanced bin usually.")
+        return []
+    if len(in_list) <=1:
         return []
     all_bin_pairs=MakePCPairs(in_list)
 
@@ -286,6 +337,9 @@ def MakePCPairsWithThreshold(in_list, bin_threshold):
     circle_set=[]
     completed_set=[]
 
+    logger.debug(f"The shuffled in_list is {[in_list[i] for i in pair_index]}")
+    logger.debug(f"Pair index is {pair_index}")
+
     for i in range(len(pair_index)//2):
         first=i*2
         second=i*2+1
@@ -294,7 +348,8 @@ def MakePCPairsWithThreshold(in_list, bin_threshold):
     if len(pair_index)%2==1:
         first=pair_index[-2]
         second=pair_index[-1]
-        basic_set.append([in_list[pair_index[first]],in_list[pair_index[second]]])
+        logger.debug(f"first is {first}, second is {second}")
+        basic_set.append([in_list[first],in_list[second]])
 
     for i in range(1,len(pair_index)//2*2-1,2):
         circle_set.append([in_list[pair_index[i]],in_list[pair_index[i+1]]])
@@ -307,6 +362,12 @@ def MakePCPairsWithThreshold(in_list, bin_threshold):
     basic_num=len(basic_set)
     circle_num=len(circle_set)
     completed_num=len(completed_set)
+    logger.debug(f"The basic set is {basic_set}, len is {basic_num}")
+    logger.debug(f"The circle set is {circle_set}, len is {circle_num}")
+    logger.debug(f"The completed set is {completed_set}, len is {completed_num}")
+    logger.debug(f"Input len is {len(in_list)}, shold have {len(in_list)*(len(in_list)-1)//2}")
+    if basic_num+circle_num+completed_num!=len(in_list)*(len(in_list)-1)//2:
+        logger.debug("Warning! The sum of the three sets is not equal to the input length. This means an unbalanced bin usually.")
 
     ret_pairs=[]
     basic_sample_num=min(basic_num,bin_threshold)
@@ -329,12 +390,20 @@ def FromPCListToPairs(pc_list,pc_group_index,max_num):
     all_keys=list(pc_list.keys())
     all_threasholds=AllocateThresholds(pc_list,pc_group_index, max_num)
 
+    max_index_range=max(pc_group_index)+1
+
     ret_pairs={}
     for class_name in all_keys:
         if class_name not in ret_pairs.keys():
-            ret_pairs[class_name]=[None for i in range(max(pc_group_index))]
+            ret_pairs[class_name]=[None for i in range(max_index_range)]
         for pc_index in pc_group_index:
             ret_pairs[class_name][pc_index]=MakePCPairsWithThreshold(pc_list[class_name][pc_index],all_threasholds[class_name][pc_index])
+            logger.debug(f"Class name: {class_name}, pc index: {pc_index}")
+            logger.debug(f"pc list: {pc_list[class_name][pc_index]}")
+            logger.debug(f"threshold: {all_threasholds[class_name][pc_index]}")
+            logger.debug(f"pairs: {ret_pairs[class_name][pc_index]}")
+            logger.debug("==========================================")
+
     return ret_pairs
 
 def SampleRandomly(in_list,sample_num):
@@ -387,26 +456,45 @@ if __name__=="__main__":
 
     '''
     from datetime import date
-    log_path='../../Logs'
+    log_path='../Logs'
     today_str=date.today().strftime("%Y-%m-%d")
     log_file=os.path.join(log_path,today_str+'.log')
     file_handler=logging.FileHandler(log_file)
     format_str='%(asctime)s [%(levelname)s]: %(message)s'
     file_handler.setFormatter(logging.Formatter(fmt=format_str,datefmt='%Y-%m-%d-%H:%M'))
     logger.addHandler(file_handler)
-    logger.setLevel('debug')
+    logger.setLevel('DEBUG')
 
 
+    logger.info("==================new test====================")
+    max_num=120
+    pc_index_group=[1,2]
+    pc_list={}
+    pc_list['Bikes']=[]
+    pc_list["Apple"]=[]
+    pc_list["Bicycles"]=[]
+    pc_list["Bartener"]=[]
+    pc_list["Shelf"]=[]
 
+    hrc_num=20
+    grading_scale_num=4
 
+    for class_name in pc_list.keys():
+        hrc_index=list(range(hrc_num))
+        shuffle(hrc_index)
+        key_points=sorted([0]+[random.randint(0,hrc_num) for _ in range(grading_scale_num-1)]+[hrc_num])
+        
+        for i in range(grading_scale_num):
+            cur_group=[]
+            for index in hrc_index[key_points[i]:key_points[i+1]]:
+                cur_group.append([hrc_index[index], i+1])
+            pc_list[class_name].append(cur_group)
     
+    pc_pairs=FromPCListToPairs(pc_list,pc_index_group,max_num)
 
-
-
-
-
-
-
-
-
-
+    for class_name in pc_list.keys():
+        for pc_index in pc_index_group:
+            logger.debug("=================================================")
+            logger.debug(f"class_name: {class_name}, pc_index: {pc_index}")
+            logger.debug(f"Input pc list: {pc_list[class_name][pc_index]}")
+            logger.debug(f"The pairs: {pc_pairs[class_name][pc_index]}")

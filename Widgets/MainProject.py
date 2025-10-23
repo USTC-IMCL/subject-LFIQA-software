@@ -416,8 +416,6 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
         show_pairs=FromPCListToPairs(pc_list,pc_group_index,total_threshold)
 
-        
-
         '''
         for class_name in pc_list.keys():
             if class_name not in show_pairs.keys():
