@@ -1,6 +1,6 @@
 {
-    "Training":"/data_0/shengyang/Work/JPEG/LFIQA/examples/two_folder/foo_1",
-    "Test":"/data_0/shengyang/Work/JPEG/LFIQA/examples/two_folder/foo_2/",
+    "Training":"D:/Work/JPEG/examples/examples/two_folder/foo_1",
+    "Test":"D:/Work/JPEG/examples/examples/two_folder/foo_2",
     "Exp_Info":{
         "Display_Type":"2D",
         "ThreeD_Type":"LeftRight",
@@ -18,7 +18,8 @@
         "View_Changing":"Passive",
         "Refocusing":"None",
         "Comparison":"DSCS_PC_base",
-        "High_Quality_Only": false,
+        "PC_Group_Index": [0,1,2],
+        "Maximum_Pairs": 100,
         "Save_Format":"Excel",
         "Skip_Preprocessing": true,
         "Two_Folder_Mode": true,
