@@ -94,9 +94,12 @@ def GetRandomShowList(in_dict):
         logger.warning("Can not generate a valid random list. A default shuffled version will be used.")
         random.shuffle(show_index)
         output_list=show_index
-    return output_list
+    b_out_of_range=try_count>=try_threshold
+    return output_list, b_out_of_range
 
 def CheckList(in_dict,in_list):
+    if len(in_list)==0:
+        return False
     for i in in_dict.keys():
         if i not in in_list:
             logger.error(f'Element {i} does not exist in the output list!')
@@ -144,9 +147,11 @@ def MakeARandomScoringList(in_string_list):
         random.shuffle(out_list)
         return out_list,[in_string_list[i] for i in out_list]
     
-    out_list=GetRandomShowList(in_dict)
+    out_list=[] #GetRandomShowList(in_dict)
     while not CheckList(in_dict,out_list):
-        out_list=GetRandomShowList(in_dict)
+        out_list,b_out_of_range=GetRandomShowList(in_dict)
+        if b_out_of_range:
+            break
     logger.info('Finish generating the random play list.')
     logger.debug([in_string_list[i] for i in out_list])
     return out_list,[in_dict[i] for i in out_list]

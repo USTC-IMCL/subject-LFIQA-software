@@ -216,7 +216,10 @@ class MainProject(QMainWindow,Ui_MainWindow):
         # TODO : put the log show into the project display
         if os.path.exists(self.log_file):
             with open(self.log_file,'r') as f:
-                log_text=f.read()
+                log_text=f.readlines()
+                if len(log_text)>PathManager.log_lines_threshold:
+                    log_text=log_text[-PathManager.log_lines_threshold:]
+                log_text=''.join(log_text)
                 self.project_display.right_text_editor.setText(log_text)
                 self.project_display.right_text_editor.moveCursor(QTextCursor.End)
     
@@ -759,10 +762,12 @@ class MainProject(QMainWindow,Ui_MainWindow):
             self.SaveProject()
             return
 
+    '''
     def GetRandomShowList(self,show_list):
         show_index=list(range(len(show_list)))
         shuffle(show_index)
         return show_index,[show_list[i] for i in show_index]
+    '''
     
     def SaveProject(self):
         if self.cur_project is not None:

@@ -1755,6 +1755,8 @@ class ProjectDisplay(QtWidgets.QFrame):
 
         self.right_text_editor=QtWidgets.QTextEdit()#QLogTextEditor()
         self.right_text_editor.setReadOnly(True)
+        # TODO: a dynamic lines
+        self.right_text_editor.document().setMaximumBlockCount(PathManager.log_lines_threshold)
         self.right_text_editor_handler=QtLogTextEditorHandler()
         self.right_text_editor_handler.SetLogTextEditor(self.right_text_editor)
         logger.addHandler(self.right_text_editor_handler)

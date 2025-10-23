@@ -12,6 +12,7 @@ import openpyxl
 
 software_version='3.0'
 
+log_lines_threshold=300
 inner_views_refocusing_path="views_refocusing"
 inner_show_views_path="show_views"
 inner_show_refocusing_path="show_refocusing"
