@@ -414,7 +414,12 @@ class MainProject(QMainWindow,Ui_MainWindow):
         pc_group_index=self.exp_setting.pc_group_index
         total_threshold=self.exp_setting.maximum_pairs
 
-        show_pairs=FromPCListToPairs(pc_list,pc_group_index,total_threshold)
+        ret_list=FromPCListToPairs(pc_list,pc_group_index,total_threshold)
+        for class_name in ret_list.keys():
+            if class_name not in show_pairs.keys():
+                show_pairs[class_name]=[]
+            for pc_index in pc_group_index:
+                show_pairs[class_name]+=ret_list[class_name][pc_index]
 
         '''
         for class_name in pc_list.keys():

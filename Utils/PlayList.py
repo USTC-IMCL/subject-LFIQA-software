@@ -77,7 +77,9 @@ def GetRandomShowList(in_dict):
 
     output_list=[]
     pre_class=None
-    while len(output_list)<all_num:
+    try_count=0
+    try_threshold=1000
+    while len(output_list)<all_num and try_count<try_threshold:
         cur_index=GetRandomElement(in_dict,show_index,pre_class)
         if cur_index >= 0:
             output_list.append(cur_index)
@@ -87,6 +89,11 @@ def GetRandomShowList(in_dict):
             show_index=list(range(all_num))
             output_list=[]
             logger.debug("false to get the random element. re-generate the list now...")
+            try_count+=1
+    if try_count>=try_threshold:
+        logger.warning("Can not generate a valid random list. A default shuffled version will be used.")
+        random.shuffle(show_index)
+        output_list=show_index
     return output_list
 
 def CheckList(in_dict,in_list):
@@ -233,7 +240,7 @@ def MakePCPairs(in_list):
             ret_list.append([in_list[start_index],in_list[end_index]])
     return ret_list
 
-def AllocateThresholds(pc_list,pc_group_index, max_num,mode="uniform"):
+def AllocateThresholds(pc_list,pc_group_index, max_num,mode="percent"):
     all_keys=list(pc_list.keys())
     all_thresholds={}
 
@@ -319,7 +326,7 @@ def AllocateThresholds(pc_list,pc_group_index, max_num,mode="uniform"):
 def MakePCPairsWithThreshold(in_list, bin_threshold):
     # if the bin pairs number is less than threshold, no reduction is needed
     if bin_threshold <=0:
-        logger.debug("Warning! One bin has a threshold less than 0. This means an unbalanced bin usually.")
+        logger.debug("Warning! One bin has a threshold <= 0. This may indicate an unbalanced bin distribution.")
         return []
     if len(in_list) <=1:
         return []

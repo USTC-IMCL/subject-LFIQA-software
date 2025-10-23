@@ -441,6 +441,8 @@ class SubjectsManagerWidget(ScrollUnitArea):
         return self.unit_list[index].name
 
     def DeleteSubject(self,index):
+        self.active_index=None
+        self.unit_list_labels[index].SetDeactive()
         target_subject=self.unit_list[index]
         target_name=target_subject.name
 
