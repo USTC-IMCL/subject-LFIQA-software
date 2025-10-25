@@ -140,6 +140,12 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         self.force_update=True
         self.UpdateLabelPos()
         self.force_update=False
+    
+    def RefreshIndex(self):
+        self.unit_num=len(self.unit_list_labels)
+        index_list=list(range(self.unit_num))
+        for i in range(self.unit_num):
+            self.unit_list_labels[i].SetIndex(index_list[i])
 
     def GetItemName(self,index):
         return "Item "+str(index)
@@ -442,7 +448,7 @@ class SubjectsManagerWidget(ScrollUnitArea):
 
     def DeleteSubject(self,index):
         self.active_index=None
-        self.unit_list_labels[index].SetDeactive()
+        self.unit_list_labels[index].SetDeActive()
         target_subject=self.unit_list[index]
         target_name=target_subject.name
 
@@ -451,6 +457,7 @@ class SubjectsManagerWidget(ScrollUnitArea):
         del_label=self.unit_list_labels.pop(index)
         del_label.deleteLater()
 
+        self.RefreshIndex()
         self.RefreshLabelPos()
 
         self.delete_subject_signal.emit(index,target_name)
@@ -1291,6 +1298,9 @@ class ImageUnit(QtWidgets.QFrame):
         self.index=unit_index
         self.open_menu=False
         self.menu_text=None
+    
+    def SetIndex(self, index):
+        self.index=index
 
     def SetBasicParam(self, unit_info:ScoringExpLFIInfo=None):
         self.scoring_info=unit_info

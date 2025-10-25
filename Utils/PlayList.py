@@ -15,6 +15,8 @@ def AllocateToBins(in_bins,in_num):
     bin_num=len(in_bins)
 
     bins_sum=sum(in_bins)
+    if bins_sum == 0:
+        return [0 for i in range(bin_num)]
     ret_list=[in_num*in_bins[i]/bins_sum for i in range(bin_num)]
     #print(ret_list)
 
