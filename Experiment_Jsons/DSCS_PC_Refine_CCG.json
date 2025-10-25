@@ -5,6 +5,7 @@
         "Display_Type":"2D",
         "ThreeD_Type":"LeftRight",
         "Score_Levels":3,
+        "Score_Values": [],
         "Score_Names":[
             "Please Rate the Quality"
         ],

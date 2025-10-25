@@ -1,25 +1,25 @@
 {
-    "Training":"D:/Work/JPEG/examples/examples/two_folder/foo_1",
-    "Test":"D:/Work/JPEG/examples/examples/two_folder/foo_2",
+    "Training":"/data_0/shengyang/Work/JPEG/LFIQA/examples/two_folder/foo_1",
+    "Test":"/data_0/shengyang/Work/JPEG/LFIQA/examples/two_folder/foo_2",
     "Exp_Info":{
         "Display_Type":"2D",
         "ThreeD_Type":"LeftRight",
-        "Score_Levels":5,
+        "Score_Levels":4,
+        "Score_Values":[[0,-1,-2,-3]],
         "Score_Names":[
             "Please Rate the Quality"
         ],
         "Score_Definition":[
-            ["5. Imperceptible",
-            "4. Perceptible but not annoying",
-            "3. Slightly Annoying",
-            "2. Annoying",
-            "1. Very Annoying"]
+            ["0. Same",
+            "-1. Slightly worse",
+            "-2. Worse",
+            "-3. Much worse"]
         ],
         "View_Changing":"Passive",
         "Refocusing":"None",
         "Comparison":"DSCS_PC_base",
-        "PC_Group_Index": [0,1,2],
-        "Maximum_Pairs": 100,
+        "PC_Group_Index": [1,2],
+        "Maximum_Pairs": 6,
         "Save_Format":"Excel",
         "Skip_Preprocessing": true,
         "Two_Folder_Mode": true,
