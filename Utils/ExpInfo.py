@@ -741,6 +741,7 @@ class ProjectInfo:
         else:
             self.ReadFromFile()
         self.person_list=[]
+        self.max_person_id=0
     
     def InitAllScoringLFIInfo(self):
         if self.exp_setting.two_folder_mode:
@@ -1684,17 +1685,31 @@ class PorjectPathManager():
 
 class PersonInfo:
     def __init__(self) -> None:
+        self.person_ID=None
         self.name=None
         self.age=None
         self.job=None
         self.gender=None
 
         self.subject_info={
+            'id':self.person_ID,
             'name':self.name,
             'gender':self.gender,
             'age':self.age,
             'job':self.job
         }
+        self.io_list_name=[
+            'name',
+            'gender',
+            'age',
+            'job'
+        ]
+    
+    def GetPersonID(self):
+        return self.person_ID
+    
+    def SetPersonID(self,person_ID):
+        self.person_ID=person_ID
     
     def GetName(self):
         return self.name
@@ -1727,25 +1742,28 @@ class PersonInfo:
     
     def AppendToCSV(self,file_name):
         with open(file_name,'a+') as fid:
+            #fid.write(f"Person ID:, {self.person_ID}\n")
+            for key in self.io_list_name:
+                fid.write(f"{key}:, {self.subject_info[key]}\n")
+            fid.write('\n')
+
+            '''
             fid.write(f"Name:, {self.name}\n")
             fid.write(f'Gender:,{self.gender}\n')
             fid.write(f'Age:,{self.age}\n')
             fid.write(f'Job:,{self.job}\n')
             fid.write('\n')
+            '''
     
+    # TODO: use sqlite to store the info
     def ReadFromCSV(self,fid):
-        all_values=[]
-        for i in range(4):
+        for i in range(len(self.io_list_name)):
             line=fid.readline()
             if not line:
                 return False
             line=line.rstrip('\n')
             value=line.split(',')[1].strip()
-            all_values.append(value)
-        
-        self.name=all_values[0]
-        self.gender=all_values[1]
-        self.age=all_values[2]
-        self.job=all_values[3]
+            self.subject_info[self.io_list_name[i]]=value
+        self.age=int(self.age) 
         line=fid.readline()
         return True
