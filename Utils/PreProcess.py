@@ -27,6 +27,29 @@ class DatasetEvaluate:
     def __init__(self):
         pass
 
+def VideoResolutionDetection(video_path:str):
+    # ignore the gray background to get the true video resolution
+    cap=cv2.VideoCapture(video_path)
+
+    threshold=10
+
+    frame=cap.read()[1]
+    frame=frame.astype(np.float32)
+    width=frame.shape[1]
+    horizontal_gradient=frame[:,1:,:]-frame[1,:width-1,:]
+    horizontal_gradient=np.abs(horizontal_gradient)
+    horizontal_gradient=np.mean(horizontal_gradient,axis=2)
+    horizontal_gradient=np.mean(horizontal_gradient,axis=1)    
+
+    edge_gap=0
+    for i in range(horizontal_gradient.shape[0]):
+        if horizontal_gradient[i]>0:
+            edge_gap=i
+            break
+    
+    true_width=(width-2*edge_gap-20)//2
+    return true_width
+
 
 class PreProcessThread(QObject):
     sub_task_finished=Signal(int,str)
@@ -546,10 +569,7 @@ class SinglePreProcessing:
         '''
 
 if __name__ == "__main__":
-    test_file_path='../debug.lfqoe'
-    training_LFI_info, test_LFI_info, exp_setting=ReadExpConfig(test_file_path)
 
-    GenerateRefocusedImg(training_LFI_info.all_LFI_info["Bikes"]["Origin"])
+    pass
 
-    
     
