@@ -27,27 +27,29 @@ class DatasetEvaluate:
     def __init__(self):
         pass
 
-def VideoResolutionDetection(video_path:str):
-    # ignore the gray background to get the true video resolution
-    cap=cv2.VideoCapture(video_path)
-
-    threshold=10
-
-    frame=cap.read()[1]
-    frame=frame.astype(np.float32)
-    width=frame.shape[1]
-    horizontal_gradient=frame[:,1:,:]-frame[1,:width-1,:]
+def ImageResolutionDetection(img:np.ndarray):
+    width=img.shape[1]
+    img=img.astype(np.float32)
+    horizontal_gradient=img[:,1:,:]-img[1:,:-1,:]
     horizontal_gradient=np.abs(horizontal_gradient)
     horizontal_gradient=np.mean(horizontal_gradient,axis=2)
     horizontal_gradient=np.mean(horizontal_gradient,axis=1)    
 
     edge_gap=0
-    for i in range(horizontal_gradient.shape[0]):
-        if horizontal_gradient[i]>0:
+    for i in range(width):
+        if horizontal_gradient[i]>10:
             edge_gap=i
             break
     
     true_width=(width-2*edge_gap-20)//2
+    return true_width
+
+def VideoResolutionDetection(video_path:str):
+    # ignore the gray background to get the true video resolution
+    cap=cv2.VideoCapture(video_path)
+
+    frame=cap.read()[1]
+    true_width=ImageResolutionDetection(frame)
     return true_width
 
 
@@ -570,6 +572,7 @@ class SinglePreProcessing:
 
 if __name__ == "__main__":
 
+    video_path=
     pass
 
     
