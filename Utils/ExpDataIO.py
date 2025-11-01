@@ -151,3 +151,20 @@ def GetConfigExpSetting(config_file):
         exp_setting.allow_undistinguishable=exp_config["Allow_Undistinguishable"]
 
     return exp_setting
+
+def CheckVideoResJson(file_list,json_file):
+    with open(json_file,"r") as f:
+        json_data=json.load(f)
+    all_classes=json_data.keys()
+    all_classes=[x.lower() for x in all_classes]
+    file_list=[x.lower() for x in file_list]
+
+    for file_name in file_list:
+        in_json_file=False
+        for class_name in all_classes:
+            if class_name in file_name:
+                in_json_file=True
+                break
+        if not in_json_file:
+            return False
+    return True

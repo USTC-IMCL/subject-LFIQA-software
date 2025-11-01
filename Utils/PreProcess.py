@@ -84,6 +84,27 @@ def VideoResolutionDetection(video_path:str):
     true_height,true_width=ImageResolutionDetection(frame)
     return true_height,true_width
 
+# To be deleted in next version
+def GetVideoInfo(video_path,json_file):
+    with open(json_file,"r") as f:
+        video_info=json.load(f)
+    all_classes=list(video_info.keys())
+
+    ret_info=None
+    for class_name in all_classes:
+        if class_name.lower() in video_path.lower():
+            ret_info=video_info[class_name]
+    
+    if ret_info is None:
+        return False, None, None
+    
+    else:
+        cap=cv2.VideoCapture(video_path)
+        video_width=int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        video_height=int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        img_height=int(ret_info["height"])
+        img_width=int(ret_info["width"])
+        return True, [video_height,video_width],[img_height,img_width]
 
 class PreProcessThread(QObject):
     sub_task_finished=Signal(int,str)

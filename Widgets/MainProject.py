@@ -4,6 +4,7 @@ sys.path.append('../UI')
 from random import shuffle
 from datetime import date
 from PySide6.QtWidgets import QWidget, QDockWidget, QMainWindow, QTextBrowser, QApplication, QFileDialog, QMessageBox, QProgressDialog, QInputDialog, QErrorMessage, QDialog
+from ExpDataIO import CheckVideoResJson
 from PySide6.QtGui import QAction, QActionGroup,QTextCursor
 from PySide6.QtCore import Qt, QThread
 from LogWindow import QLogTextEditor , StreamToLogger
@@ -310,10 +311,20 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
         # TODO: divide the experiment into several sessions.
         # Now only DSCSPC contains two sessions.
-        if mode=="test" and (self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_BASE or self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_CCG):
+        #self.cur_exp_mode
+        if (self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_BASE or self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_CCG):
+            if not os.path.exists(PathManager.scene_resolution):
+                logger.error("The resolution file not exist, please put it in the software folder.")
+                return
+            check_file_list=[]
+            for i in range(all_scoring_lfi_info.GetLFINum()):
+                check_file_list.append(all_scoring_lfi_info.GetLFIFromIndex(i).passive_view_video_path)
+            if not CheckVideoResJson(check_file_list, PathManager.scene_resolution):
+                logger.error("A video file can not be found in the json file. Please check them carefully.")
+                return
             self.all_sessions=[ExpInfo.ComparisonType.DoubleStimuli, ExpInfo.ComparisonType.PairComparison]
         else:
-            self.all_sessions=[ExpInfo.ComparisonType.DoubleStimuli]
+            self.all_sessions=[self.exp_setting.comparison_type]
         
         self.sessions_num=len(self.all_sessions)
 
@@ -349,14 +360,20 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
         # only testing mode could have multiple sessions
         # now we need to handle some jobs first. E.g. videos generation.
+        '''
+        # no, training can have 2 sessions
         if self.cur_exp_mode == "training":
             logger.info("Training finished!")
             JPLMessageBox.ShowInformationMessage("Training finished.")
             return
+        '''
         
         result_session_index=self.sessions_num-len(self.all_sessions)-1
 
-        save_file=os.path.join(self.cur_project.project_path,PathManager.subject_results_folder,f"{self.cur_person_info.GetName()}_session_{result_session_index}")
+        if self.cur_exp_mode == "training":
+            save_file=None
+        else:
+            save_file=os.path.join(self.cur_project.project_path,PathManager.subject_results_folder,f"{self.cur_person_info.GetName()}_session_{result_session_index}")
 
 
         # TODO: how to save the results?
@@ -368,14 +385,16 @@ class MainProject(QMainWindow,Ui_MainWindow):
             '''
             JPLMessageBox.ShowInformationMessage("Session finished! Thank you and have a rest now.")
             update_project=False
-            self.GetAndSaveResult(all_results,self.cur_person_info,all_show_index,cur_all_scoring_lfi,cmp_type=res_session_cmp_type,save_file=save_file,update_project=update_project)
+            if self.cur_exp_mode !="training":
+                self.GetAndSaveResult(all_results,self.cur_person_info,all_show_index,cur_all_scoring_lfi,cmp_type=res_session_cmp_type,save_file=save_file,update_project=update_project)
 
             self.MakeDSCSPC(all_results,self.cur_person_info,all_show_index,self.cur_project.test_scoring_lfi_info)
         else:
             JPLMessageBox.ShowInformationMessage("Experiment finished! Thank you!")
             logger.info("Experiment finished!")
-            update_project=True
-            self.GetAndSaveResult(all_results,self.cur_person_info,all_show_index,cur_all_scoring_lfi,cmp_type=res_session_cmp_type,save_file=save_file,update_project=update_project)
+            if self.cur_exp_mode != "training":
+                update_project=True
+                self.GetAndSaveResult(all_results,self.cur_person_info,all_show_index,cur_all_scoring_lfi,cmp_type=res_session_cmp_type,save_file=save_file,update_project=update_project)
 
 
     def MakeDSCSPC(self,all_results,subject_info,all_show_index,all_scoring_lfi_info:ExpInfo.AllScoringLFI):
@@ -489,7 +508,9 @@ class MainProject(QMainWindow,Ui_MainWindow):
                     logger.debug(f"File {output_file} already exists. Skip the generation.")
                     continue
                 else:
-                    cur_cmd=ConcatPCFilesCMD(file_1,file_2,output_file)
+                    res_file=PathManager.scene_resolution
+                    read_status,video_res,img_res=PreProcess.GetVideoInfo(file_1,res_file)
+                    cur_cmd=ConcatPCFilesCMD(file_1,file_2,output_file,video_res,img_res)
                     all_pc_cmds.append(cur_cmd)
         
         if len(all_pc_cmds) > 0:

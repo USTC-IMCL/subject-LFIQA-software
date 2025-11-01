@@ -1,0 +1,38 @@
+{
+    "Bartender":{
+        "height": 1080,
+        "width": 1920
+    },
+    "Bookshelf":{
+        "height": 1200,
+        "width": 1600
+    },
+    "Cinema":{
+        "height": 1080,
+        "width": 1920
+    },
+    "Glossyshop1":{
+        "height": 750,
+        "width": 1082
+    },
+    "Glossyshop2":{
+        "height": 750,
+        "width": 1082
+    },
+    "Lounge":{
+        "height": 750,
+        "width": 1082
+    },
+    "RuziNiu":{
+        "height": 1190,
+        "width": 1600
+    },
+    "Square":{
+        "height": 1200,
+        "width": 1600
+    },
+    "Sunset":{
+        "height": 750,
+        "width": 1082
+    }
+}

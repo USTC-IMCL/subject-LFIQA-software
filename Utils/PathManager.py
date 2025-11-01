@@ -46,6 +46,9 @@ talbe_vertical_gap=10
 # lambda file will be deprecated
 lambda_file="lambda.txt"
 
+# to be deleted later
+scene_resolution='SceneResotion.json'
+
 # output folders
 subject_results_folder="SubjectResults"
 all_subject_info_file='all_subject_info.csv'

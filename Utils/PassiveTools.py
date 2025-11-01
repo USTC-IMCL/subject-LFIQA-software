@@ -6,16 +6,19 @@ from dataclasses import dataclass
 from PySide6.QtCore import QThread, Signal, QThreadPool,QRunnable, QMutex, QMutexLocker, QObject
 from PySide6.QtWidgets import QVBoxLayout,QProgressBar,QLabel
 from PySide6.QtWidgets import QWidget, QPushButton,QApplication
+from PreProcess import GetVideoInfo
 import sys
 import time
 import json
 import logging
 
+'''
 def GetVideoInfo(video_path):
     cap = cv2.VideoCapture(video_path)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     return width, height
+'''
 
 def ConcatPCFilesCMD(file_1,file_2,output_file,video_res=None,img_res=None,center_gap=20,ffmpeg_path='ffmpeg.exe'):
     if sys.platform == 'win32':
@@ -26,8 +29,9 @@ def ConcatPCFilesCMD(file_1,file_2,output_file,video_res=None,img_res=None,cente
     video_height, video_width = video_res
     img_height, img_width = img_res
 
+    # height_gap , and width_gap
     h_gap=(video_height-img_height)//2
-    w_gap=(video_width-img_width*2-20)//2
+    w_gap=(video_width-img_width*2-center_gap)//2
 
     left_x=w_gap
     left_y=h_gap
@@ -35,11 +39,11 @@ def ConcatPCFilesCMD(file_1,file_2,output_file,video_res=None,img_res=None,cente
     right_x=w_gap+img_width+center_gap
     right_y=h_gap
 
+    '''
     ffmpeg_cmd=f"{ffmpeg_path} -i {file_1} -i {file_2} -i color=gray128 -filter_complex \"[0:v]crop=w={img_width}:h={img_height}:x={right_x}:y={right_y},pad=iw+20:ih:0:0:gray128[left];[1:v]crop=w={img_width}:h={img_height}:x={right_x}:y={right_y}[right];[left][right]hstack=inputs=2[ab];color=gray128:s={video_width}x{video_height}[bg];[bg][ab]overlay=x={left_x}:y={left_y}\" -c:v libx265 -qp 0 {output_file} -y"
     '''
 
     ffmpeg_cmd=f"{ffmpeg_path} -i {file_1} -i {file_2} -filter_complex \"[1:v]crop=w={img_width}:h={img_height}:x={right_x}:y={right_y}[right];[0:v][right]overlay=x={left_x}:y={left_y}\" -c:v libx265 -qp 0 {output_file} -y"
-    '''
     return ffmpeg_cmd
 
 def RunCMDs(all_cmd):
@@ -202,10 +206,10 @@ if __name__ == '__main__':
         pool.join()
     '''
 
-    video_1='./1.mp4'
-    video_2='./2.mp4'
+    video_1='./Bartender_1.mp4'
+    video_2='./Bartender_2.mp4'
+    json_path='../SceneResolution.json'
 
-    video_res=[2160,4096]
-    img_res=[540,1910]
+    status, video_res, img_res = GetVideoInfo(video_1,json_path)
     cmd=ConcatPCFilesCMD(video_1,video_2,'./output.mp4',video_res,img_res)
     print(cmd)
