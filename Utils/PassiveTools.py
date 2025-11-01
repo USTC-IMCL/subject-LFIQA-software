@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QVBoxLayout,QProgressBar,QLabel
 from PySide6.QtWidgets import QWidget, QPushButton,QApplication
 import sys
 import time
+import json
 import logging
 
 def GetVideoInfo(video_path):
@@ -16,12 +17,29 @@ def GetVideoInfo(video_path):
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     return width, height
 
-def ConcatPCFilesCMD(file_1,file_2,output_file,ffmpeg_path='ffmpeg.exe'):
+def ConcatPCFilesCMD(file_1,file_2,output_file,video_res=None,img_res=None,center_gap=20,ffmpeg_path='ffmpeg.exe'):
     if sys.platform == 'win32':
         ffmpeg_path = 'ffmpeg.exe'
     else:
         ffmpeg_path = 'ffmpeg'
-    ffmpeg_cmd=f"{ffmpeg_path} -i {file_1} -i {file_2} -filter_complex \"[0:v]crop=w=iw/2:h=ih:x=iw/2:y=0[left];[1:v]crop=w=iw/2:h=ih:x=iw/2:y=0[right];[left][right]hstack=inputs=2\" -c:v libx265 -qp 0 {output_file} -y"
+    
+    video_height, video_width = video_res
+    img_height, img_width = img_res
+
+    h_gap=(video_height-img_height)//2
+    w_gap=(video_width-img_width*2-20)//2
+
+    left_x=w_gap
+    left_y=h_gap
+    
+    right_x=w_gap+img_width+center_gap
+    right_y=h_gap
+
+    ffmpeg_cmd=f"{ffmpeg_path} -i {file_1} -i {file_2} -i color=gray128 -filter_complex \"[0:v]crop=w={img_width}:h={img_height}:x={right_x}:y={right_y},pad=iw+20:ih:0:0:gray128[left];[1:v]crop=w={img_width}:h={img_height}:x={right_x}:y={right_y}[right];[left][right]hstack=inputs=2[ab];color=gray128:s={video_width}x{video_height}[bg];[bg][ab]overlay=x={left_x}:y={left_y}\" -c:v libx265 -qp 0 {output_file} -y"
+    '''
+
+    ffmpeg_cmd=f"{ffmpeg_path} -i {file_1} -i {file_2} -filter_complex \"[1:v]crop=w={img_width}:h={img_height}:x={right_x}:y={right_y}[right];[0:v][right]overlay=x={left_x}:y={left_y}\" -c:v libx265 -qp 0 {output_file} -y"
+    '''
     return ffmpeg_cmd
 
 def RunCMDs(all_cmd):
@@ -172,14 +190,22 @@ def print_result(result):
     print(f"Result: {result}")
 
 if __name__ == '__main__':
+    '''
     app = QApplication(sys.argv)
     window = WorkerTest()
     window.show()
     sys.exit(app.exec())
-    '''
     with Pool(processes=4) as pool:
         for  i in range(4):
             pool.apply_async(square,(i,),callback=lambda x: print_result(x))
         pool.close()
         pool.join()
     '''
+
+    video_1='./1.mp4'
+    video_2='./2.mp4'
+
+    video_res=[2160,4096]
+    img_res=[540,1910]
+    cmd=ConcatPCFilesCMD(video_1,video_2,'./output.mp4',video_res,img_res)
+    print(cmd)

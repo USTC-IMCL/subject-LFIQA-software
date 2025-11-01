@@ -28,29 +28,61 @@ class DatasetEvaluate:
         pass
 
 def ImageResolutionDetection(img:np.ndarray):
-    width=img.shape[1]
+    height,width,channel=img.shape
     img=img.astype(np.float32)
-    horizontal_gradient=img[:,1:,:]-img[1:,:-1,:]
+    horizontal_gradient=np.zeros(img.shape)
+    v_gray=np.zeros([height,1,channel])+128
+
+    horizontal_gradient[:,0,:]=img[:,0,:]-v_gray[:,0,:]
+    horizontal_gradient[:,1:,:]=img[:,1:,:]-img[:,:-1,:]
+
     horizontal_gradient=np.abs(horizontal_gradient)
     horizontal_gradient=np.mean(horizontal_gradient,axis=2)
-    horizontal_gradient=np.mean(horizontal_gradient,axis=1)    
+    horizontal_gradient=np.mean(horizontal_gradient,axis=0)    
 
-    edge_gap=0
-    for i in range(width):
-        if horizontal_gradient[i]>10:
-            edge_gap=i
+    h_edge=[]
+    for i in range(1,width):
+        if horizontal_gradient[i-1]==0 and horizontal_gradient[i]>0:
+            h_edge.append(i)
+        if horizontal_gradient[i-1]>0 and horizontal_gradient[i]==0:
+            h_edge.append(i)
+        if len(h_edge)==4:
             break
     
-    true_width=(width-2*edge_gap-20)//2
-    return true_width
+    print(h_edge)
+
+    vertical_gradient=np.zeros(img.shape)
+    h_gray=np.zeros([1,width,channel])+128
+    vertical_gradient[0,:,:]=img[0,:,:]-h_gray[0,:,:]
+    vertical_gradient[1:,:,:]=img[1:,:,:]-img[:-1,:,:]
+
+    vertical_gradient=np.abs(vertical_gradient)
+    vertical_gradient=np.mean(vertical_gradient,axis=2)
+    vertical_gradient=np.mean(vertical_gradient,axis=1)
+
+    v_edge=[]
+    for i in range(1,height):
+        if vertical_gradient[i-1]==0 and vertical_gradient[i]>0:
+            v_edge.append(i)
+        if vertical_gradient[i-1]>0 and vertical_gradient[i]==0:
+            v_edge.append(i)
+        if len(v_edge)==2:
+            break
+    
+    print(v_edge)
+
+    true_width=h_edge[1]-h_edge[0]
+    true_height=v_edge[1]-v_edge[0]
+
+    return true_height,true_width
 
 def VideoResolutionDetection(video_path:str):
     # ignore the gray background to get the true video resolution
     cap=cv2.VideoCapture(video_path)
 
     frame=cap.read()[1]
-    true_width=ImageResolutionDetection(frame)
-    return true_width
+    true_height,true_width=ImageResolutionDetection(frame)
+    return true_height,true_width
 
 
 class PreProcessThread(QObject):
@@ -572,7 +604,8 @@ class SinglePreProcessing:
 
 if __name__ == "__main__":
 
-    video_path=
-    pass
+    video_path='./c.mp4'
+    true_width=VideoResolutionDetection(video_path)
+    print(true_width)
 
     
