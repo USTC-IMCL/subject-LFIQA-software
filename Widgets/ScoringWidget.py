@@ -1415,6 +1415,7 @@ class VideoPage(QtWidgets.QWidget):
     def SetEventMask(self, event_mask:EventMask):
         self.event_mask=event_mask
         
+    '''
     def mousePressEvent(self, event) -> None:
         if self.pause_allowed:
             self.video_player.toogle_play_pause()
@@ -1422,6 +1423,7 @@ class VideoPage(QtWidgets.QWidget):
             if self.hint_label_window.isVisible():
                 self.hint_label_window.raise_()
         #return super().mousePressEvent(event)
+    '''
 
     def disableAllButtons(self):
         self.left_btn.setEnabled(False)
@@ -1850,6 +1852,7 @@ if __name__ == "__main__":
     #scoring_widget = ScoringPage(1440,2560)
     #scoring_widget.HasScored.connect(lambda x:print(x))
     #scoring_widget.show()
+    '''
 
     screen = QtWidgets.QApplication.primaryScreen()
     finish_widget=FinishPage(screen.size().width(),screen.size().height())
@@ -1858,6 +1861,7 @@ if __name__ == "__main__":
     finish_widget.setGeometry(0,0,screen.size().width(),screen.size().height())
 
     finish_widget.show()
+    '''
 
     '''
     screen = QtWidgets.QApplication.primaryScreen()
@@ -1873,7 +1877,6 @@ if __name__ == "__main__":
     score_page.show()
 
     '''
-    '''
     locale.setlocale(locale.LC_NUMERIC, 'C')
     exp_setting=ExpSetting()
     exp_setting.comparison_type=ComparisonType.DoubleStimuli
@@ -1886,7 +1889,7 @@ if __name__ == "__main__":
     exp_setting.skip_hint_text="You can skip the video by pressing Enter now."
     exp_setting.table_font_size=50
 
-    video_path='/data_0/shengyang/Work/JPEG/LFIQA/examples/two_folder/foo_1/1.mp4'
+    video_path='/data_0/shengyang/Work/JPEG/LFIQA/examples/two_folder/foo_1/Cinema_JPLM_Cinema_25x4_459_int.mp4'
     #video_path='C:/Users/ZSY/Downloads/examples/two_folder/foo_1/1.mp4'
     video_page=VideoPage(exp_setting,None,video_path)
 
@@ -1894,7 +1897,6 @@ if __name__ == "__main__":
     video_page.finish_video.connect(VideoFinishPage)
 
     video_page.show()
-    '''
 
     '''
     scoring_definition=[['Score: -3 ','Score: -2','Score: -1','Score: 0','Score: 1','Score: 2','Score: 3'],['Score: 5','Score: 4','Score: 3','Score: 2','Score: 1']]

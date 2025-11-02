@@ -175,7 +175,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         '''
         if self.project_display is not None:
             self.project_display.hide()
-            logger.removeHandler(self.project_display.right_text_editor_handler)
+            #logger.removeHandler(self.project_display.right_text_editor_handler)
             self.project_display.deleteLater()
             self.project_display=None
         
@@ -193,7 +193,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         #TODO: implement an update function
         if self.project_display is not None:
             self.project_display.hide()
-            logger.removeHandler(self.project_display.right_text_editor_handler)
+            #logger.removeHandler(self.project_display.right_text_editor_handler)
             self.project_display.deleteLater()
         self.cur_project_name=project_name
         self.cur_project=ExpInfo.ProjectInfo(project_name,project_root)
@@ -205,7 +205,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         #self.text_label.show()
         #self.logo_label.show()
         self.project_display.hide()
-        logger.removeHandler(self.project_display.right_text_editor_handler)
+        #logger.removeHandler(self.project_display.right_text_editor_handler)
         self.project_display.deleteLater()
         self.project_display=None
         self.setupUi(self)
@@ -215,6 +215,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.project_display=ProjectDisplay(self.cur_project)
         self.setCentralWidget(self.project_display)
         # TODO : put the log show into the project display
+        '''
         if os.path.exists(self.log_file):
             with open(self.log_file,'r') as f:
                 log_text=f.readlines()
@@ -223,6 +224,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 log_text=''.join(log_text)
                 self.project_display.right_text_editor.setText(log_text)
                 self.project_display.right_text_editor.moveCursor(QTextCursor.End)
+        '''
     
     def NewProject(self):
         print("Create a new project now.")
@@ -318,7 +320,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 return
             check_file_list=[]
             for i in range(all_scoring_lfi_info.GetLFINum()):
-                check_file_list.append(all_scoring_lfi_info.GetLFIFromIndex(i).passive_view_video_path)
+                check_file_list.append(all_scoring_lfi_info.GetScoringExpLFIInfo(i).passive_view_video_path)
             if not CheckVideoResJson(check_file_list, PathManager.scene_resolution):
                 logger.error("A video file can not be found in the json file. Please check them carefully.")
                 return

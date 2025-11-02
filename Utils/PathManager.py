@@ -47,11 +47,11 @@ talbe_vertical_gap=10
 lambda_file="lambda.txt"
 
 # to be deleted later
-scene_resolution='SceneResotion.json'
+scene_resolution='SceneResolution.json'
 
 # output folders
 subject_results_folder="SubjectResults"
-all_subject_info_file='all_subject_info.csv'
+all_subject_info_file='all_subjects_info.csv'
 mos_file='MOS.csv'
 srocc_file='SROCC.csv'
 plcc_file='PLCC.csv'

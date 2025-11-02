@@ -1764,6 +1764,18 @@ class PersonInfo:
             line=line.rstrip('\n')
             value=line.split(',')[1].strip()
             self.subject_info[self.io_list_name[i]]=value
-        self.age=int(self.age) 
+        self.age=int(self.subject_info['age']) 
+        self.gender=self.subject_info['gender']
+        self.name=self.subject_info['name']
+        self.job=self.subject_info['job']
         line=fid.readline()
         return True
+
+if __name__ == "__main__":
+    csv_file='/data_0/shengyang/Work/JPEG/LFIQA/subject-LFIQA-software/Projects/dscs_pc_base/SubjectResults/all_subjects_info.csv'
+    fid=open(csv_file,'r')
+    a=PersonInfo()
+
+    a.ReadFromCSV(fid)
+
+    pass

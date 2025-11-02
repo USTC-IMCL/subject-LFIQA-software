@@ -149,10 +149,13 @@ class CreateNewExperiment(QtWidgets.QWidget,NewExperimentForm):
         self.page_3_btn_finish.clicked.connect(self.FinishConfig)
     
     def ShowNotice(self):
+        pass
+        '''
         current_mouse_pos=QtGui.QCursor.pos()
         self.label_3d_ns.setGeometry(QRect(current_mouse_pos.x(),current_mouse_pos.y(),self.label_3d_ns.width(),self.label_3d_ns.height()))
         self.label_3d_ns.show()
-        
+        '''
+
     def FinishConfig(self):
         if self.radio_btn_refocusing_none.isChecked() and self.radio_btn_view_change_none.isChecked():
             self.ShowMessage("You must select at least one feature!",2)

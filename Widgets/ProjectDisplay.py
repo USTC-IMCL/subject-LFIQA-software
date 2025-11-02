@@ -41,7 +41,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
 
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setWidgetResizable(True)
+        #self.setWidgetResizable(True)
 
         self.unit_col_num=0
         self.need_update=True
@@ -75,6 +75,8 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         self.scroll_menu_text=[]
 
         self.active_index=None
+
+        self.content_widget.resize(self.width(),self.height())
         # do not call the make function here, 
         # as some parameters are not ready.
     
@@ -109,14 +111,14 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         if len(self.unit_list_labels) == self.unit_num:
             return
         if self.use_add_icon:
-            self.unit_list_labels.append(ImageUnit(icon_img=self.add_icon,parent=self,unit_index=0))
+            self.unit_list_labels.append(ImageUnit(icon_img=self.add_icon,parent=self.content_widget,unit_index=0))
             start_index=1
         else:
             start_index=0
 
         # TODO: better design? not so elegant.
         for i in range(self.unit_num-start_index):
-            self.unit_list_labels.append(ImageUnit(None,icon_img=self.GetIconImg(i),icon_title=self.GetItemName(i),parent=self,unit_index=i+start_index))
+            self.unit_list_labels.append(ImageUnit(None,icon_img=self.GetIconImg(i+start_index),icon_title=self.GetItemName(i+start_index),parent=self.content_widget,unit_index=i+start_index))
         
         for unit_label in self.unit_list_labels[start_index:]:
             unit_label.clicked.connect(self.SetActiveUnit)
@@ -134,6 +136,8 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
             self.need_update=False
             for i in range(self.unit_num):
                 self.unit_list_labels[i].setGeometry(self.item_pos[i][1],self.item_pos[i][0],self.unit_size[1],self.unit_size[0])
+            if self.unit_num > 0:
+                self.content_widget.resize(self.width(),self.item_pos[-1][0]+self.unit_size[0]+self.margin_bottom)
     
     def RefreshLabelPos(self):
         self.active_index=None
@@ -1455,6 +1459,9 @@ class MaterialFolderFrame(ScrollUnitArea):
             'Delete':self.DeleteLFI
         }
 
+        self.tmp_list_names=[]
+        self.MakeNames()
+
         self.MakeUnitLabels()
         self.UpdateLabelPos()
 
@@ -1464,6 +1471,21 @@ class MaterialFolderFrame(ScrollUnitArea):
             self.unit_list_labels[0].clicked.connect(lambda: JPLMessageBox.ShowWarningMessage("Subject list is not empty! Can not add new LFI."))
 
         self.MakeMenu()
+
+    
+    def MakeNames(self):
+        all_classes={}
+        self.tmp_list_names=[]
+        self.tmp_list_names.append(None)
+        for i in range(1,len(self.unit_list)):
+            passive_file_path=self.unit_list[i].passive_view_video_path
+            file_name=os.path.basename(passive_file_path)
+            class_name=file_name.split('_')[0]
+            if class_name not in all_classes:
+                all_classes[class_name]=0
+            else:
+                all_classes[class_name]+=1
+            self.tmp_list_names.append(f'{class_name}_{all_classes[class_name]}')
 
     def MakeMenu(self):
         self.MakeUnitMenu()
@@ -1483,7 +1505,8 @@ class MaterialFolderFrame(ScrollUnitArea):
             PathManager.OpenPath(v)
     
     def GetItemName(self, index):
-        return self.unit_list[index+1].show_name
+        # TODO: wrap the unit_list
+        return self.tmp_list_names[index]
 
     def SetEditable(self, b_editable):
         self.b_editable=b_editable
@@ -1763,10 +1786,12 @@ class ProjectDisplay(QtWidgets.QFrame):
         self.right_stack.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,QtWidgets.QSizePolicy.Policy.Expanding)
         #self.main_layout.addWidget(self.right_stack)
 
+        '''
         self.right_text_editor=QtWidgets.QTextEdit()#QLogTextEditor()
         self.right_text_editor.setReadOnly(True)
         # TODO: a dynamic lines
-        self.right_text_editor.document().setMaximumBlockCount(PathManager.log_lines_threshold)
+        # Do Not Use This !!! MaximumBlockCount + a dynamic text editor = cursor out of range
+        #self.right_text_editor.document().setMaximumBlockCount(PathManager.log_lines_threshold)
         self.right_text_editor_handler=QtLogTextEditorHandler()
         self.right_text_editor_handler.SetLogTextEditor(self.right_text_editor)
         logger.addHandler(self.right_text_editor_handler)
@@ -1776,6 +1801,8 @@ class ProjectDisplay(QtWidgets.QFrame):
         self.right_stack_splitter.addWidget(self.right_text_editor)
 
         self.right_stack_splitter.setSizes([self.height()*0.8,self.height()*0.2])
+        '''
+        self.right_stack_splitter.addWidget(self.right_stack)
 
         self.main_layout.setStretch(1,1)
 
@@ -1885,7 +1912,8 @@ if __name__ == "__main__":
     #project_display.resize(800,600)
 
     #project_display.show()
-    subject_display=ScrollUnitArea(['item1','item2','item3','als;djf;lasdjf;lajsd;fkljasd;lfja;skldjf;l'])
+    item_list=[f'item_{i}' for i in range(100)]
+    subject_display=ScrollUnitArea(item_list)
     subject_display.MakeUnitLabels()
     subject_display.UpdateLabelPos()
     subject_display.resize(800,600)
