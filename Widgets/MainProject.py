@@ -23,7 +23,7 @@ import PathManager
 import FontSetting
 import SubjectInfo
 from ProjectDisplay import ProjectDisplay
-from PlayList import MakeDSCSPCList, FromPCListToPairs
+from PlayList import MakeDSCSPCList, FromPCListToPairs, MakeAllPossiblePairs
 from PassiveTools import ConcatPCFilesCMD, WorkerManager
 from SessionConnector import SessionConnector
 from ExpSession import ExperimentSession
@@ -91,7 +91,8 @@ class MainProject(QMainWindow,Ui_MainWindow):
         #self.menuView.addAction(self.action_log)
         self.action_new_project.triggered.connect(self.NewProject)
         self.action_load_project.triggered.connect(self.LoadProject)
-        self.action_preprocessing.deleteLater()
+        self.action_preprocessing.triggered.connect(self.DSCSPreprocessing)
+        #self.action_preprocessing.deleteLater()
         #self.action_preprocessing.triggered.connect(self.PreprosessingFinishedCallback)
         self.action_start_training.triggered.connect(lambda: self.StartExperiment('training'))
         self.action_start_test.triggered.connect(lambda: self.StartExperiment("test"))
@@ -499,22 +500,27 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
                 file_part_1=file_part_1.replace(post_fix_1,"")[len(class_name):]
                 file_part_2=file_part_2.replace(post_fix_2,"")[len(class_name):]
-                output_file=os.path.join(pc_root,f"{class_name}_{file_part_1}_vs_{file_part_2}.{video_save_type_str}")
+
+                output_file_1=os.path.join(pc_root,f"{class_name}_{file_part_1}_vs_{file_part_2}.{video_save_type_str}")
+                output_file_2=os.path.join(pc_root,f"{class_name}_{file_part_2}_vs_{file_part_1}.{video_save_type_str}")
+
+                if os.path.exists(output_file_1):
+                    logger.debug(f"File {output_file_1} already exists. Reversed pairs are equivalent. Skip the generation.")
+                    output_file=output_file_1
+                elif os.path.exists(output_file_2):
+                    logger.debug(f"File {output_file_2} already exists. Skip the generation.")
+                    output_file=output_file_2
+                else:
+                    res_file=PathManager.scene_resolution
+                    read_status,video_res,img_res=PreProcess.GetVideoInfo(file_1,res_file)
+                    cur_cmd=ConcatPCFilesCMD(file_1,file_2,output_file,video_res,img_res)
+                    all_pc_cmds.append(cur_cmd)
 
                 target_scoring_lfi=ExpInfo.ScoringExpLFIInfo()
                 target_scoring_lfi.passive_view_video_path=output_file
                 target_scoring_lfi.passive_refocusing_folder=output_file
                 self.pc_show_list.AddScoringLFI(target_scoring_lfi)
 
-                if os.path.exists(output_file):
-                    logger.debug(f"File {output_file} already exists. Skip the generation.")
-                    continue
-                else:
-                    res_file=PathManager.scene_resolution
-                    read_status,video_res,img_res=PreProcess.GetVideoInfo(file_1,res_file)
-                    cur_cmd=ConcatPCFilesCMD(file_1,file_2,output_file,video_res,img_res)
-                    all_pc_cmds.append(cur_cmd)
-        
         if len(all_pc_cmds) > 0:
             logger.debug("===================Print the cmds now====================")
             for i, cmd in enumerate(all_pc_cmds):
@@ -532,7 +538,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         else:
             logger.info("All material for next session already exists. You may enter the next session now.")
             JPLMessageBox.ShowInformationMessage("All material for next session already exists. Click OK to enter next session.")
-            self.StartSession(self.pc_show_list,"test")
+            self.StartSession(self.pc_show_list,self.cur_exp_mode)
 
     def MakeDSCSPCFinished(self):
         logger.info("DSCS PC tasks are done. Checking....")
@@ -552,7 +558,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
             JPLMessageBox.ShowErrorMessage(f"{len(all_errors)} errors occured during generation. Please check the log file.")
         else:
             JPLMessageBox.ShowInformationMessage("DSCS PC refinement material has been generated successfully. You can now go to the next session.")
-            self.StartSession(self.pc_show_list,"test")
+            self.StartSession(self.pc_show_list,self.cur_exp_mode)
         
     
     def GetAndSaveResult(self,all_results,person_info:ExpInfo.PersonInfo,all_show_index,show_list:ExpInfo.AllScoringLFI, update_project=True,cmp_type=None,save_file=None):
@@ -791,6 +797,105 @@ class MainProject(QMainWindow,Ui_MainWindow):
         shuffle(show_index)
         return show_index,[show_list[i] for i in show_index]
     '''
+
+    def DSCSPreprocessing(self):
+        if self.cur_project is None:
+            self.ShowMessage("Please select one project first!",1)
+            logger.warning('Please select one project first!')
+            return
+        if self.cur_project.exp_setting.comparison_type != ExpInfo.ComparisonType.DSCS_PC_BASE and self.cur_project.exp_setting.comparison_type != ExpInfo.ComparisonType.DSCS_PC_CCG:
+            self.ShowMessage("This function is only available for DSCS-PC and DSCS-PC-CCG!",1)
+            logger.warning('This function is only available for DSCS-PC and DSCS-PC-CCG!')
+            return
+        
+        self.jpl
+        
+        training_all_scoring_lfi_info=self.cur_project.training_scoring_lfi_info
+        test_all_scoring_lfi_info=self.cur_project.test_scoring_lfi_info
+        training_lfi_names=[]
+        test_lfi_names=[]
+
+        for i in range(training_all_scoring_lfi_info.GetLFINum()):
+            cur_training_scoring_lfi_info=training_all_scoring_lfi_info.GetScoringExpLFIInfo(i)
+            training_lfi_names.append(cur_training_scoring_lfi_info.passive_view_video_path)
+        
+        for i in range(test_all_scoring_lfi_info.GetLFINum()):
+            cur_test_scoring_lfi_info=test_all_scoring_lfi_info.GetScoringExpLFIInfo(i)
+            test_lfi_names.append(cur_test_scoring_lfi_info.passive_view_video_path)
+        
+        all_training_pairs=MakeAllPossiblePairs(training_lfi_names)
+        all_test_pairs=MakeAllPossiblePairs(test_lfi_names)
+
+        video_save_type_str=self.cur_project.exp_setting.VideoSaveTypeStr
+
+        all_cmds=[]
+
+        res_file=PathManager.scene_resolution
+        pc_root=os.path.join(self.cur_project.project_path,PathManager.dscs_folder,"training")
+        for class_name in all_training_pairs.keys():
+            cur_pairs=all_training_pairs[class_name]
+            for pc_pair in cur_pairs:
+                scoring_lfi_1=training_all_scoring_lfi_info.GetScoringExpLFIInfo(pc_pair[0]).passive_view_video_path
+                scoring_lfi_2=training_all_scoring_lfi_info.GetScoringExpLFIInfo(pc_pair[1]).passive_view_video_path
+
+                file_1=scoring_lfi_1.passive_view_video_path
+                file_part_1=os.path.basename(file_1)
+                post_fix_1='.'+file_part_1.split(".")[-1]
+
+                file_2=scoring_lfi_2.passive_view_video_path
+                file_part_2=os.path.basename(file_2)
+                post_fix_2='.'+file_part_2.split(".")[-1]
+
+                file_part_1=file_part_1.replace(post_fix_1,"")[len(class_name):]
+                file_part_2=file_part_2.replace(post_fix_2,"")[len(class_name):]
+                output_file=os.path.join(pc_root,f"{class_name}_{file_part_1}_vs_{file_part_2}.{video_save_type_str}")
+
+                target_scoring_lfi=ExpInfo.ScoringExpLFIInfo()
+                target_scoring_lfi.passive_view_video_path=output_file
+                target_scoring_lfi.passive_refocusing_folder=output_file
+
+                read_status, video_res, img_res =PreProcess.GetVideoInfo(file_1,res_file)
+                cmd=ConcatPCFilesCMD(file_1,file_2,output_file,video_res,img_res)
+                all_cmds.append(cmd)
+        
+        if len(all_cmds)>0:
+            logger.debug("Now generate the videos for DSCS PC mode.")
+            for i, cmd in enumerate(all_cmds):
+                logger.debug(f"index {i}, CMD: {cmd}")
+            logger.debug("=========================================================")
+
+            self.back_thread.Reset()
+            self.back_thread.SetCMDs(all_cmds)
+            self.session_connector=SessionConnector(len(all_cmds))
+
+            self.back_thread.cmd_value_changed.connect(self.session_connector.UpdateProgress)
+            self.session_connector.task_finished.connect(self.DSCSPreProcessingFinished)
+
+            self.session_connector.show()
+            self.back_thread.RunTasks()
+        else:
+            logger.info("DSCS PC preprocessing done!")
+            JPLMessageBox.ShowInformationMessage("Preprocessing done!")
+
+
+    def DSCSPreProcessingFinished(self):
+        logger.info("DSCS PC preprocessing done!")
+        all_errors=self.back_thread.error_cmds
+        if len(all_errors) > 0:
+            logger.error("Some errors occured during generation.")
+            logger.error("=============================================")
+            for error_info in all_errors:
+                logger.error(f"CMD index {error_info.idx}, CMD: {error_info.cmd}, Error: {error_info.stderr}")
+            logger.error("=============================================")
+        self.back_thread.Reset() 
+        self.back_thread.SetCMDs([])
+        self.session_connector.hide()
+        self.session_connector.deleteLater()
+
+        if len(all_errors)>0:
+            JPLMessageBox.ShowErrorMessage(f"{len(all_errors)} errors occured during generation. Please check the log file.")
+        else:
+            JPLMessageBox.ShowInformationMessage("Preprocessing done!")
     
     def SaveProject(self):
         if self.cur_project is not None:

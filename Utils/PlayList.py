@@ -430,9 +430,23 @@ def SampleRandomly(in_list,sample_num):
     sample_index=random.sample(range(len(in_list)),sample_num)
     ret_list=[in_list[i] for i in sample_index]
     return ret_list
-        
 
+def MakeAllPossiblePairs(in_list):
+    pc_in_class={}
+    ret_pair={}
 
+    # first in list to index list
+
+    for file_index,file_name in enumerate(in_list):
+        class_name=file_name.split('_')[0]
+        if class_name not in pc_in_class.keys():
+            pc_in_class[class_name]=[]
+        pc_in_class[class_name].append(index)
+    
+    for class_name in pc_in_class.keys():
+        ret_pair[class_name]=MakePCPairs(pc_in_class[class_name])
+
+    return ret_pair
 
 
 

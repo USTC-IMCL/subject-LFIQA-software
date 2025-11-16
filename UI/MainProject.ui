@@ -176,11 +176,8 @@ color: rgb(255, 255, 255);</string>
    </property>
   </action>
   <action name="action_preprocessing">
-   <property name="icon">
-    <iconset theme="accessories-dictionary"/>
-   </property>
    <property name="text">
-    <string>Pre Processing</string>
+    <string>DSCS Preprocessing</string>
    </property>
   </action>
   <action name="action_start_training">
