@@ -808,8 +808,6 @@ class MainProject(QMainWindow,Ui_MainWindow):
             logger.warning('This function is only available for DSCS-PC and DSCS-PC-CCG!')
             return
         
-        self.jpl
-        
         training_all_scoring_lfi_info=self.cur_project.training_scoring_lfi_info
         test_all_scoring_lfi_info=self.cur_project.test_scoring_lfi_info
         training_lfi_names=[]
@@ -817,11 +815,11 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
         for i in range(training_all_scoring_lfi_info.GetLFINum()):
             cur_training_scoring_lfi_info=training_all_scoring_lfi_info.GetScoringExpLFIInfo(i)
-            training_lfi_names.append(cur_training_scoring_lfi_info.passive_view_video_path)
+            training_lfi_names.append(os.path.basename(cur_training_scoring_lfi_info.passive_view_video_path))
         
         for i in range(test_all_scoring_lfi_info.GetLFINum()):
             cur_test_scoring_lfi_info=test_all_scoring_lfi_info.GetScoringExpLFIInfo(i)
-            test_lfi_names.append(cur_test_scoring_lfi_info.passive_view_video_path)
+            test_lfi_names.append(os.path.basename(cur_test_scoring_lfi_info.passive_view_video_path))
         
         all_training_pairs=MakeAllPossiblePairs(training_lfi_names)
         all_test_pairs=MakeAllPossiblePairs(test_lfi_names)
@@ -833,6 +831,32 @@ class MainProject(QMainWindow,Ui_MainWindow):
         res_file=PathManager.scene_resolution
         pc_root=os.path.join(self.cur_project.project_path,PathManager.dscs_folder,"training")
         for class_name in all_training_pairs.keys():
+            cur_pairs=all_training_pairs[class_name]
+            for pc_pair in cur_pairs:
+                scoring_lfi_1=training_all_scoring_lfi_info.GetScoringExpLFIInfo(pc_pair[0]).passive_view_video_path
+                scoring_lfi_2=training_all_scoring_lfi_info.GetScoringExpLFIInfo(pc_pair[1]).passive_view_video_path
+
+                file_1=scoring_lfi_1.passive_view_video_path
+                file_part_1=os.path.basename(file_1)
+                post_fix_1='.'+file_part_1.split(".")[-1]
+
+                file_2=scoring_lfi_2.passive_view_video_path
+                file_part_2=os.path.basename(file_2)
+                post_fix_2='.'+file_part_2.split(".")[-1]
+
+                file_part_1=file_part_1.replace(post_fix_1,"")[len(class_name):]
+                file_part_2=file_part_2.replace(post_fix_2,"")[len(class_name):]
+                output_file=os.path.join(pc_root,f"{class_name}_{file_part_1}_vs_{file_part_2}.{video_save_type_str}")
+
+                target_scoring_lfi=ExpInfo.ScoringExpLFIInfo()
+                target_scoring_lfi.passive_view_video_path=output_file
+                target_scoring_lfi.passive_refocusing_folder=output_file
+
+                read_status, video_res, img_res =PreProcess.GetVideoInfo(file_1,res_file)
+                cmd=ConcatPCFilesCMD(file_1,file_2,output_file,video_res,img_res)
+                all_cmds.append(cmd)
+
+        for class_name in all_test_pairs.keys():
             cur_pairs=all_training_pairs[class_name]
             for pc_pair in cur_pairs:
                 scoring_lfi_1=training_all_scoring_lfi_info.GetScoringExpLFIInfo(pc_pair[0]).passive_view_video_path
