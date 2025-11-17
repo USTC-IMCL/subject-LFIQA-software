@@ -56,9 +56,12 @@ class MainProject(QMainWindow,Ui_MainWindow):
             inner_json='./Utils/SoftwareConfig.json'
         '''
         custom_log_level=PathManager.SoftWarePathManager.ReadLogLevelOnly(custom_init_path)
+        thread_num=PathManager.SoftWarePathManager.ReadThreadNumOnly(custom_init_path)
         self.software_manager=PathManager.SoftWarePathManager()
         if custom_log_level is not None:
             self.software_manager.log_level=custom_log_level
+        if thread_num is not None:
+            self.software_manager.thread_num=thread_num
 
         self.software_manager.file_path=custom_init_path
         self.software_manager.SaveInfo()
@@ -77,7 +80,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         sys.stderr=StreamToLogger(logger, logging.ERROR)
 
         # set a new processing to run PC content generation CMDs
-        self.back_thread= WorkerManager()  
+        self.back_thread= WorkerManager(worker_num=self.software_manager.thread_num)  
         self.session_player=None
         self.session_connector=None
         self.all_sessions=[]  # a list containing all sessions' mode
@@ -114,10 +117,53 @@ class MainProject(QMainWindow,Ui_MainWindow):
         self.log_level_group.addAction(self.actionError)
         self.log_level_group.addAction(self.actionWarning)
 
+        self.thread_num_group=QActionGroup(self)
+        self.thread_num_group.setExclusive(True)
+        self.thread_num_group.addAction(self.action_thread_1)
+        self.thread_num_group.addAction(self.action_thread_2)
+        self.thread_num_group.addAction(self.action_thread_4)
+        self.thread_num_group.addAction(self.action_thread_8)
+
         self.action_setting_interchange_data.triggered.connect(self.SetInterchangeData)
 
         self.log_level_group.triggered.connect(self.GroupSetLevel)
         self.SetLogActionTriggered()
+
+        self.thread_num_group.triggered.connect(self.GroupSetThreadNum)
+        self.SetThreadNumTriggered()
+    
+    def SetThreadNumTriggered(self):
+        if self.software_manager.thread_num==1:
+            self.action_thread_1.setChecked(True)
+            return
+        if self.software_manager.thread_num==2:
+            self.action_thread_2.setChecked(True)
+            return
+        if self.software_manager.thread_num==4:
+            self.action_thread_4.setChecked(True)
+            return
+        if self.software_manager.thread_num==8:
+            self.action_thread_8.setChecked(True)
+            return
+
+    def GroupSetThreadNum(self):
+        if self.action_thread_1.isChecked():
+            self.software_manager.thread_num=1
+            self.back_thread.SetWorkerNum(1)
+
+        if self.action_thread_2.isChecked():
+            self.software_manager.thread_num=2
+            self.back_thread.SetWorkerNum(2)
+
+        if self.action_thread_4.isChecked():
+            self.software_manager.thread_num=4
+            self.back_thread.SetWorkerNum(4)
+
+        if self.action_thread_8.isChecked():
+            self.software_manager.thread_num=8
+            self.back_thread.SetWorkerNum(8)
+
+        self.software_manager.SaveInfo()
     
     def SetInterchangeData(self):
         pass
@@ -513,6 +559,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 else:
                     res_file=PathManager.scene_resolution
                     read_status,video_res,img_res=PreProcess.GetVideoInfo(file_1,res_file)
+                    output_file=output_file_1
                     cur_cmd=ConcatPCFilesCMD(file_1,file_2,output_file,video_res,img_res)
                     all_pc_cmds.append(cur_cmd)
 
@@ -529,6 +576,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
             logger.info("Now making DSCS PC refinement material ...")
             self.back_thread.Reset()
             self.back_thread.SetCMDs(all_pc_cmds)
+            logger.debug(f"The thread number is {self.back_thread.worker_num}")
             self.session_connector=SessionConnector(len(all_pc_cmds))
             self.back_thread.cmd_value_changed.connect(self.session_connector.UpdateProgress)
             self.session_connector.task_finished.connect(self.MakeDSCSPCFinished)
@@ -551,6 +599,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
             logger.error("=============================================")
         self.back_thread.Reset() 
         self.back_thread.SetCMDs([])
+        self.back_thread.cmd_value_changed.disconnect(self.session_connector.UpdateProgress)
         self.session_connector.hide()
         self.session_connector.deleteLater()
 
@@ -830,11 +879,13 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
         res_file=PathManager.scene_resolution
         pc_root=os.path.join(self.cur_project.project_path,PathManager.dscs_folder,"training")
+        if not os.path.exists(pc_root):
+            os.makedirs(pc_root)
         for class_name in all_training_pairs.keys():
             cur_pairs=all_training_pairs[class_name]
             for pc_pair in cur_pairs:
-                scoring_lfi_1=training_all_scoring_lfi_info.GetScoringExpLFIInfo(pc_pair[0]).passive_view_video_path
-                scoring_lfi_2=training_all_scoring_lfi_info.GetScoringExpLFIInfo(pc_pair[1]).passive_view_video_path
+                scoring_lfi_1=training_all_scoring_lfi_info.GetScoringExpLFIInfo(pc_pair[0])
+                scoring_lfi_2=training_all_scoring_lfi_info.GetScoringExpLFIInfo(pc_pair[1])
 
                 file_1=scoring_lfi_1.passive_view_video_path
                 file_part_1=os.path.basename(file_1)
@@ -846,21 +897,26 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
                 file_part_1=file_part_1.replace(post_fix_1,"")[len(class_name):]
                 file_part_2=file_part_2.replace(post_fix_2,"")[len(class_name):]
-                output_file=os.path.join(pc_root,f"{class_name}_{file_part_1}_vs_{file_part_2}.{video_save_type_str}")
+                output_file_1=os.path.join(pc_root,f"{class_name}_{file_part_1}_vs_{file_part_2}.{video_save_type_str}")
+                output_file_2=os.path.join(pc_root,f"{class_name}_{file_part_2}_vs_{file_part_1}.{video_save_type_str}")
 
-                target_scoring_lfi=ExpInfo.ScoringExpLFIInfo()
-                target_scoring_lfi.passive_view_video_path=output_file
-                target_scoring_lfi.passive_refocusing_folder=output_file
+                if os.path.exists(output_file_1) or os.path.exists(output_file_2):
+                    logger.debug(f"File {output_file_1} or {output_file_2} already exists, skip it!")
+                    continue
 
+                output_file=output_file_1
                 read_status, video_res, img_res =PreProcess.GetVideoInfo(file_1,res_file)
                 cmd=ConcatPCFilesCMD(file_1,file_2,output_file,video_res,img_res)
                 all_cmds.append(cmd)
 
+        pc_root=os.path.join(self.cur_project.project_path,PathManager.dscs_folder,"test")
+        if not os.path.exists(pc_root):
+            os.makedirs(pc_root)
         for class_name in all_test_pairs.keys():
             cur_pairs=all_training_pairs[class_name]
             for pc_pair in cur_pairs:
-                scoring_lfi_1=training_all_scoring_lfi_info.GetScoringExpLFIInfo(pc_pair[0]).passive_view_video_path
-                scoring_lfi_2=training_all_scoring_lfi_info.GetScoringExpLFIInfo(pc_pair[1]).passive_view_video_path
+                scoring_lfi_1=training_all_scoring_lfi_info.GetScoringExpLFIInfo(pc_pair[0])
+                scoring_lfi_2=training_all_scoring_lfi_info.GetScoringExpLFIInfo(pc_pair[1])
 
                 file_1=scoring_lfi_1.passive_view_video_path
                 file_part_1=os.path.basename(file_1)
@@ -872,12 +928,14 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
                 file_part_1=file_part_1.replace(post_fix_1,"")[len(class_name):]
                 file_part_2=file_part_2.replace(post_fix_2,"")[len(class_name):]
-                output_file=os.path.join(pc_root,f"{class_name}_{file_part_1}_vs_{file_part_2}.{video_save_type_str}")
+                output_file_1=os.path.join(pc_root,f"{class_name}_{file_part_1}_vs_{file_part_2}.{video_save_type_str}")
+                output_file_2=os.path.join(pc_root,f"{class_name}_{file_part_2}_vs_{file_part_1}.{video_save_type_str}")
 
-                target_scoring_lfi=ExpInfo.ScoringExpLFIInfo()
-                target_scoring_lfi.passive_view_video_path=output_file
-                target_scoring_lfi.passive_refocusing_folder=output_file
-
+                if os.path.exists(output_file_1) or os.path.exists(output_file_2):
+                    logger.debug(f"File {output_file_1} or {output_file_2} already exists, skip it!")
+                    continue
+                
+                output_file=output_file_1
                 read_status, video_res, img_res =PreProcess.GetVideoInfo(file_1,res_file)
                 cmd=ConcatPCFilesCMD(file_1,file_2,output_file,video_res,img_res)
                 all_cmds.append(cmd)
@@ -890,10 +948,13 @@ class MainProject(QMainWindow,Ui_MainWindow):
 
             self.back_thread.Reset()
             self.back_thread.SetCMDs(all_cmds)
+            logger.debug(f"The thread number is {self.back_thread.worker_num}")
             self.session_connector=SessionConnector(len(all_cmds))
 
             self.back_thread.cmd_value_changed.connect(self.session_connector.UpdateProgress)
             self.session_connector.task_finished.connect(self.DSCSPreProcessingFinished)
+
+            self.session_connector.setWindowTitle("DSCS PC preprocessing")
 
             self.session_connector.show()
             self.back_thread.RunTasks()
@@ -913,6 +974,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
             logger.error("=============================================")
         self.back_thread.Reset() 
         self.back_thread.SetCMDs([])
+        self.back_thread.cmd_value_changed.disconnect(self.session_connector.UpdateProgress)
         self.session_connector.hide()
         self.session_connector.deleteLater()
 

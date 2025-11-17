@@ -129,9 +129,19 @@ color: rgb(255, 255, 255);</string>
      <addaction name="actionWarning"/>
      <addaction name="actionError"/>
     </widget>
+    <widget class="QMenu" name="menuThread_Num">
+     <property name="title">
+      <string>Thread Num</string>
+     </property>
+     <addaction name="action_thread_1"/>
+     <addaction name="action_thread_2"/>
+     <addaction name="action_thread_4"/>
+     <addaction name="action_thread_8"/>
+    </widget>
     <addaction name="menuFont_Size"/>
     <addaction name="menuLog_Level"/>
     <addaction name="action_setting_interchange_data"/>
+    <addaction name="menuThread_Num"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -297,6 +307,41 @@ color: rgb(255, 255, 255);</string>
   <action name="action_export_interchange_data">
    <property name="text">
     <string>Interchange Data</string>
+   </property>
+  </action>
+  <action name="action_thread_1">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>1</string>
+   </property>
+  </action>
+  <action name="action_thread_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>2</string>
+   </property>
+  </action>
+  <action name="action_thread_4">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>4</string>
+   </property>
+  </action>
+  <action name="action_thread_8">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>8</string>
    </property>
   </action>
  </widget>

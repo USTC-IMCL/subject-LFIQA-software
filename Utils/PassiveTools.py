@@ -43,7 +43,8 @@ def ConcatPCFilesCMD(file_1,file_2,output_file,video_res=None,img_res=None,cente
     ffmpeg_cmd=f"{ffmpeg_path} -i {file_1} -i {file_2} -i color=gray128 -filter_complex \"[0:v]crop=w={img_width}:h={img_height}:x={right_x}:y={right_y},pad=iw+20:ih:0:0:gray128[left];[1:v]crop=w={img_width}:h={img_height}:x={right_x}:y={right_y}[right];[left][right]hstack=inputs=2[ab];color=gray128:s={video_width}x{video_height}[bg];[bg][ab]overlay=x={left_x}:y={left_y}\" -c:v libx265 -qp 0 {output_file} -y"
     '''
 
-    ffmpeg_cmd=f"{ffmpeg_path} -i {file_1} -i {file_2} -filter_complex \"[1:v]crop=w={img_width}:h={img_height}:x={right_x}:y={right_y}[right];[0:v][right]overlay=x={left_x}:y={left_y}\" -c:v libx265 -qp 0 {output_file} -y"
+    # no , qp = 0 does not mean lossless for libx265
+    ffmpeg_cmd=f"{ffmpeg_path} -i {file_1} -i {file_2} -filter_complex \"[1:v]crop=w={img_width}:h={img_height}:x={right_x}:y={right_y}[right];[0:v][right]overlay=x={left_x}:y={left_y}\" -c:v libx264 -qp 0 {output_file} -y"
     return ffmpeg_cmd
 
 def RunCMDs(all_cmd):
@@ -118,6 +119,12 @@ class WorkerManager(QObject):
         self.cmd_value_changed.emit(self.finished_work_num)
         self.pool.clear()
         self.all_cmds=[]
+    
+    def SetWorkerNum(self,num):
+        if num <= 0:
+            return
+        self.worker_num=num
+        self.pool.setMaxThreadCount(num)
 
 '''
 class CMDWorker(QThread):

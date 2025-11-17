@@ -441,7 +441,7 @@ def MakeAllPossiblePairs(in_list):
         class_name=file_name.split('_')[0]
         if class_name not in pc_in_class.keys():
             pc_in_class[class_name]=[]
-        pc_in_class[class_name].append(index)
+        pc_in_class[class_name].append(file_index)
     
     for class_name in pc_in_class.keys():
         ret_pair[class_name]=MakePCPairs(pc_in_class[class_name])

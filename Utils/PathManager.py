@@ -180,11 +180,13 @@ class SoftWarePathManager():
         self._software_version=''
         self._logs_path='./Logs'
         self._log_level="INFO"
+        self._thread_num=4
         self.config_keys=[
             "Software_Path",
             "Software_Version",
             "Logs_Path",
-            "Log_Level"
+            "Log_Level",
+            "Thread_Num"
         ]
         self.log_level_dict={
             'INFO':logging.INFO,
@@ -197,6 +199,7 @@ class SoftWarePathManager():
         self.config['Software_Version']=self._software_version
         self.config['Logs_Path']=self._logs_path
         self.config['Log_Level']=self._log_level
+        self.config['Thread_Num']=self._thread_num
 
     def CheckInnerPath(self,path):
         if not os.path.exists(path):
@@ -205,6 +208,14 @@ class SoftWarePathManager():
     def SaveInfo(self):
         with open(self.file_path,'w') as fid:
             json.dump(self.config,fid,indent=4)
+    
+    @property
+    def thread_num(self):
+        return self._thread_num
+    @thread_num.setter
+    def thread_num(self,value):
+        self._thread_num=value
+        self.config['Thread_Num']=value
         
     @property
     def software_path(self):
@@ -274,6 +285,16 @@ class SoftWarePathManager():
         if log_level.upper() not in ['INFO',"ERROR","WARNING","DEBUG"]:
             return None
         return log_level
+    
+    @staticmethod
+    def ReadThreadNumOnly(input_json):
+        if not os.path.exists(input_json):
+            return None
+        with open(input_json,'r') as fid:
+            cur_config=json.load(fid)
+        if 'Thread_Num' not in cur_config.keys():
+            return None
+        return cur_config['Thread_Num']
 
 def GetSubjectResultFolder(project_path):
     return os.path.join(project_path,subject_results_folder)
