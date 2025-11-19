@@ -913,10 +913,10 @@ class MainProject(QMainWindow,Ui_MainWindow):
         if not os.path.exists(pc_root):
             os.makedirs(pc_root)
         for class_name in all_test_pairs.keys():
-            cur_pairs=all_training_pairs[class_name]
+            cur_pairs=all_test_pairs[class_name]
             for pc_pair in cur_pairs:
-                scoring_lfi_1=training_all_scoring_lfi_info.GetScoringExpLFIInfo(pc_pair[0])
-                scoring_lfi_2=training_all_scoring_lfi_info.GetScoringExpLFIInfo(pc_pair[1])
+                scoring_lfi_1=test_all_scoring_lfi_info.GetScoringExpLFIInfo(pc_pair[0])
+                scoring_lfi_2=test_all_scoring_lfi_info.GetScoringExpLFIInfo(pc_pair[1])
 
                 file_1=scoring_lfi_1.passive_view_video_path
                 file_part_1=os.path.basename(file_1)
