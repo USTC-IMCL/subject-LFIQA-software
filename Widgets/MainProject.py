@@ -436,8 +436,9 @@ class MainProject(QMainWindow,Ui_MainWindow):
             update_project=False
             if self.cur_exp_mode !="training":
                 self.GetAndSaveResult(all_results,self.cur_person_info,all_show_index,cur_all_scoring_lfi,cmp_type=res_session_cmp_type,save_file=save_file,update_project=update_project)
-
-            self.MakeDSCSPC(all_results,self.cur_person_info,all_show_index,self.cur_project.test_scoring_lfi_info)
+                self.MakeDSCSPC(all_results,self.cur_person_info,all_show_index,self.cur_project.test_scoring_lfi_info)
+            else:
+                self.MakeDSCSPC(all_results,self.cur_person_info,all_show_index,self.cur_project.training_scoring_lfi_info)
         else:
             JPLMessageBox.ShowInformationMessage("Experiment finished! Thank you!")
             logger.info("Experiment finished!")
