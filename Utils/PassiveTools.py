@@ -79,7 +79,7 @@ class CMDWorker(QRunnable):
     def run(self):
         try:
             cp = subprocess.run(self.cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=7200)
-            res=CMDResult(self.idx,self.cmd,cp.returncode,cp.stdout.decode('utf-8'),cp.stderr.decode('utf-8'))
+            res=CMDResult(self.idx,self.cmd,cp.returncode,cp.stdout,cp.stderr)
         except subprocess.TimeoutExpired as e:
             res=CMDResult(self.idx,self.cmd,-1,'','Timeout')
         self.cmd_finished.cmd_finished.emit(res)

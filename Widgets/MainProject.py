@@ -236,6 +236,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
         project_name=project_file.split('/')[-1]
         project_name=project_name.split('.')[0]
         project_root=os.path.dirname(os.path.dirname(project_file))
+        self.project_root=project_root
 
         #TODO: implement an update function
         if self.project_display is not None:
