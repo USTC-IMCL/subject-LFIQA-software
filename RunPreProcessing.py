@@ -48,7 +48,9 @@ def CalDenseRefocusing(img_path):
 
 if __name__ == "__main__":
     #view_root='/data_0/shengyang/Work/JPEG/LFIQA/examples/Bikes/Ori'
-    view_root='/data_0/Work/JPEG/LFIQA/examples/Bikes/Ori'
+    #view_root='/data_0/Work/JPEG/LFIQA/examples/Bikes/Ori'
+    '''
+    view_root='/data_0/shengyang/Work/JPEG/LFIQA/Active_examples/Bikes/dist/JPEG/dist_2'
     lambda_file=os.path.join(view_root,'lambda.txt')
     meta_data=None
     angular_height=11
@@ -61,4 +63,14 @@ if __name__ == "__main__":
     post_fix='.png'
 
     CalDenseRefocusing(view_root)
+    '''
+    view_root='/data_0/shengyang/Work/JPEG/LFIQA/Active_examples/Pair_Comparison/training/Bikes_JPEG_0'
+
+    all_files=os.listdir(view_root)
+
+    for file_name in all_files:
+        if '..' in file_name:
+            new_name=file_name.replace('..','.')
+            os.rename(os.path.join(view_root,file_name),os.path.join(view_root,new_name))
+
 

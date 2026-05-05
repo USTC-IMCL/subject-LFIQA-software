@@ -1,0 +1,7 @@
+{
+    "Software_Path": "",
+    "Software_Version": "",
+    "Logs_Path": "./Logs",
+    "Log_Level": "DEBUG",
+    "Thread_Num": 4
+}

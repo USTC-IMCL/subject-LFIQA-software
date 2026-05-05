@@ -1,11 +1,13 @@
-import PySide6.QtGui
 from PySide6.QtWidgets import QApplication,QWidget,QTextEdit
 from PySide6.QtGui import QMouseEvent,QKeyEvent
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt,QObject,Signal
 import logging
 import sys
 sys.path.append('../UI')
 from LogWidget_ui import Ui_LogWidget as LogWidget
+
+class LogEmitter(QObject):
+    log_signal = Signal(str)
 
 class StreamToLogger(object):
     """
@@ -26,19 +28,17 @@ class StreamToLogger(object):
 class QtLogTextEditorHandler(logging.Handler):
     def __init__(self, *args) -> None:
         super().__init__(*args)
-        self.log_text_editor=None
+        self.log_emitter=LogEmitter()
         format_str='%(asctime)s [%(levelname)s]: %(message)s'
         self.log_format=logging.Formatter(fmt=format_str,datefmt='%Y-%m-%d-%H:%M')
         self.setFormatter(self.log_format)
 
-    def SetLogTextEditor(self,log_text_editor):
-        self.log_text_editor=log_text_editor
+    def SetLogTextEditor(self,log_text_editor:QTextEdit):
+        self.log_emitter.log_signal.connect(log_text_editor.append,Qt.ConnectionType.QueuedConnection)
 
     def emit(self, record):
-        if self.log_text_editor is None:
-            return
-        else:
-            self.log_text_editor.append(self.format(record))
+        #self.log_text_editor.append(self.format(record))
+        self.log_emitter.log_signal.emit(self.format(record))
 
 class QLogTextEditor(QTextEdit):
     def __init__(self, *args, **kwargs):
