@@ -1,9 +1,9 @@
 import sys
 import copy
 from PySide6 import QtWidgets,QtCore, QtGui
-from PySide6.QtWidgets import QSizePolicy
+from PySide6.QtWidgets import QSizePolicy, QLayout
 from PySide6.QtGui import QFontMetrics
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QRect, QPoint, QSize
 sys.path.append('../Utils')
 sys.path.append('../UI')
 import UI_res_rc
@@ -22,11 +22,76 @@ import PostProcess
 logger = logging.getLogger("LogWindow")
 import JPLMessageBox
 
+class FlowLayout(QLayout):
+    def __init__(self, parent=None, margin=0, spacing=6):
+        super().__init__(parent)
+        self._items = []
+        self.setContentsMargins(margin, margin, margin, margin)
+        self.setSpacing(spacing if spacing >= 0 else 6)
+
+    def addItem(self, item):
+        self._items.append(item)
+
+    def count(self):
+        return len(self._items)
+
+    def itemAt(self, index):
+        return self._items[index] if 0 <= index < len(self._items) else None
+
+    def takeAt(self, index):
+        return self._items.pop(index) if 0 <= index < len(self._items) else None
+
+    def expandingDirections(self):
+        return Qt.Orientations()
+
+    def hasHeightForWidth(self):
+        return True
+
+    def heightForWidth(self, width):
+        return self._doLayout(QRect(0, 0, width, 0), True)
+
+    def setGeometry(self, rect):
+        super().setGeometry(rect)
+        self._doLayout(rect, False)
+
+    def sizeHint(self):
+        return self.minimumSize()
+
+    def minimumSize(self):
+        size = QSize()
+        for item in self._items:
+            size = size.expandedTo(item.minimumSize())
+        m = self.contentsMargins()
+        size += QSize(m.left() + m.right(), m.top() + m.bottom())
+        return size
+
+    def _doLayout(self, rect, testOnly=False):
+        m = self.contentsMargins()
+        effective = rect.adjusted(m.left(), m.top(), -m.right(), -m.bottom())
+        x = effective.x()
+        y = effective.y()
+        lineHeight = 0
+        spacing = self.spacing()
+        for item in self._items:
+            itemSize = item.sizeHint()
+            nextX = x + itemSize.width() + spacing
+            if nextX - spacing > effective.right() and lineHeight > 0:
+                x = effective.x()
+                y += lineHeight + spacing
+                nextX = x + itemSize.width() + spacing
+                lineHeight = 0
+            if not testOnly:
+                item.setGeometry(QRect(QPoint(x, y), itemSize))
+            x = nextX
+            lineHeight = max(lineHeight, itemSize.height())
+        return y + lineHeight - rect.y() + m.bottom()
+
 class ScrollUnitArea(QtWidgets.QScrollArea):
     def __init__(self, item_list=[], parent=None, *args, **kwargs):
         super().__init__(parent=parent)
         self.content_widget=QtWidgets.QFrame()
         self.setWidget(self.content_widget)
+        self.flow_layout=FlowLayout(self.content_widget)
 
         if 'use_add_icon' in kwargs.keys():
             self.use_add_icon=kwargs['use_add_icon']
@@ -41,7 +106,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
 
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        #self.setWidgetResizable(True)
+        self.setWidgetResizable(True)
 
         self.unit_col_num=0
         self.need_update=True
@@ -76,8 +141,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
 
         self.active_index=None
 
-        self.content_widget.resize(self.width(),self.height())
-        # do not call the make function here, 
+        # do not call the make function here,
         # as some parameters are not ready.
     
     def SetActiveUnit(self,index):
@@ -89,7 +153,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         self.unit_list_labels[index].SetActive()
         self.unit_list_labels[index].raise_()
         
-
+    '''
     def MakeColRowIndex(self):
         old_unit_col_num=self.unit_col_num
         self.unit_col_num=(self.width()-self.margin_left-self.margin_right+self.h_space)//(self.unit_size[1]+self.h_space)
@@ -106,22 +170,24 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
             col=list_index-row*self.unit_col_num
             self.item_index [list_index]=[row,col]
             self.item_pos[list_index]=[row*(self.unit_size[0]+self.h_space)+self.margin_top,col*(self.unit_size[1]+self.h_space)+self.margin_left]
+    '''
     
     def MakeUnitLabels(self):
         if len(self.unit_list_labels) == self.unit_num:
             return
         if self.use_add_icon:
-            self.unit_list_labels.append(ImageUnit(icon_img=self.add_icon,parent=self.content_widget,unit_index=0))
+            self.unit_list_labels.append(ImageUnit(icon_img=self.add_icon,parent=None,unit_index=0))
             start_index=1
         else:
             start_index=0
 
         # TODO: better design? not so elegant.
         for i in range(self.unit_num-start_index):
-            self.unit_list_labels.append(ImageUnit(None,icon_img=self.GetIconImg(i+start_index),icon_title=self.GetItemName(i+start_index),parent=self.content_widget,unit_index=i+start_index))
+            self.unit_list_labels.append(ImageUnit(None,icon_img=self.GetIconImg(i+start_index),icon_title=self.GetItemName(i+start_index),parent=None,unit_index=i+start_index))
         
         for unit_label in self.unit_list_labels[start_index:]:
             unit_label.clicked.connect(self.SetActiveUnit)
+            self.flow_layout.addWidget(unit_label)
     
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -130,6 +196,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
             self.active_index=None
         event.ignore()
     
+    '''
     def UpdateLabelPos(self):
         self.MakeColRowIndex()
         if self.need_update:
@@ -144,6 +211,7 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
         self.force_update=True
         self.UpdateLabelPos()
         self.force_update=False
+    '''
     
     def RefreshIndex(self):
         self.unit_num=len(self.unit_list_labels)
@@ -160,10 +228,12 @@ class ScrollUnitArea(QtWidgets.QScrollArea):
     def SetClickFunc(self,index,func):
         self.unit_list_labels[index].clicked.connect(func)
     
+    '''
     def resizeEvent(self, event):
         self.need_update=True
         self.UpdateLabelPos()
         return super().resizeEvent(event)
+    '''
     
     def MakeUnitMenu(self):
         if len(self.unit_menu_text) == 0:
@@ -222,7 +292,6 @@ class SubjectsManagerWidget(ScrollUnitArea):
         }
 
         self.MakeUnitLabels()
-        self.UpdateLabelPos()
 
         self.MakeMenu()
 
@@ -462,7 +531,7 @@ class SubjectsManagerWidget(ScrollUnitArea):
         del_label.deleteLater()
 
         self.RefreshIndex()
-        self.RefreshLabelPos()
+        #self.RefreshLabelPos()
 
         self.delete_subject_signal.emit(index,target_name)
         self.subject_num_changed_signal.emit(self.unit_num)
@@ -1302,6 +1371,8 @@ class ImageUnit(QtWidgets.QFrame):
         self.index=unit_index
         self.open_menu=False
         self.menu_text=None
+        self.setMinimumSize(self.logo_size[0], self.logo_size[1] + 20)   # 留一点给文字
+        self.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
     
     def SetIndex(self, index):
         self.index=index
@@ -1463,7 +1534,6 @@ class MaterialFolderFrame(ScrollUnitArea):
         self.MakeNames()
 
         self.MakeUnitLabels()
-        self.UpdateLabelPos()
 
         if self.b_editable:
             self.unit_list_labels[0].clicked.connect(self.AddNewLFI)
@@ -1583,7 +1653,7 @@ class MaterialFolderFrame(ScrollUnitArea):
             self.item_index=[None]*(1+self.all_scoring_lfi.exp_lfi_info_num) #[[row, col]]
             self.item_pos=[None]*(1+self.all_scoring_lfi.exp_lfi_info_num) #[height,width]
             self.force_update=True
-            self.UpdateLabelPos()
+            #self.UpdateLabelPos()
             self.force_update=False
 
     def CancleAddNewLFI(self):
@@ -1592,15 +1662,7 @@ class MaterialFolderFrame(ScrollUnitArea):
     def DeleteLFI(self,index):
         self.all_scoring_lfi.DeleteScoringLFI(index)
         self.unit_list_labels.pop(index).deleteLater()
-        self.UpdateLabelText()
-        self.force_update=True
-        self.UpdateLabelPos()
-        self.force_update=False
 
-    def UpdateLabelText(self):
-        for index,image_unit in enumerate(self.unit_list_labels[1:]):
-            image_unit.SetText(f'LFI {index}')
-    
     def CheckCache(self,project_path):
         if self.cache_root is None:
             self.MakeCache(project_path)
@@ -1915,7 +1977,6 @@ if __name__ == "__main__":
     item_list=[f'item_{i}' for i in range(100)]
     subject_display=ScrollUnitArea(item_list)
     subject_display.MakeUnitLabels()
-    subject_display.UpdateLabelPos()
     subject_display.resize(800,600)
 
     subject_display.show()
