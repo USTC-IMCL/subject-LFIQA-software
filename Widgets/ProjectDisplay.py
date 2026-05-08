@@ -1389,16 +1389,17 @@ class ImageUnit(QtWidgets.QFrame):
         self.logo_label.setGeometry(QtCore.QRect(0, 0, self.logo_size[1], self.logo_size[0]))
 
         metrics=QFontMetrics(self.font())
+        self.active_title = icon_title
         self.deactive_title=metrics.elidedText(icon_title,QtCore.Qt.ElideRight, self.logo_size[1])
 
         self.logo_title_label.setFixedWidth(self.logo_size[1])
-        self.logo_title_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.logo_title_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+        self.logo_title_label.setWordWrap(False)
         self.logo_title_label.setText(self.deactive_title)
-
         self.logo_title_label.adjustSize()
-        title_label_width=self.logo_title_label.width()
-        title_label_height=self.logo_title_label.height()
-        self.logo_title_label.setGeometry(QtCore.QRect((self.logo_size[1]-title_label_width)//2, self.logo_size[0], title_label_width, title_label_height))
+        label_h=self.logo_title_label.height()
+        self.logo_title_label.move(0, self.logo_size[0])
+        self.logo_title_label.resize(self.logo_size[1], label_h)
 
     def SetText(self, text):
         self.logo_title_label.setText(text)
@@ -1437,36 +1438,52 @@ class ImageUnit(QtWidgets.QFrame):
         # https://stackoverflow.com/questions/12262123/how-to-customize-qlabel-word-wrap-mode
         self.b_active=True
         self.logo_label.setStyleSheet('background-color: rgba(0,0,255,180);')
-        font_size=self.logo_title_label.font().pointSize()
         self.logo_title_label.setStyleSheet('background-color: rgba(0,0,255,180); color: white;')
         self.logo_title_label.setFixedWidth(self.logo_size[1])
+        self.logo_title_label.setAlignment(QtCore.Qt.AlignCenter)
         self.logo_title_label.setWordWrap(True)
-        self.logo_title_label.setText(self.active_title)
-        self.logo_title_label.setFont(QtGui.QFont(self.font().family(), font_size))
-
+        self.logo_title_label.setText(self._break_long_words(self.active_title))
         self.logo_title_label.adjustSize()
-        title_label_width=self.logo_title_label.width()
-        title_label_height=self.logo_title_label.height()
-        if self.logo_size[0] + title_label_height > self.height():
-            self.resize(self.width(), self.logo_size[0] + title_label_height)
-
-        self.logo_title_label.setGeometry(QtCore.QRect((self.logo_size[1]-title_label_width)//2, self.logo_size[0], title_label_width, title_label_height))
+        label_h=self.logo_title_label.height()
+        if self.logo_size[0] + label_h > self.height():
+            self.setMinimumHeight(self.logo_size[0] + label_h)
+        self.logo_title_label.move(0, self.logo_size[0])
+        self.logo_title_label.resize(self.logo_size[1], label_h)
 
     def SetDeActive(self):
         self.b_active=False
         self.logo_label.setStyleSheet('background-color: transparent;')
-        font_size=self.logo_title_label.font().pointSize()
         self.logo_title_label.setStyleSheet('background-color: transparent; color: black;')
 
         self.logo_title_label.setFixedWidth(self.logo_size[1])
+        self.logo_title_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
         self.logo_title_label.setWordWrap(False)
         self.logo_title_label.setText(self.deactive_title)
-        self.logo_title_label.setFont(QtGui.QFont(self.font().family(), font_size))
         self.logo_title_label.adjustSize()
-        title_label_width=self.logo_title_label.width()
-        title_label_height=self.logo_title_label.height()
+        label_h=self.logo_title_label.height()
+        self.setMinimumSize(self.logo_size[0], self.logo_size[1] + 20)
+        self.logo_title_label.move(0, self.logo_size[0])
+        self.logo_title_label.resize(self.logo_size[1], label_h)
 
-        self.logo_title_label.setGeometry(QtCore.QRect((self.logo_size[1]-title_label_width)//2, self.logo_size[0], title_label_width, title_label_height))
+    def _break_long_words(self, text):
+        """Insert spaces into long single words so word-wrap can break them."""
+        fm = QFontMetrics(self.logo_title_label.font())
+        max_w = self.logo_size[1]
+        parts = []
+        for word in text.split(' '):
+            if fm.horizontalAdvance(word) > max_w:
+                line = ''
+                for ch in word:
+                    if fm.horizontalAdvance(line + ch) > max_w:
+                        parts.append(line)
+                        line = ch
+                    else:
+                        line += ch
+                if line:
+                    parts.append(line)
+            else:
+                parts.append(word)
+        return ' '.join(parts)
 
     def contextMenuEvent(self, event):
         if not self.open_menu:
