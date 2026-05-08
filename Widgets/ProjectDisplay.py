@@ -1406,14 +1406,16 @@ class ImageUnit(QtWidgets.QFrame):
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
             self.clicked.emit(self.index)
-            event.ignore()
-        return super().mousePressEvent(event)
+            event.accept()
+            return
+        super().mousePressEvent(event)
 
     def mouseDoubleClickEvent(self, event):
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
             self.double_clicked.emit(self.index)
-            event.ignore()
-        return super().mouseDoubleClickEvent(event)
+            event.accept()
+            return
+        super().mouseDoubleClickEvent(event)
 
     def MakeMenu(self, menu_text):
         self.open_menu=True
