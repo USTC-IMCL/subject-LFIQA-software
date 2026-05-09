@@ -193,409 +193,355 @@ class BlankScoringWidget(QtWidgets.QWidget):
         key.ignore()
         pass
 
-class PairWiseScoringWidget(QtWidgets.QStackedWidget):
-    scoring_finished=QtCore.Signal(list)
-    
-    def __init__(self, all_lfi_info:AllScoringLFI, exp_setting:ExpSetting, all_show_index):
+class BaseScoringWidget(QtWidgets.QStackedWidget):
+    scoring_finished = QtCore.Signal(list)
+    trial_scored = QtCore.Signal(int, int)
+
+    def __init__(self, all_lfi_info, exp_setting, all_show_index):
         super().__init__()
-
         self.setStyleSheet('background-color:gray;')
-
-        self.all_lfi_info=all_lfi_info
-        self.exp_setting=exp_setting
-        self.all_show_index=all_show_index
-        self.current_lfi_show_index=0
-
-        self.all_view_scores=[]
-        self.all_refocusing_scores=[]
-        self.show_page_list=[] # view changing, refocusing
-
-        self.current_page_index=0
-        self.max_page_num=0
+        self.all_lfi_info = all_lfi_info
+        self.exp_setting = exp_setting
+        self.all_show_index = all_show_index
+        self.current_lfi_show_index = 0
+        self.show_page_list = []
+        self.current_page_index = 0
+        self.max_page_num = 0
 
         screen = QApplication.primaryScreen().geometry()
-        self.setGeometry(0,0,screen.width(), screen.height())
-
+        self.setGeometry(0, 0, screen.width(), screen.height())
         self.setWindowFlag(Qt.FramelessWindowHint)
         self.setWindowFlag(Qt.WindowStaysOnTopHint)
-        #self.setAttribute(Qt.WA_TranslucentBackground)
-        
-        #cur_lf_info=self.GetSingleLFIInfo(self.current_lfi_show_index)
-        cur_scoring_lfi_info=self.all_lfi_info.GetScoringExpLFIInfo(self.all_show_index[self.current_lfi_show_index])
+        locale.setlocale(locale.LC_NUMERIC, "C")
 
-        locale.setlocale(locale.LC_NUMERIC,"C")
+        self._build_pages(screen)
 
-        self.SetPageShowing(cur_scoring_lfi_info,init_flag=True)
-        #self.SetPageShowing(cur_scoring_lfi_info)
+        self.finish_page = FinishPage(screen.width(), screen.height())
+        self.finish_page.setParent(self)
+        self.finish_page.key_pressed.connect(lambda: self.FinishAll())
+        self.addWidget(self.finish_page)
+
+        self.all_page_num = self.max_page_num + 2
+        self.setCurrentIndex(0)
+
+    def _build_pages(self, screen):
+        raise NotImplementedError
+
+    def _resize_children(self, screen):
+        raise NotImplementedError
+
+    def _results(self):
+        raise NotImplementedError
+
+    def SetScoringScreen(self, screen_index):
+        app = QApplication.instance()
+        if app is None:
+            app = QApplication([])
+        self.setScreen(app.screens()[screen_index])
+        cur_scree = self.screen()
+        self.move(cur_scree.geometry().topLeft())
+        self.resize(cur_scree.geometry().size())
+        self._resize_children(cur_scree)
+        self.finish_page.resize(self.width(), self.height())
+        self.finish_page.setGeometry(0, 0, self.width(), self.height())
+
+    def GetSingleLFIInfo(self, show_index):
+        cur_index = self.all_show_index[show_index]
+        return self.all_lfi_info.GetScoringExpLFIInfo(cur_index)
+
+    def NextPage(self):
+        self.current_page_index += 1
+        if self.current_page_index >= self.all_page_num:
+            self.current_page_index = 0
+        self.setCurrentIndex(self.current_page_index)
+
+    def PrePage(self):
+        self.current_page_index -= 1
+        if self.current_page_index < 0:
+            self.current_page_index = self.all_page_num - 1
+        self.setCurrentIndex(self.current_page_index)
+
+    def FinishAll(self):
+        self.hide()
+        self.scoring_finished.emit(self._results())
+        for page in self.show_page_list:
+            if page is not None and isinstance(page, VideoPage):
+                page.CloseVideoPlayer()
+
+    def keyPressEvent(self, event):
+        cur_page = self.currentWidget()
+        cur_page.handle_key_press(event)
+        return super().keyPressEvent(event)
+
+
+class PairWiseScoringWidget(BaseScoringWidget):
+    def _build_pages(self, screen):
+        self.all_view_scores = []
+        self.all_refocusing_scores = []
+
+        cur_scoring_lfi_info = self.GetSingleLFIInfo(0)
+        self.SetPageShowing(cur_scoring_lfi_info, init_flag=True)
         for page in self.show_page_list:
             if page is not None:
                 page.setParent(self)
 
-        ############ 
-        self.blank_page=BlankScoringWidget(screen_height=screen.height(),screen_width=screen.width())
+        self.blank_page = BlankScoringWidget(
+            screen_height=screen.height(), screen_width=screen.width())
         self.blank_page.blank_timeout.connect(lambda: self.BlankPageNext())
         self.blank_page.setParent(self)
         self.addWidget(self.blank_page)
 
-        self.finish_page=FinishPage(screen.width(),screen.height())
-        self.finish_page.key_pressed.connect(lambda: self.FinishAll())
-        self.finish_page.setParent(self)
-        self.addWidget(self.finish_page)
+    def _resize_children(self, screen):
+        self.blank_page.resize(self.width(), self.height())
+        self.blank_page.setGeometry(0, 0, self.width(), self.height())
 
-        self.all_page_num=self.max_page_num+2
-    
-    def SetScoringScreen(self,screen_index):
-        app=QApplication.instance()
-        if app is None:
-            app=QApplication([])
-        self.setScreen(app.screens()[screen_index])
-        cur_scree=self.screen()
-        self.move(cur_scree.geometry().topLeft())
-        self.resize(cur_scree.geometry().size())
-        self.blank_page.resize(self.width(),self.height())
-        self.blank_page.setGeometry(0,0,self.width(),self.height())
-        self.finish_page.resize(self.width(),self.height())
-        self.finish_page.setGeometry(0,0,self.width(),self.height())
+    def _results(self):
+        if len(self.all_view_scores) == 0:
+            self.all_view_scores = None
+        if len(self.all_refocusing_scores) == 0:
+            self.all_refocusing_scores = None
+        return [self.all_view_scores, self.all_refocusing_scores]
 
-    def GetSingleLFIInfo(self,show_index)->ScoringExpLFIInfo:
-        cur_index=self.all_show_index[show_index]
-        return self.all_lfi_info.GetScoringExpLFIInfo(cur_index)
-    
-    def ShowingNext(self,ret_score,score_list,i=0):
-        if i+1>=self.max_page_num:
-            self.RecordScore(ret_score,score_list)
+    def ShowingNext(self, ret_score, score_list, i=0):
+        if i + 1 >= self.max_page_num:
+            self.RecordScore(ret_score, score_list)
         else:
             score_list.append(ret_score)
             self.NextPage()
 
-    def RecordScore(self,ret_score,score_list):
-        # get score, then set new lfi image
+    def RecordScore(self, ret_score, score_list):
         logger.debug(f"Score is {ret_score}")
         score_list.append(ret_score)
         self.NextPage()
-    
+
     def BlankPageNext(self):
-        self.current_lfi_show_index+=1
+        self.current_lfi_show_index += 1
         if self.current_lfi_show_index >= self.all_lfi_info.GetLFINum():
-            self.current_page_index+=1
+            self.current_page_index += 1
             self.setCurrentIndex(self.current_page_index)
             return
-        cur_lfi_info=self.GetSingleLFIInfo(self.current_lfi_show_index)
+        self.trial_scored.emit(self.current_lfi_show_index, self.all_lfi_info.GetLFINum())
+        cur_lfi_info = self.GetSingleLFIInfo(self.current_lfi_show_index)
         self.SetPageShowing(cur_lfi_info)
 
-        self.current_page_index=0
+        self.current_page_index = 0
         self.setCurrentIndex(self.current_page_index)
-    
-    def SetPageShowing(self,cur_lf_info:ScoringExpLFIInfo,init_flag=False):
-        exp_setting=self.exp_setting
 
+    def NextPage(self):
+        self.current_page_index += 1
+        if self.current_page_index >= self.all_page_num:
+            self.current_page_index = 0
+        self.setCurrentIndex(self.current_page_index)
+        if self.currentWidget() == self.blank_page:
+            self.blank_page.wait_until_timeout(1.5)
+
+    def SetPageShowing(self, cur_lf_info, init_flag=False):
+        exp_setting = self.exp_setting
         if exp_setting.two_folder_mode and LFIFeatures.Passive_ViewChanging in exp_setting.lfi_features:
             if init_flag:
-                page_showing=VideoPage(exp_setting,None,cur_lf_info.passive_view_video_path,cmp_type=ComparisonType.PairComparison)
+                page_showing = VideoPage(exp_setting, None, cur_lf_info.passive_view_video_path, cmp_type=ComparisonType.PairComparison)
                 self.addWidget(page_showing)
-                page_showing.pair_finished.connect(lambda x: self.ShowingNext(x,self.all_view_scores,0))
-                self.max_page_num+=1
+                page_showing.pair_finished.connect(lambda x: self.ShowingNext(x, self.all_view_scores, 0))
+                self.max_page_num += 1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[0].SetNewLFI(exp_setting,None,cur_lf_info.passive_view_video_path,cmp_type=ComparisonType.PairComparison)
+                self.show_page_list[0].SetNewLFI(exp_setting, None, cur_lf_info.passive_view_video_path, cmp_type=ComparisonType.PairComparison)
             return
 
         if LFIFeatures.Active_Refocusing in exp_setting.lfi_features and LFIFeatures.Active_ViewChanging in exp_setting.lfi_features:
             if init_flag:
-                page_showing=ImagePage(exp_setting,cur_lf_info,cur_lf_info.active_view_path,cur_lf_info.active_refocusing_path)
+                page_showing = ImagePage(exp_setting, cur_lf_info, cur_lf_info.active_view_path, cur_lf_info.active_refocusing_path)
                 self.addWidget(page_showing)
-                page_showing.pair_finished.connect(lambda x: self.ShowingNext(x,self.all_view_scores,0))
-                self.max_page_num+=1
+                page_showing.pair_finished.connect(lambda x: self.ShowingNext(x, self.all_view_scores, 0))
+                self.max_page_num += 1
                 self.show_page_list.append(page_showing)
                 self.show_page_list.append(None)
             else:
-                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.active_view_path,cur_lf_info.active_refocusing_path)
-            return 
+                self.show_page_list[0].SetNewLFI(exp_setting, cur_lf_info, cur_lf_info.active_view_path, cur_lf_info.active_refocusing_path)
+            return
 
         if LFIFeatures.Active_ViewChanging in exp_setting.lfi_features and LFIFeatures.Active_Refocusing not in exp_setting.lfi_features:
             if init_flag:
-                page_showing=ImagePage(exp_setting,cur_lf_info,cur_lf_info.active_view_path,cur_lf_info.active_refocusing_path)
+                page_showing = ImagePage(exp_setting, cur_lf_info, cur_lf_info.active_view_path, cur_lf_info.active_refocusing_path)
                 self.addWidget(page_showing)
-                page_showing.pair_finished.connect(lambda x: self.ShowingNext(x,self.all_view_scores,0))
-                self.max_page_num+=1
+                page_showing.pair_finished.connect(lambda x: self.ShowingNext(x, self.all_view_scores, 0))
+                self.max_page_num += 1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.active_view_path,cur_lf_info.active_refocusing_path)
-        
+                self.show_page_list[0].SetNewLFI(exp_setting, cur_lf_info, cur_lf_info.active_view_path, cur_lf_info.active_refocusing_path)
+
         if LFIFeatures.Passive_ViewChanging in exp_setting.lfi_features:
             if init_flag:
-                page_showing=VideoPage(exp_setting,cur_lf_info,cur_lf_info.passive_view_video_path)
+                page_showing = VideoPage(exp_setting, cur_lf_info, cur_lf_info.passive_view_video_path)
                 self.addWidget(page_showing)
-                page_showing.pair_finished.connect(lambda x: self.ShowingNext(x,self.all_view_scores,0))
-                self.max_page_num+=1
+                page_showing.pair_finished.connect(lambda x: self.ShowingNext(x, self.all_view_scores, 0))
+                self.max_page_num += 1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.passive_view_video_path)
-        
+                self.show_page_list[0].SetNewLFI(exp_setting, cur_lf_info, cur_lf_info.passive_view_video_path)
+
         if LFIFeatures.None_ViewChanging in exp_setting.lfi_features:
             if init_flag:
                 self.show_page_list.append(None)
-        
+
         if LFIFeatures.Active_Refocusing in exp_setting.lfi_features:
             if init_flag:
-                page_showing=ImagePage(exp_setting,cur_lf_info,None,cur_lf_info.active_refocusing_path)
+                page_showing = ImagePage(exp_setting, cur_lf_info, None, cur_lf_info.active_refocusing_path)
                 self.addWidget(page_showing)
-                page_showing.pair_finished.connect(lambda x: self.ShowingNext(x,self.all_refocusing_scores,1))
-                self.max_page_num+=1
+                page_showing.pair_finished.connect(lambda x: self.ShowingNext(x, self.all_refocusing_scores, 1))
+                self.max_page_num += 1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[1].SetNewLFI(exp_setting,cur_lf_info,None,cur_lf_info.active_refocusing_path)
-        
+                self.show_page_list[1].SetNewLFI(exp_setting, cur_lf_info, None, cur_lf_info.active_refocusing_path)
+
         if LFIFeatures.Passive_Refocusing in exp_setting.lfi_features:
             if init_flag:
-                page_showing=VideoPage(exp_setting,cur_lf_info,cur_lf_info.passive_refocusing_video_path)
+                page_showing = VideoPage(exp_setting, cur_lf_info, cur_lf_info.passive_refocusing_video_path)
                 self.addWidget(page_showing)
-                page_showing.pair_finished.connect(lambda x: self.ShowingNext(x,self.all_refocusing_scores,1))
-                self.max_page_num+=1
+                page_showing.pair_finished.connect(lambda x: self.ShowingNext(x, self.all_refocusing_scores, 1))
+                self.max_page_num += 1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[1].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.passive_refocusing_video_path)
-        
+                self.show_page_list[1].SetNewLFI(exp_setting, cur_lf_info, cur_lf_info.passive_refocusing_video_path)
+
         if LFIFeatures.None_Refocusing in exp_setting.lfi_features:
             if init_flag:
                 self.show_page_list.append(None)
-    
-    def NextPage(self):
-        '''
-        Dirty Code
-        '''
-        self.current_page_index+=1
-        if self.current_page_index >= self.all_page_num:
-            self.current_page_index=0
-        self.setCurrentIndex(self.current_page_index)
-        if self.currentWidget() == self.blank_page:
-            self.blank_page.wait_until_timeout(1.5)
-    
-    def PrePage(self):
-        self.current_page_index-=1
-        if self.current_page_index < 0:
-            self.current_page_index=self.max_page_num-1
-        self.setCurrentIndex(self.current_page_index)
 
-    def FinishAll(self):
-        if len(self.all_view_scores)==0:
-            self.all_view_scores=None
-        if len(self.all_refocusing_scores)==0:
-            self.all_refocusing_scores=None
-        self.hide()
-        self.scoring_finished.emit([self.all_view_scores,self.all_refocusing_scores])
-        for page in self.show_page_list:
-            if page is not None:
-                if isinstance(page,VideoPage):
-                    page.CloseVideoPlayer()
-        self.deleteLater()
-        
-    def keyPressEvent(self, event) -> None:
-        cur_page=self.currentWidget()
-        cur_page.handle_key_press(event)
-        return super().keyPressEvent(event)
+class ScoringWidget(BaseScoringWidget):
+    def __init__(self, all_lfi_info, exp_setting, all_show_index):
+        super().__init__(all_lfi_info, exp_setting, all_show_index)
+        if exp_setting.comparison_type == ComparisonType.DSCS_PC_BASE or exp_setting.comparison_type == ComparisonType.DSCS_PC_CCG:
+            self.finish_page.SetLabelContent(
+                "The double DSCS session has been finished.\n Please press ESC to escape.")
 
-class ScoringWidget(QtWidgets.QStackedWidget):
-    scoring_finished=QtCore.Signal(list)
-    
-    def __init__(self, all_lfi_info:AllScoringLFI, exp_setting:ExpSetting, all_show_index):
-        super().__init__()
-        self.setStyleSheet('background-color:gray;')
-        self.all_lfi_info=all_lfi_info
-        self.exp_setting=exp_setting
-        self.all_show_index=all_show_index
-
-        all_level_names=exp_setting.score_names
-        all_score_levels=exp_setting.score_levels
-
-        self.current_lfi_show_index=0
-        
-        self.all_level_names=all_level_names
-        if type(all_score_levels)==int:
-            self.all_score_levels=[all_score_levels]*len(self.all_level_names)
+    def _build_pages(self, screen):
+        self.all_level_names = self.exp_setting.score_names
+        all_score_levels = self.exp_setting.score_levels
+        if isinstance(all_score_levels, int):
+            self.all_score_levels = [all_score_levels] * len(self.all_level_names)
         else:
-            self.all_score_levels=all_score_levels
-        
-        self.all_score_definitions=exp_setting.score_definition
+            self.all_score_levels = all_score_levels
+        self.all_score_definitions = self.exp_setting.score_definition
+        self.all_scores = []
 
-        self.all_scores=[]
-        self.show_page_list=[] # view changing, refocusing
-
-        self.current_page_index=0
-        self.max_page_num=0
-
-        screen = QApplication.primaryScreen().geometry()
-        self.setGeometry(0,0,screen.width(), screen.height())
-        #self.resize(screen.width(), screen.height())
-
-        self.setWindowFlag(Qt.FramelessWindowHint)
-        self.setWindowFlag(Qt.WindowStaysOnTopHint)
-        #self.setAttribute(Qt.WA_TranslucentBackground)
-        
-        cur_lfi_scoring_info=self.GetSingleLFIInfo(self.current_lfi_show_index)
-
-        self.SetPageShowing(cur_lfi_scoring_info,init_flag=True)
-        #self.SetPageShowing(cur_lfi_scoring_info)
+        cur_lfi_scoring_info = self.GetSingleLFIInfo(0)
+        self.SetPageShowing(cur_lfi_scoring_info, init_flag=True)
         for show_page in self.show_page_list:
             if show_page is not None:
                 show_page.setParent(self)
 
-
-        ############
-        self.page_scoring=ScoringPage(screen.height(),screen.width(),self.all_level_names,self.all_score_levels,self.all_score_definitions,self.exp_setting.score_values,font_size=self.exp_setting.table_font_size)
+        self.page_scoring = ScoringPage(
+            screen.height(), screen.width(),
+            self.all_level_names, self.all_score_levels,
+            self.all_score_definitions, self.exp_setting.score_values,
+            font_size=self.exp_setting.table_font_size)
         self.page_scoring.setParent(self)
         self.page_scoring.RefreshAllTables()
         self.page_scoring.HasScored.connect(self.RecordScore)
         self.addWidget(self.page_scoring)
 
-        ############ 
-        self.finish_page=FinishPage(screen.width(),screen.height())
-        self.finish_page.setParent(self)
-        self.finish_page.key_pressed.connect(lambda: self.FinishAll())
-        self.addWidget(self.finish_page)
-
-        if self.exp_setting.comparison_type == ComparisonType.DSCS_PC_BASE or self.exp_setting.comparison_type == ComparisonType.DSCS_PC_CCG:
-            self.finish_page.SetLabelContent("The double DSCS session has been finished.\n Please press ESC to escape.")
-
-        self.setCurrentIndex(self.current_page_index)
-        #self.setCurrentIndex(1)
-        self.all_page_num=self.max_page_num+2
-    
-    def SetScoringScreen(self,screen_index):
-        app=QApplication.instance()
-        if app is None:
-            app=QApplication([])
-        self.setScreen(app.screens()[screen_index])
-        cur_scree=self.screen()
-        self.move(cur_scree.geometry().topLeft())
-        self.resize(cur_scree.geometry().size())
-        self.page_scoring.resize(cur_scree.geometry().size())
-        self.page_scoring.setGeometry(0,0,self.width(),self.height())
+    def _resize_children(self, screen):
+        self.page_scoring.resize(screen.geometry().size())
+        self.page_scoring.setGeometry(0, 0, self.width(), self.height())
         self.page_scoring.RefreshAllTables()
-        self.finish_page.resize(self.width(),self.height())
-        self.finish_page.setGeometry(0,0,self.width(),self.height())
-        
 
-    def GetSingleLFIInfo(self,show_index)->ScoringExpLFIInfo:
-        cur_index=self.all_show_index[show_index]
+    def _results(self):
+        return self.all_scores
+
+    def GetSingleLFIInfo(self, show_index):
+        cur_index = self.all_show_index[show_index]
         return self.all_lfi_info.GetScoringExpLFIInfo(cur_index)
-    
-    def RecordScore(self,ret_scores):
-        # get score, then set new lfi image
+
+    def RecordScore(self, ret_scores):
         logger.debug(f'selected score is {ret_scores}')
         self.page_scoring.RefreshAllTables()
         self.all_scores.append(ret_scores)
-        self.current_lfi_show_index+=1
+        self.current_lfi_show_index += 1
         if self.current_lfi_show_index >= self.all_lfi_info.GetLFINum():
-            self.current_page_index+=1
+            self.current_page_index += 1
             self.setCurrentIndex(self.current_page_index)
             return
-        cur_lfi_info=self.GetSingleLFIInfo(self.current_lfi_show_index)
+        self.trial_scored.emit(self.current_lfi_show_index, self.all_lfi_info.GetLFINum())
+        cur_lfi_info = self.GetSingleLFIInfo(self.current_lfi_show_index)
         self.SetPageShowing(cur_lfi_info)
 
-        self.current_page_index=0
+        self.current_page_index = 0
         self.setCurrentIndex(self.current_page_index)
-    
-    def SetPageShowing(self,cur_lf_info:ScoringExpLFIInfo,init_flag=False):
-        exp_setting=self.exp_setting
+
+    def SetPageShowing(self, cur_lf_info, init_flag=False):
+        exp_setting = self.exp_setting
         if exp_setting.two_folder_mode and LFIFeatures.Passive_ViewChanging in exp_setting.lfi_features:
             if init_flag:
-                #TODO: but it is not true!!!
-                page_showing=VideoPage(exp_setting,None,cur_lf_info.passive_view_video_path,cmp_type=ComparisonType.DoubleStimuli)
+                page_showing = VideoPage(exp_setting, None, cur_lf_info.passive_view_video_path, cmp_type=ComparisonType.DoubleStimuli)
                 self.addWidget(page_showing)
                 page_showing.finish_video.connect(self.NextPage)
-                self.max_page_num+=1
+                self.max_page_num += 1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[0].SetNewLFI(exp_setting,None,cur_lf_info.passive_view_video_path,cmp_type=ComparisonType.DoubleStimuli)
+                self.show_page_list[0].SetNewLFI(exp_setting, None, cur_lf_info.passive_view_video_path, cmp_type=ComparisonType.DoubleStimuli)
             return
 
         if LFIFeatures.Active_Refocusing in exp_setting.lfi_features and LFIFeatures.Active_ViewChanging in exp_setting.lfi_features:
             if init_flag:
-                page_showing=ImagePage(exp_setting,cur_lf_info,cur_lf_info.active_view_path,cur_lf_info.active_refocusing_path)
+                page_showing = ImagePage(exp_setting, cur_lf_info, cur_lf_info.active_view_path, cur_lf_info.active_refocusing_path)
                 page_showing.setParent(self)
                 self.addWidget(page_showing)
                 page_showing.eval_finished.connect(self.NextPage)
-                self.max_page_num+=1
+                self.max_page_num += 1
                 self.show_page_list.append(page_showing)
                 self.show_page_list.append(None)
             else:
-                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.active_view_path,cur_lf_info.active_refocusing_path)
-            return 
+                self.show_page_list[0].SetNewLFI(exp_setting, cur_lf_info, cur_lf_info.active_view_path, cur_lf_info.active_refocusing_path)
+            return
 
         if LFIFeatures.Active_ViewChanging in exp_setting.lfi_features and LFIFeatures.Active_Refocusing not in exp_setting.lfi_features:
             if init_flag:
-                page_showing=ImagePage(exp_setting,cur_lf_info,cur_lf_info.active_view_path,cur_lf_info.active_refocusing_path)
+                page_showing = ImagePage(exp_setting, cur_lf_info, cur_lf_info.active_view_path, cur_lf_info.active_refocusing_path)
                 self.addWidget(page_showing)
                 page_showing.eval_finished.connect(self.NextPage)
-                self.max_page_num+=1
+                self.max_page_num += 1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.active_view_path,cur_lf_info.active_refocusing_path)
-        
+                self.show_page_list[0].SetNewLFI(exp_setting, cur_lf_info, cur_lf_info.active_view_path, cur_lf_info.active_refocusing_path)
+
         if LFIFeatures.Passive_ViewChanging in exp_setting.lfi_features:
             if init_flag:
-                page_showing=VideoPage(exp_setting,cur_lf_info,cur_lf_info.passive_view_video_path)
+                page_showing = VideoPage(exp_setting, cur_lf_info, cur_lf_info.passive_view_video_path)
                 self.addWidget(page_showing)
                 page_showing.finish_video.connect(self.NextPage)
-                self.max_page_num+=1
+                self.max_page_num += 1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[0].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.passive_view_video_path)
-        
+                self.show_page_list[0].SetNewLFI(exp_setting, cur_lf_info, cur_lf_info.passive_view_video_path)
+
         if LFIFeatures.None_ViewChanging in exp_setting.lfi_features:
             if init_flag:
                 self.show_page_list.append(None)
-        
+
         if LFIFeatures.Active_Refocusing in exp_setting.lfi_features:
             if init_flag:
-                page_showing=ImagePage(exp_setting,cur_lf_info,None,cur_lf_info.active_refocusing_path)
+                page_showing = ImagePage(exp_setting, cur_lf_info, None, cur_lf_info.active_refocusing_path)
                 self.addWidget(page_showing)
                 page_showing.eval_finished.connect(self.NextPage)
-                self.max_page_num+=1
+                self.max_page_num += 1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[1].SetNewLFI(exp_setting,cur_lf_info,None,cur_lf_info.active_refocusing_path)
-        
+                self.show_page_list[1].SetNewLFI(exp_setting, cur_lf_info, None, cur_lf_info.active_refocusing_path)
+
         if LFIFeatures.Passive_Refocusing in exp_setting.lfi_features:
             if init_flag:
-                page_showing=VideoPage(exp_setting,cur_lf_info,cur_lf_info.passive_refocusing_video_path)
+                page_showing = VideoPage(exp_setting, cur_lf_info, cur_lf_info.passive_refocusing_video_path)
                 self.addWidget(page_showing)
                 page_showing.finish_video.connect(self.NextPage)
-                self.max_page_num+=1
+                self.max_page_num += 1
                 self.show_page_list.append(page_showing)
             else:
-                self.show_page_list[1].SetNewLFI(exp_setting,cur_lf_info,cur_lf_info.passive_refocusing_video_path)
-        
+                self.show_page_list[1].SetNewLFI(exp_setting, cur_lf_info, cur_lf_info.passive_refocusing_video_path)
+
         if LFIFeatures.None_Refocusing in exp_setting.lfi_features:
             if init_flag:
                 self.show_page_list.append(None)
-        
-    def NextPage(self):
-        self.current_page_index+=1
-        if self.current_page_index >= self.all_page_num:
-            self.current_page_index=0
-        self.setCurrentIndex(self.current_page_index)
-    
-    def PrePage(self):
-        self.current_page_index-=1
-        if self.current_page_index < 0:
-            self.current_page_index=self.all_page_num-1
-        self.setCurrentIndex(self.current_page_index)
-
-    def FinishAll(self):
-        self.scoring_finished.emit(self.all_scores)
-        self.hide()
-        for page in self.show_page_list:
-            if page is not None:
-                if isinstance(page,VideoPage):
-                    page.CloseVideoPlayer()
-        #self.deleteLater()
-    
-    def keyPressEvent(self, event) -> None:
-        cur_page=self.currentWidget()
-        cur_page.handle_key_press(event)
-        return super().keyPressEvent(event)
     
 class FinishPage(QtWidgets.QWidget):
     key_pressed=QtCore.Signal()
