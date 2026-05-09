@@ -333,7 +333,7 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 self.ShowMessage("Please preprocess the experiment first!",1)
                 logger.warning("Please preprocess the experiment first!")
                 return
-        
+
         self.training_LFI_info=self.cur_project.training_LFI_info
         self.test_LFI_info=self.cur_project.test_LFI_info
         self.exp_setting=self.cur_project.exp_setting
@@ -359,10 +359,9 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 logger.warning("Experiment cancelled.")
                 return
 
-        # TODO: divide the experiment into several sessions.
-        # Now only DSCSPC contains two sessions.
-        #self.cur_exp_mode
-        if (self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_BASE or self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_CCG):
+        is_dscs_pc = (self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_BASE or
+                      self.exp_setting.comparison_type == ExpInfo.ComparisonType.DSCS_PC_CCG)
+        if is_dscs_pc:
             if not os.path.exists(PathManager.scene_resolution):
                 logger.error("The resolution file not exist, please put it in the software folder.")
                 return
@@ -373,79 +372,86 @@ class MainProject(QMainWindow,Ui_MainWindow):
                 logger.error("A video file can not be found in the json file. Please check them carefully.")
                 return
             self.all_sessions=[ExpInfo.ComparisonType.DoubleStimuli, ExpInfo.ComparisonType.PairComparison]
+            self.sessions_num=2
+            self.session_player=ExperimentSession(
+                all_scoring_lfi_info,self.exp_setting,mode=mode,
+                comparison_type=self.all_sessions[0])
+            self.session_player.SetScreenIndex(self.exp_screen_index)
+            self.session_player.exp_finished.connect(self.SessionConnector)
+            self.all_sessions.pop(0)
+            self.hide()
+            self.session_player.Start()
         else:
-            self.all_sessions=[self.exp_setting.comparison_type]
-        
-        self.sessions_num=len(self.all_sessions)
-
-        self.session_player=ExperimentSession(all_scoring_lfi_info,self.exp_setting,mode=mode)
-        self.session_player.SetScreenIndex(self.exp_screen_index)
-        self.session_player.exp_finished.connect(self.SessionConnector)
-        self.hide()
-        cur_session=self.all_sessions[0]
-        self.all_sessions.pop(0)
-        self.session_player.StartExperiment(cur_session)
+            self.session_player=ExperimentSession(
+                all_scoring_lfi_info,self.exp_setting,mode=mode,
+                comparison_type=self.exp_setting.comparison_type)
+            self.session_player.SetScreenIndex(self.exp_screen_index)
+            self.session_player.exp_finished.connect(self.SessionConnector)
+            self.session_player.session_should_break.connect(self.SessionBreakHandler)
+            self.hide()
+            self.session_player.Start()
     
     def StartSession(self,all_scoring_lfi_info:ExpInfo.AllScoringLFI,mode):
         if all_scoring_lfi_info.GetLFINum() ==0:
             logger.warning("No LFI for current session.")
-        self.session_player=ExperimentSession(all_scoring_lfi_info,self.exp_setting,mode)
+        cmp_type=self.all_sessions[0] if self.all_sessions else ExpInfo.ComparisonType.PairComparison
+        self.session_player=ExperimentSession(
+            all_scoring_lfi_info,self.exp_setting,mode,
+            comparison_type=cmp_type)
         self.session_player.SetScreenIndex(self.exp_screen_index)
         self.session_player.exp_finished.connect(self.SessionConnector)
         self.hide()
-        cur_session=self.all_sessions[0]
         self.all_sessions.pop(0)
-        self.session_player.StartExperiment(cur_session)
+        self.session_player.Start()
+
+    def SessionBreakHandler(self, done, total):
+        self.show()
+        JPLMessageBox.ShowInformationMessage(
+            f"Session break — {done} of {total} done.\nTake a rest and press OK to continue.")
+        self.hide()
+        self.session_player.Resume()
 
     def SessionConnector(self):
         logger.info("Session finished!")
         self.show()
         all_results=copy.deepcopy(self.session_player.GetResult())
         all_show_index=copy.deepcopy(self.session_player.GetShowIndex())
-        res_session_cmp_type=self.session_player.cur_cmp_type
         cur_all_scoring_lfi=self.session_player.all_scoring_lfi
+        cmp_type=self.session_player.comparison_type
         self.session_player.exp_finished.disconnect(self.SessionConnector)
         self.session_player.deleteLater()
         self.session_player=None
 
-        # only testing mode could have multiple sessions
-        # now we need to handle some jobs first. E.g. videos generation.
-        '''
-        # no, training can have 2 sessions
-        if self.cur_exp_mode == "training":
-            logger.info("Training finished!")
-            JPLMessageBox.ShowInformationMessage("Training finished.")
-            return
-        '''
-        
-        result_session_index=self.sessions_num-len(self.all_sessions)-1
+        is_multi_session = len(self.all_sessions) > 0
+        if is_multi_session:
+            # DSCS-PC: first session done, generate pairs and run second session
+            result_session_index=self.sessions_num-len(self.all_sessions)-1
+            save_file=None if self.cur_exp_mode == "training" else \
+                os.path.join(self.cur_project.project_path,PathManager.subject_results_folder,
+                             f"{self.cur_person_info.GetName()}_session_{result_session_index}")
 
-        if self.cur_exp_mode == "training":
-            save_file=None
-        else:
-            save_file=os.path.join(self.cur_project.project_path,PathManager.subject_results_folder,f"{self.cur_person_info.GetName()}_session_{result_session_index}")
-
-
-        # TODO: how to save the results?
-        # Not a good solution now. Only works for passive mode
-
-        if len(self.all_sessions)>0:
-            '''
-                Need updating
-            '''
             JPLMessageBox.ShowInformationMessage("Session finished! Thank you and have a rest now.")
             update_project=False
             if self.cur_exp_mode !="training":
-                self.GetAndSaveResult(all_results,self.cur_person_info,all_show_index,cur_all_scoring_lfi,cmp_type=res_session_cmp_type,save_file=save_file,update_project=update_project)
-                self.MakeDSCSPC(all_results,self.cur_person_info,all_show_index,self.cur_project.test_scoring_lfi_info)
+                self.GetAndSaveResult(all_results,self.cur_person_info,all_show_index,
+                                      cur_all_scoring_lfi,cmp_type=cmp_type,
+                                      save_file=save_file,update_project=update_project)
+                self.MakeDSCSPC(all_results,self.cur_person_info,all_show_index,
+                                self.cur_project.test_scoring_lfi_info)
             else:
-                self.MakeDSCSPC(all_results,self.cur_person_info,all_show_index,self.cur_project.training_scoring_lfi_info)
+                self.MakeDSCSPC(all_results,self.cur_person_info,all_show_index,
+                                self.cur_project.training_scoring_lfi_info)
         else:
+            # Single session (or DSCS-PC final session): save and done
             JPLMessageBox.ShowInformationMessage("Experiment finished! Thank you!")
             logger.info("Experiment finished!")
             if self.cur_exp_mode != "training":
+                save_file=os.path.join(self.cur_project.project_path,PathManager.subject_results_folder,
+                                       f"{self.cur_person_info.GetName()}")
                 update_project=True
-                self.GetAndSaveResult(all_results,self.cur_person_info,all_show_index,cur_all_scoring_lfi,cmp_type=res_session_cmp_type,save_file=save_file,update_project=update_project)
+                self.GetAndSaveResult(all_results,self.cur_person_info,all_show_index,
+                                      cur_all_scoring_lfi,cmp_type=cmp_type,
+                                      save_file=save_file,update_project=update_project)
 
 
     def MakeDSCSPC(self,all_results,subject_info,all_show_index,all_scoring_lfi_info:ExpInfo.AllScoringLFI):
